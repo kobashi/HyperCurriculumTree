@@ -867,6 +867,11 @@ input {
   color: var(--warn);
 }
 
+.alert.info {
+  background: #e8f1f7;
+  color: #315c74;
+}
+
 .alert.bad {
   background: #fdecec;
   color: var(--bad);

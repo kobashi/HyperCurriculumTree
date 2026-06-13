@@ -439,6 +439,7 @@ const state = {
   secondYearGpa: 1,
   manualOther: 0,
   viewMode: "plan",
+  teacherNotice: "",
   openCourseId: null,
   openTreeNodeId: null,
   planned: new Map()
@@ -736,6 +737,33 @@ function resetCatalogFilters() {
   });
 }
 
+function teacherPlanCourses() {
+  const preferred = new Map();
+  allCourses.filter((course) =>
+    (course.category === "teacher" || course.teacherRequired) &&
+    (course.category !== "courseRequired" || course.course === state.course)
+  ).forEach((course) => {
+    const key = course.key;
+    const existing = preferred.get(key);
+    if (!existing ||
+      course.category === "teacher" ||
+      (course.category === "courseRequired" && existing.category === "specializedElective")) {
+      preferred.set(key, course);
+    }
+  });
+  return [...preferred.values()];
+}
+
+function addTeacherPlanCourses() {
+  let added = 0;
+  teacherPlanCourses().forEach((course) => {
+    if (state.planned.has(course.id)) return;
+    state.planned.set(course.id, openingTermForCourse(course));
+    added += 1;
+  });
+  return added;
+}
+
 function autoFill() {
   state.planned.clear();
   state.openCourseId = null;
@@ -755,7 +783,7 @@ function autoFill() {
     state.planned.set(course.id, openingTermForCourse(course));
   });
   if (state.teacher) {
-    allCourses.filter((course) => course.category === "teacher").forEach((course) => state.planned.set(course.id, openingTermForCourse(course)));
+    addTeacherPlanCourses();
   }
   render();
 }
@@ -1185,6 +1213,9 @@ function renderAlerts(stats) {
   const alerts = [];
   const prereqProblems = validatePrereqs();
   const caps = capProblems();
+  if (state.teacherNotice) {
+    alerts.push(["info", state.teacherNotice]);
+  }
   if (stats.otherDeptRaw > 12) {
     alerts.push(["warn", `他学科履修は${stats.otherDeptRaw}単位中、卒業算入は12単位までです。`]);
   }
@@ -1232,12 +1263,13 @@ function init() {
   document.querySelector("#teacherToggle").addEventListener("change", (event) => {
     state.teacher = event.target.checked;
     if (state.teacher) {
-      allCourses
-        .filter((course) => course.category === "teacher")
-        .forEach((course) => state.planned.set(course.id, openingTermForCourse(course)));
+      const added = addTeacherPlanCourses();
+      state.teacherNotice = `教職課程をONにしました。教職課程科目と教職必修指定科目を履修状態にしました（新規追加 ${added}科目）。`;
     } else {
-      allCourses.filter((course) => course.category === "teacher").forEach((course) => state.planned.delete(course.id));
+      state.teacherNotice = "教職課程をOFFにしました。すでに履修状態にした教職課程科目・教職必修指定科目は外していません。不要な科目は個別に×で外してください。";
     }
+    state.openCourseId = null;
+    state.openTreeNodeId = null;
     render();
   });
   document.querySelector("#gpaInput").addEventListener("change", (event) => {

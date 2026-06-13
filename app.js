@@ -682,6 +682,8 @@ function visibleCourses() {
   const terms = new Set([...document.querySelectorAll(".term-filter:checked")].map((input) => input.value));
   const currentRequired = currentCourseRequiredKeys();
   return allCourses.filter((course) => {
+    const retainedTeacherCourse = course.category === "teacher" && !state.teacher && state.planned.has(course.id);
+    if (retainedTeacherCourse) return true;
     if (course.category === "courseRequired" && course.course !== state.course) return false;
     if (course.category === "specializedElective" && currentRequired.has(course.key)) return false;
     if (course.category === "teacher" && !state.teacher && !state.planned.has(course.id)) return false;
@@ -1270,6 +1272,7 @@ function init() {
     }
     state.openCourseId = null;
     state.openTreeNodeId = null;
+    resetCatalogFilters();
     render();
   });
   document.querySelector("#gpaInput").addEventListener("change", (event) => {

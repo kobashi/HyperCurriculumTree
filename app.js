@@ -661,14 +661,12 @@ function courseForTreeNode(node) {
 }
 
 function treeSectionForCourse(course) {
+  if (course.qualificationEligible || course.intensive) return "集中・資格認定";
   if (course.category === "basicRequired") return "基礎教育必修";
   if (course.category === "basicElective") return "基礎教育選択";
   if (course.category === "commonRequired") return "コース共通";
   if (course.category === "courseRequired") return `${course.course}コース`;
-  if (course.category === "specializedElective") {
-    if (course.qualificationEligible || course.intensive) return "集中・資格認定";
-    return "専門選択";
-  }
+  if (course.category === "specializedElective") return "専門選択";
   if (course.category === "otherDept") return "他学科履修";
   if (course.category === "teacher") return "教職課程に関する科目";
   return categoryLabels[course.category] || "その他";
@@ -1103,7 +1101,9 @@ function visibleTreeNodes() {
     const course = courseForTreeNode(node);
     if (!course || !visibleCourseIds.has(course.id)) return;
     usedCourseIds.add(course.id);
-    nodes.push(node);
+    nodes.push(course.qualificationEligible || course.intensive
+      ? { ...node, section: treeSectionForCourse(course), lane: treeLaneForCourse(course) }
+      : node);
   });
 
   courses.forEach((course) => {

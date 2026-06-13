@@ -106,11 +106,16 @@
           <div class="plan-head">
             <h2>4年間の履修計画</h2>
             <div class="quick-actions">
+              <div class="view-toggle" aria-label="表示モード">
+                <button id="planModeButton" type="button" aria-pressed="true">計画</button>
+                <button id="treeModeButton" type="button" aria-pressed="false">ツリー</button>
+              </div>
               <button id="autoFillButton" type="button">標準配置</button>
               <button id="clearButton" type="button">クリア</button>
             </div>
           </div>
           <div id="planGrid" class="plan-grid"></div>
+          <div id="treeView" class="tree-view" hidden></div>
         </section>
 
         <aside class="status-panel" aria-label="判定">

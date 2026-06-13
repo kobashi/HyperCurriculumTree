@@ -19,7 +19,8 @@ const aliases = new Map([
   ["アルゴリズムと構造", "アルゴリズムとデータ構造"],
   ["ITマネジメント", "ＩＴマネジメント"],
   ["ITストラテジ", "ＩＴストラテジ"],
-  ["CG基礎", "ＣＧ基礎"]
+  ["CG基礎", "ＣＧ基礎"],
+  ["基本情報技術者", "基本情報技術"]
 ]);
 
 const normalizeName = (name) => {
@@ -46,7 +47,7 @@ const RECOGNITION_METHODS = [
 
 const qualificationRecognitions = [
   ["Q-001", "ITパスポート", 2, 1, "前"],
-  ["Q-002", "基本情報技術者", 2, 1, "前"]
+  ["Q-002", "基本情報技術", 2, 1, "前"]
 ];
 
 const intensiveCourseNames = new Set([
@@ -55,7 +56,7 @@ const intensiveCourseNames = new Set([
   "アウトドアスポーツⅡ",
   "ボランティア活動",
   "ITパスポート",
-  "基本情報技術者"
+  "基本情報技術"
 ]);
 
 const requiredBasic = [
@@ -143,7 +144,30 @@ const specializedElectives = [
   ["SE-008", "ＣＧ演習", 2, 3, "後"],
   ["SE-009", "レコーディング演習", 2, 3, "前"],
   ["SE-010", "暮しとデザイン", 2, 3, "前"],
-  ["SE-011", "Ｗｅｂ解析", 2, 3, "前"]
+  ["SE-011", "Ｗｅｂ解析", 2, 3, "前"],
+  ["SE-012", "データサイエンス", 2, 2, "後"],
+  ["SE-013", "人工知能", 2, 3, "前"],
+  ["SE-015", "情報管理", 2, 2, "前", true],
+  ["SE-016", "ゲームプログラミング", 2, 2, "後"],
+  ["SE-017", "サウンドプログラミング", 2, 3, "前"],
+  ["SE-018", "知識情報学", 2, 3, "後", true],
+  ["SE-019", "モバイル情報論", 2, 3, "後", true],
+  ["SE-020", "ドキュメンタリー・シナリオ", 2, 3, "前"],
+  ["SE-021", "ＣＭ制作", 2, 3, "前"],
+  ["SE-022", "ドキュメンタリー演習", 2, 3, "後"],
+  ["SE-023", "放送・配信論", 2, 3, "後"],
+  ["SE-024", "写真技術", 2, 2, "後"],
+  ["SE-025", "照明技術", 2, 2, "後"],
+  ["SE-026", "舞台制作", 2, 3, "後"],
+  ["SE-027", "サウンドプロダクション", 2, 3, "後"],
+  ["SE-028", "ＣＡＤ", 2, 2, "前"],
+  ["SE-029", "メディア文化論", 2, 3, "前"],
+  ["SE-030", "デジタルファブリケーション", 2, 3, "前"],
+  ["SE-031", "インターンシップ", 2, 1, "前"],
+  ["SE-032", "情報メディア特別演習Ⅰ", 2, 3, "前"],
+  ["SE-033", "情報メディア特別演習Ⅱ", 2, 3, "後"],
+  ["SE-034", "アート&デザイン演習", 2, 4, "前"],
+  ["SE-035", "音響制作演習", 2, 3, "前"]
 ];
 
 const basicElectives = [
@@ -192,14 +216,202 @@ const otherDeptNames = [
 
 const teacherCourses = [
   ["T-001", "教育原理", 2, 1, "前"],
-  ["T-002", "教師論", 2, 1, "後"],
-  ["T-003", "教育課程論", 2, 2, "前"],
-  ["T-004", "教育の制度と経営", 2, 2, "後"],
-  ["T-005", "情報科教育法Ⅰ", 2, 3, "前"],
-  ["T-006", "情報科教育法Ⅱ", 2, 3, "後"],
-  ["T-007", "教育実習", 2, 4, "前"],
-  ["T-008", "教職実践演習", 2, 4, "後"]
+  ["T-002", "教師論", 2, 1, "前"],
+  ["T-003", "教育課程論", 2, 1, "後"],
+  ["T-004", "教育の制度と経営", 2, 1, "後"],
+  ["T-005", "教育心理学", 2, 2, "前"],
+  ["T-006", "特別活動論", 2, 2, "前"],
+  ["T-007", "生徒進路指導論", 2, 2, "前"],
+  ["T-008", "教育相談論", 2, 2, "後"],
+  ["T-009", "特別支援教育", 2, 2, "後"],
+  ["T-010", "総合的な学習の時間の指導法", 2, 2, "後"],
+  ["T-011", "教育の方法と技術（情報通信技術の活用含む）", 2, 3, "前"],
+  ["T-012", "情報科教育法Ⅰ", 2, 3, "前"],
+  ["T-013", "教育実習指導", 2, 3, "後"],
+  ["T-014", "情報科教育法Ⅱ", 2, 3, "後"],
+  ["T-015", "教育実習", 2, 4, "前"],
+  ["T-016", "教職実践演習（高校）", 2, 4, "後"]
 ];
+
+const officialTreeNodes = [
+  ["common-programming-intro", "プログラミング入門", "professional", "コース共通", "情報処理系列", "1前", "初級", "1103", true],
+  ["common-program-exercise-1", "プログラム演習Ⅰ", "professional", "コース共通", "情報処理系列", "1後", "初級", "2103", false],
+  ["common-info-processing", "情報処理演習", "professional", "コース共通", "情報処理系列", "1後", "初級", "2104", true],
+  ["common-data-science", "データサイエンス", "professional", "コース共通", "情報処理系列", "2後", "中級", "4103", false],
+  ["common-ai", "人工知能", "professional", "コース共通", "情報処理系列", "3前", "中級", "5102", false],
+  ["common-media-theory", "情報メディア論", "professional", "コース共通", "総合・その他", "1前", "初級", "1105", false],
+  ["common-ethics", "情報社会の倫理と職業", "professional", "コース共通", "総合・その他", "1後", "中級", "2106", true],
+  ["common-it-management", "ＩＴマネジメント", "professional", "コース共通", "情報資格系列", "1後", "初級", "2105", false],
+  ["common-it-passport", "ITパスポート", "professional", "コース共通", "情報資格系列", "1後", "初級", "9101", false],
+  ["common-it-strategy", "ＩＴストラテジ", "professional", "コース共通", "情報資格系列", "2前", "初級", "3105", false],
+  ["common-software-basic", "ソフトウェア基礎", "professional", "コース共通", "情報資格系列", "2前", "中級", "3106", true],
+  ["common-fe", "基本情報技術", "professional", "コース共通", "情報資格系列", "2後", "中級", "9102", false],
+  ["common-info-management", "情報管理", "professional", "コース共通", "情報資格系列", "2前", "中級", "3109", true],
+  ["common-internship", "インターンシップ", "professional", "コース共通", "総合・その他", "1前", "上級", "9103", false],
+  ["common-special-seminar-1", "情報メディア特別演習Ⅰ", "professional", "コース共通", "総合・その他", "3前", "中級", "5111", false],
+  ["common-special-seminar-2", "情報メディア特別演習Ⅱ", "professional", "コース共通", "総合・その他", "3後", "中級", "6111", false],
+  ["common-art-design", "アート&デザイン演習", "professional", "コース共通", "総合・その他", "4前", "上級", "7101", false],
+  ["common-seminar-1", "専門演習Ⅰ", "professional", "コース共通", "演習", "3前", "中級", "5101", false],
+  ["common-seminar-2", "専門演習Ⅱ", "professional", "コース共通", "演習", "3後", "中級", "6101", false],
+  ["common-graduation-1", "卒業演習Ⅰ", "professional", "コース共通", "演習", "4前", "上級", "7102", false],
+  ["common-graduation-2", "卒業演習Ⅱ", "professional", "コース共通", "演習", "4後", "上級", "8101", false],
+
+  ["system-intro", "情報システム入門", "professional", "情報システムコース", "システム開発系列", "1前", "初級", "1110", false],
+  ["system-basic-theory", "情報基礎理論", "professional", "情報システムコース", "システム開発系列", "1後", "初級", "2111", false],
+  ["system-media-tech", "メディア情報技術", "professional", "情報システムコース", "システム開発系列", "2後", "中級", "4105", false],
+  ["system-development", "システム開発論", "professional", "情報システムコース", "システム開発系列", "3前", "中級", "5104", false],
+  ["system-database", "データベース", "professional", "情報システムコース", "システム開発系列", "3前", "上級", "5105", true],
+  ["system-program-2", "プログラム演習Ⅱ", "professional", "情報システムコース", "プログラミング系列", "2前", "中級", "3101", false],
+  ["system-algorithm", "アルゴリズムとデータ構造", "professional", "情報システムコース", "プログラミング系列", "2前", "中級", "3102", true],
+  ["system-game-programming", "ゲームプログラミング", "professional", "情報システムコース", "プログラミング系列", "2後", "中級", "4104", false],
+  ["system-program-3", "プログラム演習Ⅲ", "professional", "情報システムコース", "プログラミング系列", "3前", "中級", "5103", false],
+  ["system-program-4", "プログラム演習Ⅳ", "professional", "情報システムコース", "プログラミング系列", "3後", "上級", "6102", false],
+  ["system-sound-programming", "サウンドプログラミング", "professional", "情報システムコース", "プログラミング系列", "3前", "上級", "5112", false],
+  ["system-knowledge", "知識情報学", "professional", "情報システムコース", "プログラミング系列", "3後", "上級", "6103", true],
+  ["system-network-1", "コンピュータネットワークⅠ", "professional", "情報システムコース", "ネットワーク系列", "2後", "中級", "4106", true],
+  ["system-network-2", "コンピュータネットワークⅡ", "professional", "情報システムコース", "ネットワーク系列", "3前", "上級", "5106", false],
+  ["system-mobile", "モバイル情報論", "professional", "情報システムコース", "ネットワーク系列", "3後", "上級", "6104", true],
+  ["system-web-programming", "Ｗｅｂプログラミング", "professional", "情報システムコース", "ネットワーク系列", "2前", "中級", "3108", false],
+
+  ["movie-production-1", "映像制作演習Ⅰ", "professional", "映像メディアコース", "映像制作系列", "2前", "初中級", "3201", false],
+  ["movie-history", "映像史とアーカイブ", "professional", "映像メディアコース", "映像制作系列", "2前", "中級", "3202", false],
+  ["movie-production-2", "映像制作演習Ⅱ", "professional", "映像メディアコース", "映像制作系列", "2後", "中級", "4201", false],
+  ["movie-processing", "映像加工技術", "professional", "映像メディアコース", "映像制作系列", "3前", "中級", "5201", false],
+  ["movie-scenario", "ドキュメンタリー・シナリオ", "professional", "映像メディアコース", "映像制作系列", "3前", "中級", "5202", false],
+  ["movie-cm", "ＣＭ制作", "professional", "映像メディアコース", "映像制作系列", "3前", "中級", "5203", false],
+  ["movie-media-art", "メディアアート", "professional", "映像メディアコース", "映像制作系列", "3後", "上級", "6201", false],
+  ["movie-documentary", "ドキュメンタリー演習", "professional", "映像メディアコース", "映像制作系列", "3後", "上級", "6202", false],
+  ["movie-broadcast", "放送・配信論", "professional", "映像メディアコース", "映像制作系列", "3後", "上級", "6203", false],
+  ["movie-digital-art", "デジタルアート入門", "professional", "映像メディアコース", "画像処理・CG系列", "1前", "初級", "1201", true],
+  ["movie-animation", "アニメーション", "professional", "映像メディアコース", "画像処理・CG系列", "1後", "初級", "2201", false],
+  ["movie-cg-basic", "ＣＧ基礎", "professional", "映像メディアコース", "画像処理・CG系列", "2前", "中級", "3203", false],
+  ["movie-cg-exercise", "ＣＧ演習", "professional", "映像メディアコース", "画像処理・CG系列", "2後", "上級", "4202", false],
+  ["movie-color", "色彩学", "professional", "映像メディアコース", "総合・その他", "2前", "初中級", "3204", false],
+  ["movie-photo", "写真技術", "professional", "映像メディアコース", "総合・その他", "2後", "中級", "4203", false],
+  ["movie-multimedia", "マルチメディア", "professional", "映像メディアコース", "総合・その他", "3前", "中級", "5204", true],
+
+  ["sound-digital-intro", "デジタルサウンド入門", "professional", "サウンド制作コース", "音響技術系列", "1前", "初級", "1301", false],
+  ["sound-practice", "音響実務", "professional", "サウンド制作コース", "音響技術系列", "2前", "初中級", "3301", false],
+  ["sound-acoustics", "音響学", "professional", "サウンド制作コース", "音響技術系列", "2後", "初中級", "4301", false],
+  ["sound-ear-training", "聴能・音感演習", "professional", "サウンド制作コース", "音響技術系列", "2後", "初中級", "4302", false],
+  ["sound-lighting", "照明技術", "professional", "サウンド制作コース", "音響技術系列", "2後", "中級", "4303", false],
+  ["sound-production", "音響制作演習", "professional", "サウンド制作コース", "音響技術系列", "3前", "中上級", "5301", false],
+  ["sound-recording", "レコーディング演習", "professional", "サウンド制作コース", "音響技術系列", "3後", "上級", "6301", false],
+  ["sound-stage", "舞台制作", "professional", "サウンド制作コース", "音響技術系列", "3後", "上級", "6302", false],
+  ["sound-broadcast", "放送・配信論", "professional", "サウンド制作コース", "音響技術系列", "3後", "上級", "6203", false],
+  ["sound-production-work", "サウンドプロダクション", "professional", "サウンド制作コース", "音響技術系列", "3後", "上級", "6303", false],
+  ["sound-midi-1", "ＭＩＤＩ制作演習Ⅰ", "professional", "サウンド制作コース", "楽曲制作系列", "1後", "初級", "2301", false],
+  ["sound-music-theory", "音楽理論", "professional", "サウンド制作コース", "楽曲制作系列", "2前", "初中級", "3302", false],
+  ["sound-midi-2", "ＭＩＤＩ制作演習Ⅱ", "professional", "サウンド制作コース", "楽曲制作系列", "2前", "初中級", "3303", false],
+  ["sound-creation", "サウンドクリエーション", "professional", "サウンド制作コース", "楽曲制作系列", "2後", "中級", "4304", false],
+
+  ["design-graphic", "グラフィックデザイン", "professional", "メディアデザインコース", "メディアデザイン系列", "1後", "初級", "2401", false],
+  ["design-exercise-1", "メディアデザイン演習Ⅰ", "professional", "メディアデザインコース", "メディアデザイン系列", "2前", "初級", "3401", false],
+  ["design-color", "色彩学", "professional", "メディアデザインコース", "メディアデザイン系列", "2前", "初中級", "3204", false],
+  ["design-exercise-2", "メディアデザイン演習Ⅱ", "professional", "メディアデザインコース", "メディアデザイン系列", "2後", "初級", "4401", false],
+  ["design-multimedia", "マルチメディア", "professional", "メディアデザインコース", "メディアデザイン系列", "3前", "中級", "5204", true],
+  ["design-living", "暮しとデザイン", "professional", "メディアデザインコース", "メディアデザイン系列", "3後", "上級", "6401", false],
+  ["design-cg-basic", "ＣＧ基礎", "professional", "メディアデザインコース", "プロダクトデザイン系列", "2前", "中級", "3203", false],
+  ["design-cad", "ＣＡＤ", "professional", "メディアデザインコース", "プロダクトデザイン系列", "2前", "中級", "3402", false],
+  ["design-digital-fabrication", "デジタルファブリケーション", "professional", "メディアデザインコース", "プロダクトデザイン系列", "3前", "上級", "5401", false],
+  ["design-web-programming", "Ｗｅｂプログラミング", "professional", "メディアデザインコース", "Webデザイン系列", "2前", "中級", "3108", false],
+  ["design-web-design", "Ｗｅｂデザイン", "professional", "メディアデザインコース", "Webデザイン系列", "2後", "中級", "4402", true],
+  ["design-web-analysis", "Ｗｅｂ解析", "professional", "メディアデザインコース", "Webデザイン系列", "3前", "上級", "5402", false],
+  ["design-media-culture", "メディア文化論", "professional", "メディアデザインコース", "Webデザイン系列", "3前", "中級", "5403", false],
+  ["design-documentary", "ドキュメンタリー演習", "professional", "メディアデザインコース", "Webデザイン系列", "3後", "上級", "6202", false],
+  ["design-intro", "メディアデザイン入門", "professional", "メディアデザインコース", "総合・その他", "1前", "初級", "1401", false],
+
+  ["teacher-principles", "教育原理", "teacher", "教職課程に関する科目", "教職", "1前", "", "M5Z1201", false],
+  ["teacher-role", "教師論", "teacher", "教職課程に関する科目", "教職", "1前", "", "M5Z1202", false],
+  ["teacher-curriculum", "教育課程論", "teacher", "教職課程に関する科目", "教職", "1後", "", "M5Z2201", false],
+  ["teacher-system", "教育の制度と経営", "teacher", "教職課程に関する科目", "教職", "1後", "", "M5Z2202", false],
+  ["teacher-psychology", "教育心理学", "teacher", "教職課程に関する科目", "教職", "2前", "", "M5Z3201", false],
+  ["teacher-activities", "特別活動論", "teacher", "教職課程に関する科目", "教職", "2前", "", "M5Z3202", false],
+  ["teacher-guidance", "生徒進路指導論", "teacher", "教職課程に関する科目", "教職", "2前", "", "M5Z4201", false],
+  ["teacher-counseling", "教育相談論", "teacher", "教職課程に関する科目", "教職", "2後", "", "M5Z4202", false],
+  ["teacher-special-support", "特別支援教育", "teacher", "教職課程に関する科目", "教職", "2後", "", "M5Z4203", false],
+  ["teacher-integrated-study", "総合的な学習の時間の指導法", "teacher", "教職課程に関する科目", "教職", "2後", "", "M5Z4204", false],
+  ["teacher-method", "教育の方法と技術（情報通信技術の活用含む）", "teacher", "教職課程に関する科目", "教職", "3前", "", "M5Z5201", false],
+  ["teacher-info-method-1", "情報科教育法Ⅰ", "teacher", "教職課程に関する科目", "教職", "3前", "", "M5Z5202", false],
+  ["teacher-practice-guidance", "教育実習指導", "teacher", "教職課程に関する科目", "教職", "3後", "", "M5Z6202", false],
+  ["teacher-info-method-2", "情報科教育法Ⅱ", "teacher", "教職課程に関する科目", "教職", "3後", "", "M5Z6201", false],
+  ["teacher-practice", "教育実習", "teacher", "教職課程に関する科目", "教職", "4前", "", "M5Z7201", false],
+  ["teacher-final", "教職実践演習（高校）", "teacher", "教職課程に関する科目", "教職", "4後", "", "M5Z8201", false]
+].map(([id, courseName, page, section, lane, term, level, courseNumber, teacherRequired = false, displayName = null]) => ({
+  id,
+  courseName,
+  displayName: displayName || courseName,
+  page,
+  section,
+  lane,
+  term,
+  level,
+  courseNumber,
+  teacherRequired
+}));
+
+const officialTreeEdges = [
+  ["common-programming-intro", "common-program-exercise-1"],
+  ["common-program-exercise-1", "common-data-science"],
+  ["common-info-processing", "common-data-science"],
+  ["common-data-science", "common-ai"],
+  ["common-media-theory", "common-ethics"],
+  ["common-it-management", "common-it-strategy"],
+  ["common-it-strategy", "common-fe"],
+  ["common-it-strategy", "common-software-basic"],
+  ["common-it-strategy", "common-info-management"],
+  ["common-special-seminar-1", "common-special-seminar-2"],
+  ["common-special-seminar-2", "common-art-design"],
+  ["common-seminar-1", "common-seminar-2"],
+  ["common-seminar-2", "common-graduation-1"],
+  ["common-graduation-1", "common-graduation-2"],
+  ["system-program-2", "system-program-3"],
+  ["system-algorithm", "system-game-programming"],
+  ["system-game-programming", "system-program-3"],
+  ["system-program-3", "system-program-4"],
+  ["system-program-3", "system-sound-programming"],
+  ["system-program-4", "system-knowledge"],
+  ["system-network-1", "system-network-2"],
+  ["system-network-2", "system-mobile"],
+  ["system-intro", "system-basic-theory"],
+  ["system-basic-theory", "system-media-tech"],
+  ["system-media-tech", "system-development"],
+  ["system-development", "system-database"],
+  ["movie-production-1", "movie-production-2"],
+  ["movie-production-2", "movie-processing"],
+  ["movie-processing", "movie-media-art"],
+  ["movie-processing", "movie-documentary"],
+  ["movie-processing", "movie-broadcast"],
+  ["movie-digital-art", "movie-animation"],
+  ["movie-animation", "movie-cg-basic"],
+  ["movie-cg-basic", "movie-cg-exercise"],
+  ["sound-digital-intro", "sound-practice"],
+  ["sound-practice", "sound-acoustics"],
+  ["sound-acoustics", "sound-production"],
+  ["sound-ear-training", "sound-production"],
+  ["sound-production", "sound-recording"],
+  ["sound-midi-1", "sound-music-theory"],
+  ["sound-midi-1", "sound-midi-2"],
+  ["sound-music-theory", "sound-creation"],
+  ["sound-midi-2", "sound-creation"],
+  ["design-graphic", "design-exercise-1"],
+  ["design-exercise-1", "design-exercise-2"],
+  ["design-exercise-2", "design-multimedia"],
+  ["design-multimedia", "design-living"],
+  ["design-cg-basic", "design-digital-fabrication"],
+  ["design-cad", "design-digital-fabrication"],
+  ["design-web-programming", "design-web-design"],
+  ["design-web-design", "design-web-analysis"],
+  ["design-media-culture", "design-documentary"],
+  ["teacher-principles", "teacher-curriculum"],
+  ["teacher-role", "teacher-curriculum"],
+  ["teacher-curriculum", "teacher-psychology"],
+  ["teacher-psychology", "teacher-counseling"],
+  ["teacher-counseling", "teacher-info-method-1"],
+  ["teacher-info-method-1", "teacher-info-method-2"],
+  ["teacher-info-method-2", "teacher-practice"],
+  ["teacher-practice", "teacher-final"]
+].map(([from, to]) => ({ from, to }));
 
 const prereqs = {
   "プラクティカル・イングリッシュⅡ": ["プラクティカル・イングリッシュⅠ"],
@@ -226,7 +438,9 @@ const state = {
   gpa: 1,
   secondYearGpa: 1,
   manualOther: 0,
+  viewMode: "plan",
   openCourseId: null,
+  openTreeNodeId: null,
   planned: new Map()
 };
 
@@ -425,6 +639,42 @@ function currentCourseRequiredKeys() {
     .map((course) => course.key));
 }
 
+function courseForTreeNode(node) {
+  const candidates = allCourses.filter((course) => course.key === normalizeName(node.courseName));
+  if (node.page === "teacher") return candidates.find((course) => course.category === "teacher") || null;
+  if (node.section === "コース共通") {
+    return candidates.find((course) => course.category === "commonRequired") ||
+      candidates.find((course) => course.category === "specializedElective") ||
+      candidates[0] ||
+      null;
+  }
+  const courseName = node.section.replace(/コース$/, "");
+  if (courseName === state.course) {
+    return candidates.find((course) => course.category === "courseRequired" && course.course === state.course) ||
+      candidates.find((course) => course.category === "specializedElective") ||
+      candidates[0] ||
+      null;
+  }
+  return candidates.find((course) => course.category === "specializedElective") || candidates[0] || null;
+}
+
+function optionMarkupForCourse(course) {
+  const validTerms = validTermsForCourse(course);
+  const termOptions = course.qualificationEligible
+    ? RECOGNITION_METHODS.flatMap((method) =>
+      recognitionTermsForMethod(course, method.id).map((term) => `<option value="${recognitionValue(method.id, term.id)}">${method.label} ${term.label}</option>`)
+    ).join("")
+    : validTerms.map((term) => `<option value="${term.id}">${term.label}</option>`).join("");
+  return `<option value="none">未配置</option>${termOptions}`;
+}
+
+function validatePlannedCourse(course) {
+  const currentValue = state.planned.get(course.id);
+  if (currentValue && !isValidPlannedValue(course, currentValue)) {
+    state.planned.delete(course.id);
+  }
+}
+
 function visibleCourses() {
   const filter = document.querySelector("#categoryFilter").value;
   const years = new Set([...document.querySelectorAll(".year-filter:checked")].map((input) => Number(input.value)));
@@ -474,6 +724,7 @@ function setPlanned(courseId, term) {
     if (course && isValidPlannedValue(course, term)) state.planned.set(courseId, term);
   }
   state.openCourseId = null;
+  state.openTreeNodeId = null;
   render();
 }
 
@@ -488,6 +739,7 @@ function resetCatalogFilters() {
 function autoFill() {
   state.planned.clear();
   state.openCourseId = null;
+  state.openTreeNodeId = null;
   resetCatalogFilters();
   allCourses.forEach((course) => {
     if (course.category === "courseRequired" && course.course !== state.course) return;
@@ -637,11 +889,7 @@ function renderCatalog() {
     title.className = "course-title";
     title.innerHTML = `<span>${course.name}</span><small>${course.credits}単位</small>`;
 
-    const validTerms = validTermsForCourse(course);
-    const currentValue = state.planned.get(course.id);
-    if (currentValue && !isValidPlannedValue(course, currentValue)) {
-      state.planned.delete(course.id);
-    }
+    validatePlannedCourse(course);
 
     const tags = document.createElement("div");
     tags.className = "tags";
@@ -675,12 +923,7 @@ function renderCatalog() {
     actions.className = "course-actions";
     const select = document.createElement("select");
     select.setAttribute("aria-label", `${course.name}の配置`);
-    const termOptions = course.qualificationEligible
-      ? RECOGNITION_METHODS.flatMap((method) =>
-        recognitionTermsForMethod(course, method.id).map((term) => `<option value="${recognitionValue(method.id, term.id)}">${method.label} ${term.label}</option>`)
-      ).join("")
-      : validTerms.map((term) => `<option value="${term.id}">${term.label}</option>`).join("");
-    select.innerHTML = `<option value="none">未配置</option>${termOptions}`;
+    select.innerHTML = optionMarkupForCourse(course);
     select.value = state.planned.get(course.id) || "none";
     select.addEventListener("change", (event) => setPlanned(course.id, event.target.value));
 
@@ -751,6 +994,141 @@ function renderPlan() {
     });
     grid.appendChild(column);
   }
+}
+
+function sectionClass(section) {
+  if (section === "コース共通") return "common";
+  if (section === "情報システムコース") return "system";
+  if (section === "映像メディアコース") return "movie";
+  if (section === "サウンド制作コース") return "sound";
+  if (section === "メディアデザインコース") return "design";
+  if (section === "教職課程に関する科目") return "teacher";
+  return "common";
+}
+
+function visibleTreeNodes() {
+  return officialTreeNodes.filter((node) => node.page !== "teacher" || state.teacher);
+}
+
+function renderTree() {
+  const tree = document.querySelector("#treeView");
+  tree.innerHTML = "";
+  const termLabels = TERMS.map((term) => `<div class="tree-term">${term.label}</div>`).join("");
+  const sections = [...new Set(visibleTreeNodes().map((node) => node.section))];
+
+  const header = document.createElement("div");
+  header.className = "tree-header";
+  header.innerHTML = `<div></div>${termLabels}`;
+  tree.appendChild(header);
+
+  sections.forEach((section) => {
+    const sectionNodes = visibleTreeNodes().filter((node) => node.section === section);
+    const lanes = [...new Set(sectionNodes.map((node) => node.lane))];
+    const block = document.createElement("section");
+    block.className = `tree-section tree-section-${sectionClass(section)}`;
+    block.innerHTML = `<div class="tree-section-title">${section}</div>`;
+
+    lanes.forEach((lane) => {
+      const row = document.createElement("div");
+      row.className = "tree-row";
+      row.innerHTML = `<div class="tree-lane">${lane}</div>`;
+      TERMS.forEach((term) => {
+        const cell = document.createElement("div");
+        cell.className = "tree-cell";
+        sectionNodes
+          .filter((node) => node.lane === lane && node.term === term.id)
+          .forEach((node) => {
+            const course = courseForTreeNode(node);
+            if (!course) return;
+            validatePlannedCourse(course);
+            const disabled = course.category === "teacher" && !state.teacher;
+            const item = document.createElement("article");
+            item.className = `tree-node level-${node.level || "none"}${state.planned.has(course.id) ? " is-planned" : ""}${disabled ? " is-disabled" : ""}`;
+            item.dataset.nodeId = node.id;
+            item.dataset.courseId = course.id;
+            item.innerHTML = `
+              <button type="button" class="tree-node-button" ${disabled ? "disabled" : ""} aria-expanded="${state.openTreeNodeId === node.id ? "true" : "false"}">
+                <span class="tree-node-code">${node.courseNumber}</span>
+                <span class="tree-node-name">${node.displayName}</span>
+                <span class="tree-node-meta">${node.level || categoryLabels[course.category]}${course.teacherRequired || node.teacherRequired ? " / 教" : ""}${state.planned.has(course.id) ? ` / ${plannedButtonLabel(course)}` : ""}</span>
+              </button>
+            `;
+            const button = item.querySelector(".tree-node-button");
+            button.addEventListener("click", () => {
+              state.openTreeNodeId = state.openTreeNodeId === node.id ? null : node.id;
+              state.openCourseId = null;
+              render();
+            });
+            if (state.openTreeNodeId === node.id) {
+              const menu = document.createElement("div");
+              menu.className = "tree-node-menu";
+              const select = document.createElement("select");
+              select.setAttribute("aria-label", `${course.name}の配置`);
+              select.innerHTML = optionMarkupForCourse(course);
+              select.value = state.planned.get(course.id) || "none";
+              select.addEventListener("change", (event) => setPlanned(course.id, event.target.value));
+              const remove = document.createElement("button");
+              remove.type = "button";
+              remove.className = "remove-button";
+              remove.textContent = "×";
+              remove.setAttribute("aria-label", `${course.name}を外す`);
+              remove.addEventListener("click", () => setPlanned(course.id, "none"));
+              menu.append(select, remove);
+              item.appendChild(menu);
+            }
+            cell.appendChild(item);
+          });
+        row.appendChild(cell);
+      });
+      block.appendChild(row);
+    });
+    tree.appendChild(block);
+  });
+
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.classList.add("tree-edges");
+  svg.setAttribute("aria-hidden", "true");
+  tree.appendChild(svg);
+  requestAnimationFrame(drawTreeEdges);
+}
+
+function drawTreeEdges() {
+  const tree = document.querySelector("#treeView");
+  const svg = tree.querySelector(".tree-edges");
+  if (!svg || tree.hidden) return;
+  svg.innerHTML = "";
+  const treeRect = tree.getBoundingClientRect();
+  svg.setAttribute("viewBox", `0 0 ${tree.scrollWidth} ${tree.scrollHeight}`);
+  svg.setAttribute("width", tree.scrollWidth);
+  svg.setAttribute("height", tree.scrollHeight);
+  visibleTreeNodes();
+  officialTreeEdges.forEach((edge) => {
+    const from = tree.querySelector(`[data-node-id="${edge.from}"] .tree-node-button`);
+    const to = tree.querySelector(`[data-node-id="${edge.to}"] .tree-node-button`);
+    if (!from || !to) return;
+    const a = from.getBoundingClientRect();
+    const b = to.getBoundingClientRect();
+    const x1 = a.right - treeRect.left + tree.scrollLeft;
+    const y1 = a.top + a.height / 2 - treeRect.top + tree.scrollTop;
+    const x2 = b.left - treeRect.left + tree.scrollLeft;
+    const y2 = b.top + b.height / 2 - treeRect.top + tree.scrollTop;
+    const mid = Math.max(x1 + 18, (x1 + x2) / 2);
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", `M ${x1} ${y1} C ${mid} ${y1}, ${mid} ${y2}, ${x2} ${y2}`);
+    path.setAttribute("class", "tree-edge");
+    svg.appendChild(path);
+  });
+}
+
+function renderViewMode() {
+  const planGrid = document.querySelector("#planGrid");
+  const tree = document.querySelector("#treeView");
+  const isTree = state.viewMode === "tree";
+  planGrid.hidden = isTree;
+  tree.hidden = !isTree;
+  document.querySelector("#planModeButton").setAttribute("aria-pressed", String(!isTree));
+  document.querySelector("#treeModeButton").setAttribute("aria-pressed", String(isTree));
+  if (isTree) drawTreeEdges();
 }
 
 function setMeter(id, value, target) {
@@ -825,6 +1203,8 @@ function render() {
   const stats = totals();
   renderCatalog();
   renderPlan();
+  renderTree();
+  renderViewMode();
   renderSummary(stats);
   renderRequirements(stats);
   renderAlerts(stats);
@@ -876,9 +1256,21 @@ function init() {
   document.querySelectorAll(".year-filter, .term-filter").forEach((input) => {
     input.addEventListener("change", render);
   });
+  document.querySelector("#planModeButton").addEventListener("click", () => {
+    state.viewMode = "plan";
+    state.openTreeNodeId = null;
+    render();
+  });
+  document.querySelector("#treeModeButton").addEventListener("click", () => {
+    state.viewMode = "tree";
+    state.openCourseId = null;
+    render();
+  });
   document.querySelector("#autoFillButton").addEventListener("click", autoFill);
   document.querySelector("#clearButton").addEventListener("click", () => {
     state.planned.clear();
+    state.openCourseId = null;
+    state.openTreeNodeId = null;
     render();
   });
   autoFill();

@@ -398,7 +398,32 @@ input {
 
 .quick-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+}
+
+.view-toggle {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #eef2f0;
+}
+
+.view-toggle button {
+  min-height: 30px;
+  padding: 0 10px;
+  border-color: transparent;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.view-toggle button[aria-pressed="true"] {
+  border-color: rgba(20, 108, 104, 0.22);
+  background: #fff;
+  color: var(--brand-dark);
 }
 
 .plan-grid {
@@ -407,6 +432,214 @@ input {
   gap: 10px;
   align-items: start;
   margin-top: 14px;
+}
+
+.tree-view {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  overflow: auto;
+  padding: 8px 8px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8faf8;
+}
+
+.tree-view[hidden] {
+  display: none;
+}
+
+.tree-header,
+.tree-row {
+  display: grid;
+  grid-template-columns: 132px repeat(8, minmax(128px, 1fr));
+  gap: 6px;
+  min-width: 1180px;
+}
+
+.tree-header {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  align-items: end;
+  padding-bottom: 2px;
+  background: #f8faf8;
+}
+
+.tree-term {
+  padding: 6px;
+  border-radius: 6px;
+  background: #dcebea;
+  color: var(--brand-dark);
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.tree-section {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 6px;
+  min-width: 1180px;
+  padding: 8px;
+  border-radius: 8px;
+  border-left: 7px solid var(--brand);
+  background: #eef5f2;
+}
+
+.tree-section-common {
+  background: #eef0f1;
+  border-left-color: #7c878b;
+}
+
+.tree-section-system {
+  background: #e3f4ef;
+  border-left-color: #26947b;
+}
+
+.tree-section-movie {
+  background: #edf7d9;
+  border-left-color: #8dbd3d;
+}
+
+.tree-section-sound {
+  background: #fff8bd;
+  border-left-color: #e1b72c;
+}
+
+.tree-section-design {
+  background: #fde8c7;
+  border-left-color: #d69332;
+}
+
+.tree-section-teacher {
+  background: #fde0ed;
+  border-left-color: #d64283;
+}
+
+.tree-section-title {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.tree-lane {
+  display: grid;
+  align-content: center;
+  min-height: 44px;
+  padding: 6px;
+  border: 1px solid rgba(23, 33, 37, 0.16);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.62);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.tree-cell {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-height: 44px;
+}
+
+.tree-node {
+  position: relative;
+  z-index: 2;
+}
+
+.tree-node-button {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 5px;
+  width: 100%;
+  min-height: 38px;
+  padding: 5px 6px;
+  border-color: rgba(23, 33, 37, 0.3);
+  border-radius: 6px;
+  background: #fff;
+  text-align: left;
+}
+
+.tree-node-button[aria-expanded="true"],
+.tree-node.is-planned .tree-node-button {
+  border-color: var(--brand);
+  background: #d9ece8;
+}
+
+.tree-node-code {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.tree-node-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.tree-node-meta {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.level-初級 .tree-node-code,
+.level-初中級 .tree-node-code {
+  color: #13684f;
+}
+
+.level-中級 .tree-node-code,
+.level-中上級 .tree-node-code {
+  color: #4d4698;
+}
+
+.level-上級 .tree-node-code {
+  color: #a02d9a;
+}
+
+.tree-node-menu {
+  position: absolute;
+  z-index: 6;
+  display: grid;
+  grid-template-columns: minmax(170px, 1fr) 30px;
+  gap: 5px;
+  min-width: 230px;
+  margin-top: 4px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.tree-node-menu select,
+.tree-node-menu button {
+  min-height: 32px;
+  font-size: 12px;
+}
+
+.tree-node.is-disabled {
+  opacity: 0.55;
+}
+
+.tree-edges {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.tree-edge {
+  fill: none;
+  stroke: rgba(20, 108, 104, 0.42);
+  stroke-width: 2;
 }
 
 .year-column {

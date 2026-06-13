@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>情報メディア学科 履修計画チェッカー</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="topbar" aria-label="設定">
+        <div>
+          <p class="eyebrow">Nagoya Bunri University</p>
+          <h1>情報メディア学科 履修計画チェッカー</h1>
+        </div>
+        <div class="controls">
+          <label>
+            コース
+            <select id="courseSelect"></select>
+          </label>
+          <label>
+            通算GPA条件
+            <select id="gpaInput">
+              <option value="1" selected>1.0以上</option>
+              <option value="0.9">1.0未満</option>
+              <option value="3.7">3.7以上</option>
+            </select>
+          </label>
+          <label>
+            2年次GPA条件
+            <select id="secondYearGpaInput">
+              <option value="1" selected>1.0以上</option>
+              <option value="0.9">1.0未満</option>
+              <option value="3.7">3.7以上</option>
+            </select>
+          </label>
+          <label class="switch">
+            <input id="teacherToggle" type="checkbox">
+            <span>教職課程</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="summary-grid" aria-label="卒業要件">
+        <article class="meter-card">
+          <div class="meter-head">
+            <span>卒業要件単位</span>
+            <strong id="totalCredits">0 / 124</strong>
+          </div>
+          <div class="meter"><span id="totalMeter"></span></div>
+          <div class="meter-detail" id="totalDetail">要件外 0単位</div>
+        </article>
+        <article class="meter-card">
+          <div class="meter-head">
+            <span>基礎教育</span>
+            <strong id="basicCredits">0 / 36</strong>
+          </div>
+          <div class="meter"><span id="basicMeter"></span></div>
+        </article>
+        <article class="meter-card">
+          <div class="meter-head">
+            <span>専門教育</span>
+            <strong id="professionalCredits">0 / 36</strong>
+          </div>
+          <div class="meter"><span id="professionalMeter"></span></div>
+        </article>
+        <article class="meter-card">
+          <div class="meter-head">
+            <span>その他</span>
+            <strong id="otherCredits">0 / 52</strong>
+          </div>
+          <div class="meter"><span id="otherMeter"></span></div>
+        </article>
+      </section>
+
+      <section class="workspace">
+        <aside class="catalog-panel" aria-label="科目一覧">
+          <div class="panel-head">
+            <h2>科目</h2>
+            <select id="categoryFilter" aria-label="カテゴリ">
+              <option value="all">すべて</option>
+              <option value="basicRequired">基礎必修</option>
+              <option value="basicElective">基礎選択</option>
+              <option value="commonRequired">専門共通</option>
+              <option value="courseRequired">コース必修</option>
+              <option value="specializedElective">専門選択</option>
+              <option value="otherDept">他学科</option>
+              <option value="teacher">教職</option>
+            </select>
+          </div>
+          <div class="catalog-filters" aria-label="科目表示フィルタ">
+            <fieldset>
+              <legend>絞込</legend>
+              <label><input class="year-filter" type="checkbox" value="1" checked>1</label>
+              <label><input class="year-filter" type="checkbox" value="2" checked>2</label>
+              <label><input class="year-filter" type="checkbox" value="3" checked>3</label>
+              <label><input class="year-filter" type="checkbox" value="4" checked>4</label>
+              <label><input class="term-filter" type="checkbox" value="前" checked>前</label>
+              <label><input class="term-filter" type="checkbox" value="後" checked>後</label>
+            </fieldset>
+          </div>
+          <div id="catalogList" class="catalog-list"></div>
+        </aside>
+
+        <section class="plan-panel" aria-label="4年間の履修計画">
+          <div class="plan-head">
+            <h2>4年間の履修計画</h2>
+            <div class="quick-actions">
+              <button id="autoFillButton" type="button">標準配置</button>
+              <button id="clearButton" type="button">クリア</button>
+            </div>
+          </div>
+          <div id="planGrid" class="plan-grid"></div>
+        </section>
+
+        <aside class="status-panel" aria-label="判定">
+          <h2>判定</h2>
+          <div id="requirementsList" class="requirements"></div>
+          <label class="manual-credits">
+            その他認定単位
+            <input id="manualOtherInput" type="number" min="0" max="80" step="1" value="0">
+          </label>
+          <div id="alertsList" class="alerts"></div>
+        </aside>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

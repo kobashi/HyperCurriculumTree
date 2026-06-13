@@ -602,33 +602,6 @@ input {
   line-height: 1.2;
 }
 
-.tree-node-relations {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
-}
-
-.tree-node-link-badge {
-  display: inline-grid;
-  place-items: center;
-  min-height: 16px;
-  padding: 1px 5px;
-  border-radius: 4px;
-  color: #fff;
-  font-size: 9px;
-  font-weight: 900;
-  line-height: 1;
-}
-
-.tree-node-link-badge.branch {
-  background: #227e7e;
-}
-
-.tree-node-link-badge.merge {
-  background: #8e5b21;
-}
-
 .tree-node-meta {
   grid-column: 1 / -1;
   color: var(--muted);

@@ -1089,10 +1089,6 @@ function renderTree() {
             validatePlannedCourse(course);
             const disabled = course.category === "teacher" && !state.teacher;
             const counts = connectionCounts.get(node.id) || { incoming: 0, outgoing: 0 };
-            const relationBadges = [
-              counts.outgoing > 1 ? `<span class="tree-node-link-badge branch">分岐${counts.outgoing}</span>` : "",
-              counts.incoming > 1 ? `<span class="tree-node-link-badge merge">合流${counts.incoming}</span>` : ""
-            ].join("");
             const item = document.createElement("article");
             item.className = `tree-node level-${node.level || "none"}${state.planned.has(course.id) ? " is-planned" : ""}${disabled ? " is-disabled" : ""}${counts.outgoing > 1 ? " is-branch" : ""}${counts.incoming > 1 ? " is-merge" : ""}`;
             item.dataset.nodeId = node.id;
@@ -1103,7 +1099,6 @@ function renderTree() {
               <button type="button" class="tree-node-button" ${disabled ? "disabled" : ""} aria-expanded="${state.openTreeNodeId === node.id ? "true" : "false"}">
                 <span class="tree-node-code">${node.courseNumber}</span>
                 <span class="tree-node-name">${node.displayName}</span>
-                ${relationBadges ? `<span class="tree-node-relations">${relationBadges}</span>` : ""}
                 <span class="tree-node-meta">${node.level || categoryLabels[course.category]}${course.teacherRequired || node.teacherRequired ? " / 教" : ""}${state.planned.has(course.id) ? ` / ${plannedButtonLabel(course)}` : ""}</span>
               </button>
             `;

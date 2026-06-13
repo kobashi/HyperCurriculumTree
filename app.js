@@ -684,7 +684,7 @@ function visibleCourses() {
   return allCourses.filter((course) => {
     if (course.category === "courseRequired" && course.course !== state.course) return false;
     if (course.category === "specializedElective" && currentRequired.has(course.key)) return false;
-    if (course.category === "teacher" && !state.teacher) return false;
+    if (course.category === "teacher" && !state.teacher && !state.planned.has(course.id)) return false;
     if (filter !== "all" && course.category !== filter) return false;
     if (course.qualificationEligible) return years.size > 0 && terms.size > 0;
     if (!course.year) return terms.has(course.term);

@@ -479,7 +479,7 @@ input {
 
 .tree-section {
   position: relative;
-  z-index: 1;
+  z-index: auto;
   display: grid;
   gap: 6px;
   min-width: 1180px;
@@ -526,6 +526,8 @@ input {
 }
 
 .tree-lane {
+  position: relative;
+  z-index: 3;
   display: grid;
   align-content: center;
   min-height: 44px;
@@ -546,12 +548,12 @@ input {
 
 .tree-node {
   position: relative;
-  z-index: 2;
+  z-index: 3;
 }
 
 .tree-node-button {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 2px 5px;
   width: 100%;
   min-height: 38px;
@@ -560,6 +562,20 @@ input {
   border-radius: 6px;
   background: #fff;
   text-align: left;
+}
+
+.tree-node.is-branch .tree-node-button {
+  box-shadow: inset -3px 0 0 rgba(34, 126, 126, 0.7);
+}
+
+.tree-node.is-merge .tree-node-button {
+  box-shadow: inset 3px 0 0 rgba(142, 91, 33, 0.72);
+}
+
+.tree-node.is-branch.is-merge .tree-node-button {
+  box-shadow:
+    inset 3px 0 0 rgba(142, 91, 33, 0.72),
+    inset -3px 0 0 rgba(34, 126, 126, 0.7);
 }
 
 .tree-node-button[aria-expanded="true"],
@@ -580,6 +596,33 @@ input {
   font-size: 11px;
   font-weight: 900;
   line-height: 1.2;
+}
+
+.tree-node-relations {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.tree-node-link-badge {
+  display: inline-grid;
+  place-items: center;
+  min-height: 16px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.tree-node-link-badge.branch {
+  background: #227e7e;
+}
+
+.tree-node-link-badge.merge {
+  background: #8e5b21;
 }
 
 .tree-node-meta {
@@ -632,14 +675,48 @@ input {
 .tree-edges {
   position: absolute;
   inset: 0;
-  z-index: 0;
+  z-index: 2;
   pointer-events: none;
 }
 
 .tree-edge {
   fill: none;
-  stroke: rgba(20, 108, 104, 0.42);
+  stroke: rgba(20, 108, 104, 0.46);
   stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tree-edge.is-branch-edge {
+  stroke: rgba(34, 126, 126, 0.66);
+  stroke-width: 2.4;
+}
+
+.tree-edge.is-merge-edge {
+  stroke: rgba(142, 91, 33, 0.68);
+  stroke-width: 2.4;
+}
+
+.tree-edge.is-branch-edge.is-merge-edge {
+  stroke: rgba(112, 70, 151, 0.7);
+  stroke-width: 2.8;
+}
+
+.tree-edge-arrow {
+  fill: rgba(20, 108, 104, 0.62);
+}
+
+.tree-edge-hub {
+  stroke: #fff;
+  stroke-width: 1.5;
+}
+
+.tree-edge-hub.branch {
+  fill: #227e7e;
+}
+
+.tree-edge-hub.merge {
+  fill: #8e5b21;
 }
 
 .year-column {

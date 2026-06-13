@@ -1040,11 +1040,27 @@ function visibleTreeNodes() {
   return officialTreeNodes.filter((node) => node.page !== "teacher" || state.teacher);
 }
 
+function visibleTreeEdges(nodes = visibleTreeNodes()) {
+  const visibleIds = new Set(nodes.map((node) => node.id));
+  return officialTreeEdges.filter((edge) => visibleIds.has(edge.from) && visibleIds.has(edge.to));
+}
+
+function treeConnectionCounts(nodes = visibleTreeNodes()) {
+  const counts = new Map(nodes.map((node) => [node.id, { incoming: 0, outgoing: 0 }]));
+  visibleTreeEdges(nodes).forEach((edge) => {
+    counts.get(edge.from).outgoing += 1;
+    counts.get(edge.to).incoming += 1;
+  });
+  return counts;
+}
+
 function renderTree() {
   const tree = document.querySelector("#treeView");
   tree.innerHTML = "";
   const termLabels = TERMS.map((term) => `<div class="tree-term">${term.label}</div>`).join("");
-  const sections = [...new Set(visibleTreeNodes().map((node) => node.section))];
+  const nodes = visibleTreeNodes();
+  const connectionCounts = treeConnectionCounts(nodes);
+  const sections = [...new Set(nodes.map((node) => node.section))];
 
   const header = document.createElement("div");
   header.className = "tree-header";
@@ -1052,7 +1068,7 @@ function renderTree() {
   tree.appendChild(header);
 
   sections.forEach((section) => {
-    const sectionNodes = visibleTreeNodes().filter((node) => node.section === section);
+    const sectionNodes = nodes.filter((node) => node.section === section);
     const lanes = [...new Set(sectionNodes.map((node) => node.lane))];
     const block = document.createElement("section");
     block.className = `tree-section tree-section-${sectionClass(section)}`;
@@ -1072,14 +1088,22 @@ function renderTree() {
             if (!course) return;
             validatePlannedCourse(course);
             const disabled = course.category === "teacher" && !state.teacher;
+            const counts = connectionCounts.get(node.id) || { incoming: 0, outgoing: 0 };
+            const relationBadges = [
+              counts.outgoing > 1 ? `<span class="tree-node-link-badge branch">分岐${counts.outgoing}</span>` : "",
+              counts.incoming > 1 ? `<span class="tree-node-link-badge merge">合流${counts.incoming}</span>` : ""
+            ].join("");
             const item = document.createElement("article");
-            item.className = `tree-node level-${node.level || "none"}${state.planned.has(course.id) ? " is-planned" : ""}${disabled ? " is-disabled" : ""}`;
+            item.className = `tree-node level-${node.level || "none"}${state.planned.has(course.id) ? " is-planned" : ""}${disabled ? " is-disabled" : ""}${counts.outgoing > 1 ? " is-branch" : ""}${counts.incoming > 1 ? " is-merge" : ""}`;
             item.dataset.nodeId = node.id;
             item.dataset.courseId = course.id;
+            item.dataset.incoming = counts.incoming;
+            item.dataset.outgoing = counts.outgoing;
             item.innerHTML = `
               <button type="button" class="tree-node-button" ${disabled ? "disabled" : ""} aria-expanded="${state.openTreeNodeId === node.id ? "true" : "false"}">
                 <span class="tree-node-code">${node.courseNumber}</span>
                 <span class="tree-node-name">${node.displayName}</span>
+                ${relationBadges ? `<span class="tree-node-relations">${relationBadges}</span>` : ""}
                 <span class="tree-node-meta">${node.level || categoryLabels[course.category]}${course.teacherRequired || node.teacherRequired ? " / 教" : ""}${state.planned.has(course.id) ? ` / ${plannedButtonLabel(course)}` : ""}</span>
               </button>
             `;
@@ -1131,11 +1155,23 @@ function drawTreeEdges() {
   svg.setAttribute("viewBox", `0 0 ${tree.scrollWidth} ${tree.scrollHeight}`);
   svg.setAttribute("width", tree.scrollWidth);
   svg.setAttribute("height", tree.scrollHeight);
-  visibleTreeNodes();
-  officialTreeEdges.forEach((edge) => {
+  const nodes = visibleTreeNodes();
+  const connectionCounts = treeConnectionCounts(nodes);
+  const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+  defs.innerHTML = `
+    <marker id="tree-edge-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" class="tree-edge-arrow"></path>
+    </marker>
+  `;
+  svg.appendChild(defs);
+  const branchHubs = new Map();
+  const mergeHubs = new Map();
+  visibleTreeEdges(nodes).forEach((edge) => {
     const from = tree.querySelector(`[data-node-id="${edge.from}"] .tree-node-button`);
     const to = tree.querySelector(`[data-node-id="${edge.to}"] .tree-node-button`);
     if (!from || !to) return;
+    const fromCounts = connectionCounts.get(edge.from) || { incoming: 0, outgoing: 0 };
+    const toCounts = connectionCounts.get(edge.to) || { incoming: 0, outgoing: 0 };
     const a = from.getBoundingClientRect();
     const b = to.getBoundingClientRect();
     const x1 = a.right - treeRect.left + tree.scrollLeft;
@@ -1145,8 +1181,27 @@ function drawTreeEdges() {
     const mid = Math.max(x1 + 18, (x1 + x2) / 2);
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
     path.setAttribute("d", `M ${x1} ${y1} C ${mid} ${y1}, ${mid} ${y2}, ${x2} ${y2}`);
-    path.setAttribute("class", "tree-edge");
+    path.setAttribute("class", `tree-edge${fromCounts.outgoing > 1 ? " is-branch-edge" : ""}${toCounts.incoming > 1 ? " is-merge-edge" : ""}`);
+    path.setAttribute("marker-end", "url(#tree-edge-arrow)");
     svg.appendChild(path);
+    if (fromCounts.outgoing > 1) branchHubs.set(edge.from, { x: x1, y: y1 });
+    if (toCounts.incoming > 1) mergeHubs.set(edge.to, { x: x2, y: y2 });
+  });
+  branchHubs.forEach((point) => {
+    const hub = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    hub.setAttribute("class", "tree-edge-hub branch");
+    hub.setAttribute("cx", point.x);
+    hub.setAttribute("cy", point.y);
+    hub.setAttribute("r", 4);
+    svg.appendChild(hub);
+  });
+  mergeHubs.forEach((point) => {
+    const hub = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    hub.setAttribute("class", "tree-edge-hub merge");
+    hub.setAttribute("cx", point.x);
+    hub.setAttribute("cy", point.y);
+    hub.setAttribute("r", 4);
+    svg.appendChild(hub);
   });
 }
 

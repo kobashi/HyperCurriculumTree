@@ -434,6 +434,10 @@ input {
   margin-top: 14px;
 }
 
+.plan-grid[hidden] {
+  display: none;
+}
+
 .tree-view {
   position: relative;
   display: grid;

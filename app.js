@@ -438,7 +438,7 @@ const state = {
   gpa: 1,
   secondYearGpa: 1,
   manualOther: 0,
-  viewMode: "plan",
+  viewMode: "list",
   teacherNotice: "",
   openCourseId: null,
   openTreeNodeId: null,
@@ -641,6 +641,7 @@ function currentCourseRequiredKeys() {
 }
 
 function courseForTreeNode(node) {
+  if (node.courseId) return allCourses.find((course) => course.id === node.courseId) || null;
   const candidates = allCourses.filter((course) => course.key === normalizeName(node.courseName));
   if (node.page === "teacher") return candidates.find((course) => course.category === "teacher") || null;
   if (node.section === "コース共通") {
@@ -658,6 +659,57 @@ function courseForTreeNode(node) {
   }
   return candidates.find((course) => course.category === "specializedElective") || candidates[0] || null;
 }
+
+function treeSectionForCourse(course) {
+  if (course.category === "basicRequired") return "基礎教育必修";
+  if (course.category === "basicElective") return "基礎教育選択";
+  if (course.category === "commonRequired") return "コース共通";
+  if (course.category === "courseRequired") return `${course.course}コース`;
+  if (course.category === "specializedElective") {
+    if (course.qualificationEligible || course.intensive) return "集中・資格認定";
+    return "専門選択";
+  }
+  if (course.category === "otherDept") return "他学科履修";
+  if (course.category === "teacher") return "教職課程に関する科目";
+  return categoryLabels[course.category] || "その他";
+}
+
+function treeLaneForCourse(course) {
+  if (course.qualificationEligible) return "資格取得・科目履修";
+  if (course.intensive) return "集中講義";
+  if (course.teacherRequired) return "教職必修";
+  return categoryLabels[course.category] || "科目";
+}
+
+function syntheticTreeNodeForCourse(course) {
+  return {
+    id: `course-${course.id}`,
+    courseId: course.id,
+    courseName: course.name,
+    displayName: course.name,
+    page: course.category === "teacher" ? "teacher" : "catalog",
+    section: treeSectionForCourse(course),
+    lane: treeLaneForCourse(course),
+    term: openingTermForCourse(course),
+    level: "",
+    courseNumber: course.id,
+    teacherRequired: course.teacherRequired
+  };
+}
+
+const treeSectionOrder = [
+  "基礎教育必修",
+  "基礎教育選択",
+  "コース共通",
+  "情報システムコース",
+  "映像メディアコース",
+  "サウンド制作コース",
+  "メディアデザインコース",
+  "専門選択",
+  "集中・資格認定",
+  "他学科履修",
+  "教職課程に関する科目"
+];
 
 function optionMarkupForCourse(course) {
   const validTerms = validTermsForCourse(course);
@@ -1027,22 +1079,69 @@ function renderPlan() {
 }
 
 function sectionClass(section) {
+  if (section === "基礎教育必修") return "basic-required";
+  if (section === "基礎教育選択") return "basic-elective";
   if (section === "コース共通") return "common";
   if (section === "情報システムコース") return "system";
   if (section === "映像メディアコース") return "movie";
   if (section === "サウンド制作コース") return "sound";
   if (section === "メディアデザインコース") return "design";
+  if (section === "専門選択") return "specialized";
+  if (section === "集中・資格認定") return "intensive";
+  if (section === "他学科履修") return "other";
   if (section === "教職課程に関する科目") return "teacher";
   return "common";
 }
 
 function visibleTreeNodes() {
-  return officialTreeNodes.filter((node) => node.page !== "teacher" || state.teacher);
+  const courses = visibleCourses();
+  const visibleCourseIds = new Set(courses.map((course) => course.id));
+  const usedCourseIds = new Set();
+  const nodes = [];
+
+  officialTreeNodes.forEach((node) => {
+    const course = courseForTreeNode(node);
+    if (!course || !visibleCourseIds.has(course.id)) return;
+    usedCourseIds.add(course.id);
+    nodes.push(node);
+  });
+
+  courses.forEach((course) => {
+    if (usedCourseIds.has(course.id)) return;
+    nodes.push(syntheticTreeNodeForCourse(course));
+  });
+
+  return nodes;
 }
 
 function visibleTreeEdges(nodes = visibleTreeNodes()) {
   const visibleIds = new Set(nodes.map((node) => node.id));
-  return officialTreeEdges.filter((edge) => visibleIds.has(edge.from) && visibleIds.has(edge.to));
+  const edges = officialTreeEdges.filter((edge) => visibleIds.has(edge.from) && visibleIds.has(edge.to));
+  const nodesByCourseKey = new Map();
+  nodes.forEach((node) => {
+    const course = courseForTreeNode(node);
+    if (!course) return;
+    if (!nodesByCourseKey.has(course.key)) nodesByCourseKey.set(course.key, []);
+    nodesByCourseKey.get(course.key).push(node);
+  });
+  Object.entries(prereqs).forEach(([courseName, requiredNames]) => {
+    const toNodes = nodesByCourseKey.get(normalizeName(courseName)) || [];
+    requiredNames.forEach((requiredName) => {
+      const fromNodes = nodesByCourseKey.get(normalizeName(requiredName)) || [];
+      fromNodes.forEach((fromNode) => {
+        toNodes.forEach((toNode) => {
+          edges.push({ from: fromNode.id, to: toNode.id });
+        });
+      });
+    });
+  });
+  const seen = new Set();
+  return edges.filter((edge) => {
+    const key = `${edge.from}->${edge.to}`;
+    if (edge.from === edge.to || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function treeConnectionCounts(nodes = visibleTreeNodes()) {
@@ -1060,7 +1159,15 @@ function renderTree() {
   const termLabels = TERMS.map((term) => `<div class="tree-term">${term.label}</div>`).join("");
   const nodes = visibleTreeNodes();
   const connectionCounts = treeConnectionCounts(nodes);
-  const sections = [...new Set(nodes.map((node) => node.section))];
+  const sections = [...new Set(nodes.map((node) => node.section))]
+    .sort((a, b) => {
+      const aIndex = treeSectionOrder.indexOf(a);
+      const bIndex = treeSectionOrder.indexOf(b);
+      if (aIndex === -1 && bIndex === -1) return a.localeCompare(b, "ja");
+      if (aIndex === -1) return 1;
+      if (bIndex === -1) return -1;
+      return aIndex - bIndex;
+    });
 
   const header = document.createElement("div");
   header.className = "tree-header";
@@ -1201,12 +1308,14 @@ function drawTreeEdges() {
 }
 
 function renderViewMode() {
-  const planGrid = document.querySelector("#planGrid");
+  const workspace = document.querySelector(".workspace");
+  const catalog = document.querySelector("#catalogList");
   const tree = document.querySelector("#treeView");
   const isTree = state.viewMode === "tree";
-  planGrid.hidden = isTree;
+  catalog.hidden = isTree;
   tree.hidden = !isTree;
-  document.querySelector("#planModeButton").setAttribute("aria-pressed", String(!isTree));
+  workspace.classList.toggle("catalog-tree-mode", isTree);
+  document.querySelector("#listModeButton").setAttribute("aria-pressed", String(!isTree));
   document.querySelector("#treeModeButton").setAttribute("aria-pressed", String(isTree));
   if (isTree) drawTreeEdges();
 }
@@ -1341,8 +1450,8 @@ function init() {
   document.querySelectorAll(".year-filter, .term-filter").forEach((input) => {
     input.addEventListener("change", render);
   });
-  document.querySelector("#planModeButton").addEventListener("click", () => {
-    state.viewMode = "plan";
+  document.querySelector("#listModeButton").addEventListener("click", () => {
+    state.viewMode = "list";
     state.openTreeNodeId = null;
     render();
   });

@@ -189,6 +189,10 @@ input {
   align-items: start;
 }
 
+.workspace.catalog-tree-mode {
+  grid-template-columns: minmax(620px, 0.95fr) minmax(440px, 0.8fr) minmax(280px, 330px);
+}
+
 .catalog-panel,
 .plan-panel,
 .status-panel {
@@ -219,9 +223,19 @@ input {
   width: 132px;
 }
 
+.catalog-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .catalog-list {
   display: grid;
   gap: 8px;
+}
+
+.catalog-list[hidden] {
+  display: none;
 }
 
 .catalog-filters {
@@ -450,6 +464,10 @@ input {
   background: #f8faf8;
 }
 
+.catalog-tree {
+  max-height: calc(100vh - 230px);
+}
+
 .tree-view[hidden] {
   display: none;
 }
@@ -498,6 +516,16 @@ input {
   border-left-color: #7c878b;
 }
 
+.tree-section-basic-required {
+  background: #e9f3fb;
+  border-left-color: #4a91bd;
+}
+
+.tree-section-basic-elective {
+  background: #f2f6df;
+  border-left-color: #9cae42;
+}
+
 .tree-section-system {
   background: #e3f4ef;
   border-left-color: #26947b;
@@ -516,6 +544,21 @@ input {
 .tree-section-design {
   background: #fde8c7;
   border-left-color: #d69332;
+}
+
+.tree-section-specialized {
+  background: #ece8f7;
+  border-left-color: #7364b8;
+}
+
+.tree-section-intensive {
+  background: #fff0d8;
+  border-left-color: #c87922;
+}
+
+.tree-section-other {
+  background: #f0edf0;
+  border-left-color: #8a7f8e;
 }
 
 .tree-section-teacher {

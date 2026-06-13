@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>情報メディア学科 履修計画チェッカー</title>
-    <link rel="stylesheet" href="styles.css?v=tree-branching-20260613c">
+    <link rel="stylesheet" href="styles.css?v=catalog-tree-20260613">
   </head>
   <body>
     <main class="app-shell">
@@ -77,16 +77,22 @@
         <aside class="catalog-panel" aria-label="科目一覧">
           <div class="panel-head">
             <h2>科目</h2>
-            <select id="categoryFilter" aria-label="カテゴリ">
-              <option value="all">すべて</option>
-              <option value="basicRequired">基礎必修</option>
-              <option value="basicElective">基礎選択</option>
-              <option value="commonRequired">専門共通</option>
-              <option value="courseRequired">コース必修</option>
-              <option value="specializedElective">専門選択</option>
-              <option value="otherDept">他学科</option>
-              <option value="teacher">教職</option>
-            </select>
+            <div class="catalog-tools">
+              <div class="view-toggle" aria-label="科目表示モード">
+                <button id="listModeButton" type="button" aria-pressed="true">リスト</button>
+                <button id="treeModeButton" type="button" aria-pressed="false">ツリー</button>
+              </div>
+              <select id="categoryFilter" aria-label="カテゴリ">
+                <option value="all">すべて</option>
+                <option value="basicRequired">基礎必修</option>
+                <option value="basicElective">基礎選択</option>
+                <option value="commonRequired">専門共通</option>
+                <option value="courseRequired">コース必修</option>
+                <option value="specializedElective">専門選択</option>
+                <option value="otherDept">他学科</option>
+                <option value="teacher">教職</option>
+              </select>
+            </div>
           </div>
           <div class="catalog-filters" aria-label="科目表示フィルタ">
             <fieldset>
@@ -100,22 +106,18 @@
             </fieldset>
           </div>
           <div id="catalogList" class="catalog-list"></div>
+          <div id="treeView" class="tree-view catalog-tree" hidden></div>
         </aside>
 
         <section class="plan-panel" aria-label="4年間の履修計画">
           <div class="plan-head">
             <h2>4年間の履修計画</h2>
             <div class="quick-actions">
-              <div class="view-toggle" aria-label="表示モード">
-                <button id="planModeButton" type="button" aria-pressed="true">計画</button>
-                <button id="treeModeButton" type="button" aria-pressed="false">ツリー</button>
-              </div>
               <button id="autoFillButton" type="button">標準配置</button>
               <button id="clearButton" type="button">クリア</button>
             </div>
           </div>
           <div id="planGrid" class="plan-grid"></div>
-          <div id="treeView" class="tree-view" hidden></div>
         </section>
 
         <aside class="status-panel" aria-label="判定">
@@ -130,6 +132,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=tree-branching-20260613c"></script>
+    <script src="app.js?v=catalog-tree-20260613"></script>
   </body>
 </html>

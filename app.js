@@ -439,6 +439,7 @@ const state = {
   secondYearGpa: 1,
   manualOther: 0,
   viewMode: "list",
+  showTreeCodes: false,
   teacherNotice: "",
   openCourseId: null,
   openTreeNodeId: null,
@@ -823,12 +824,6 @@ function autoFill() {
       state.planned.set(course.id, openingTermForCourse(course));
     }
   });
-  const basicElectiveTargets = allCourses.filter((course) =>
-    course.category === "basicElective" && ["日本国憲法", "経営学", "スポーツⅠ", "スポーツⅡ", "哲学", "心理学", "統計学", "地域の課題"].includes(course.name)
-  );
-  basicElectiveTargets.forEach((course) => {
-    state.planned.set(course.id, openingTermForCourse(course));
-  });
   if (state.teacher) {
     addTeacherPlanCourses();
   }
@@ -1196,7 +1191,7 @@ function renderTree() {
             item.dataset.outgoing = counts.outgoing;
             item.innerHTML = `
               <button type="button" class="tree-node-button" ${disabled ? "disabled" : ""} aria-expanded="${state.openTreeNodeId === node.id ? "true" : "false"}">
-                <span class="tree-node-code">${node.courseNumber}</span>
+                ${state.showTreeCodes ? `<span class="tree-node-code">${node.courseNumber}</span>` : ""}
                 <span class="tree-node-name">${node.displayName}</span>
                 <span class="tree-node-meta">${node.level || categoryLabels[course.category]}${course.teacherRequired || node.teacherRequired ? " / 教" : ""}${state.planned.has(course.id) ? ` / ${plannedButtonLabel(course)}` : ""}</span>
               </button>
@@ -1319,9 +1314,13 @@ function renderViewMode() {
   const workspace = document.querySelector(".workspace");
   const catalog = document.querySelector("#catalogList");
   const tree = document.querySelector("#treeView");
+  const treeCodeToggleWrap = document.querySelector("#treeCodeToggleWrap");
+  const treeCodeToggle = document.querySelector("#treeCodeToggle");
   const isTree = state.viewMode === "tree";
   catalog.hidden = isTree;
   tree.hidden = !isTree;
+  treeCodeToggleWrap.hidden = !isTree;
+  treeCodeToggle.checked = state.showTreeCodes;
   workspace.classList.toggle("catalog-tree-mode", isTree);
   document.querySelector("#listModeButton").setAttribute("aria-pressed", String(!isTree));
   document.querySelector("#treeModeButton").setAttribute("aria-pressed", String(isTree));
@@ -1469,6 +1468,10 @@ function init() {
   document.querySelector("#treeModeButton").addEventListener("click", () => {
     state.viewMode = "tree";
     state.openCourseId = null;
+    render();
+  });
+  document.querySelector("#treeCodeToggle").addEventListener("change", (event) => {
+    state.showTreeCodes = event.target.checked;
     render();
   });
   document.querySelector("#autoFillButton").addEventListener("click", autoFill);

@@ -253,6 +253,25 @@ input {
   gap: 8px;
 }
 
+.tree-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f7faf8;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.tree-option input {
+  min-height: auto;
+  padding: 0;
+}
+
 .catalog-list {
   display: grid;
   gap: 8px;

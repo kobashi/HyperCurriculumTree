@@ -622,6 +622,10 @@ input {
   z-index: 3;
 }
 
+.tree-node.is-open {
+  z-index: 20;
+}
+
 .tree-node-button {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);

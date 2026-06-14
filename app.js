@@ -1197,7 +1197,7 @@ function renderTree() {
             const disabled = course.category === "teacher" && !state.teacher;
             const counts = connectionCounts.get(node.id) || { incoming: 0, outgoing: 0 };
             const item = document.createElement("article");
-            item.className = `tree-node level-${node.level || "none"}${state.planned.has(course.id) ? " is-planned" : ""}${disabled ? " is-disabled" : ""}${counts.outgoing > 1 ? " is-branch" : ""}${counts.incoming > 1 ? " is-merge" : ""}`;
+            item.className = `tree-node level-${node.level || "none"}${state.planned.has(course.id) ? " is-planned" : ""}${disabled ? " is-disabled" : ""}${counts.outgoing > 1 ? " is-branch" : ""}${counts.incoming > 1 ? " is-merge" : ""}${state.openTreeNodeId === node.id ? " is-open" : ""}`;
             item.dataset.nodeId = node.id;
             item.dataset.courseId = course.id;
             item.dataset.incoming = counts.incoming;

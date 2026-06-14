@@ -440,6 +440,7 @@ const state = {
   manualOther: 0,
   viewMode: "list",
   showTreeCodes: false,
+  showTreeMeta: false,
   teacherNotice: "",
   openCourseId: null,
   openTreeNodeId: null,
@@ -1193,7 +1194,7 @@ function renderTree() {
               <button type="button" class="tree-node-button" ${disabled ? "disabled" : ""} aria-expanded="${state.openTreeNodeId === node.id ? "true" : "false"}">
                 ${state.showTreeCodes ? `<span class="tree-node-code">${node.courseNumber}</span>` : ""}
                 <span class="tree-node-name">${node.displayName}</span>
-                <span class="tree-node-meta">${node.level || categoryLabels[course.category]}${course.teacherRequired || node.teacherRequired ? " / 教" : ""}${state.planned.has(course.id) ? ` / ${plannedButtonLabel(course)}` : ""}</span>
+                ${state.showTreeMeta ? `<span class="tree-node-meta">${node.level || categoryLabels[course.category]}${course.teacherRequired || node.teacherRequired ? " / 教" : ""}${state.planned.has(course.id) ? ` / ${plannedButtonLabel(course)}` : ""}</span>` : ""}
               </button>
             `;
             const button = item.querySelector(".tree-node-button");
@@ -1316,11 +1317,15 @@ function renderViewMode() {
   const tree = document.querySelector("#treeView");
   const treeCodeToggleWrap = document.querySelector("#treeCodeToggleWrap");
   const treeCodeToggle = document.querySelector("#treeCodeToggle");
+  const treeMetaToggleWrap = document.querySelector("#treeMetaToggleWrap");
+  const treeMetaToggle = document.querySelector("#treeMetaToggle");
   const isTree = state.viewMode === "tree";
   catalog.hidden = isTree;
   tree.hidden = !isTree;
   treeCodeToggleWrap.hidden = !isTree;
   treeCodeToggle.checked = state.showTreeCodes;
+  treeMetaToggleWrap.hidden = !isTree;
+  treeMetaToggle.checked = state.showTreeMeta;
   workspace.classList.toggle("catalog-tree-mode", isTree);
   document.querySelector("#listModeButton").setAttribute("aria-pressed", String(!isTree));
   document.querySelector("#treeModeButton").setAttribute("aria-pressed", String(isTree));
@@ -1472,6 +1477,10 @@ function init() {
   });
   document.querySelector("#treeCodeToggle").addEventListener("change", (event) => {
     state.showTreeCodes = event.target.checked;
+    render();
+  });
+  document.querySelector("#treeMetaToggle").addEventListener("change", (event) => {
+    state.showTreeMeta = event.target.checked;
     render();
   });
   document.querySelector("#autoFillButton").addEventListener("click", autoFill);

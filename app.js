@@ -693,6 +693,26 @@ function syntheticTreeNodeForCourse(course) {
   };
 }
 
+const treeShortNameMap = new Map([
+  ["プラクティカル・イングリッシュⅠ", "プラクティカル英語Ⅰ"],
+  ["プラクティカル・イングリッシュⅡ", "プラクティカル英語Ⅱ"],
+  ["フードビジネス・イングリッシュⅠ", "フードビジネス英語Ⅰ"],
+  ["フードビジネス・イングリッシュⅡ", "フードビジネス英語Ⅱ"],
+  ["総合的な学習の時間の指導法", "総合的な学習時間の指導法"],
+  ["教育の方法と技術（情報通信技術の活用含む）", "教育の方法と技術（ICT活用）"]
+]);
+
+function treeDisplayName(name) {
+  return treeShortNameMap.get(name) || name;
+}
+
+function treeNameFontSize(name) {
+  const length = Array.from((name || "").normalize("NFKC")).length;
+  if (length >= 16) return 8.6;
+  if (length >= 13) return 9.2;
+  return 10.5;
+}
+
 const treeSectionOrder = [
   "基礎教育必修",
   "基礎教育選択",
@@ -1181,11 +1201,12 @@ function renderTree() {
           .forEach((node) => {
             const course = courseForTreeNode(node);
             if (!course) return;
+            const treeName = treeDisplayName(node.displayName);
             validatePlannedCourse(course);
             const disabled = course.category === "teacher" && !state.teacher;
             const counts = connectionCounts.get(node.id) || { incoming: 0, outgoing: 0 };
             const item = document.createElement("article");
-            item.className = `tree-node level-${node.level || "none"}${state.planned.has(course.id) ? " is-planned" : ""}${disabled ? " is-disabled" : ""}${counts.outgoing > 1 ? " is-branch" : ""}${counts.incoming > 1 ? " is-merge" : ""}${state.openTreeNodeId === node.id ? " is-open" : ""}`;
+            item.className = `tree-node level-${node.level || "none"}${state.planned.has(course.id) ? " is-planned" : ""}${disabled ? " is-disabled" : ""}${counts.outgoing > 1 ? " is-branch" : ""}${counts.incoming > 1 ? " is-merge" : ""}${state.openTreeNodeId === node.id ? " is-open" : ""}${state.showTreeMeta ? " has-meta" : ""}${state.showTreeCodes ? " has-code" : ""}`;
             item.dataset.nodeId = node.id;
             item.dataset.courseId = course.id;
             item.dataset.incoming = counts.incoming;
@@ -1193,7 +1214,7 @@ function renderTree() {
             item.innerHTML = `
               <button type="button" class="tree-node-button" ${disabled ? "disabled" : ""} aria-expanded="${state.openTreeNodeId === node.id ? "true" : "false"}">
                 ${state.showTreeCodes ? `<span class="tree-node-code">${node.courseNumber}</span>` : ""}
-                <span class="tree-node-name">${node.displayName}</span>
+                <span class="tree-node-name" style="--tree-name-size:${treeNameFontSize(treeName)}px" title="${node.displayName}">${treeName}</span>
                 ${state.showTreeMeta ? `<span class="tree-node-meta">${node.level || categoryLabels[course.category]}${course.teacherRequired || node.teacherRequired ? " / 教" : ""}${state.planned.has(course.id) ? ` / ${plannedButtonLabel(course)}` : ""}</span>` : ""}
               </button>
             `;

@@ -1307,6 +1307,22 @@ function drawTreeEdges() {
   });
 }
 
+function updateTreeMenuPlacement() {
+  const tree = document.querySelector("#treeView");
+  const menu = tree?.querySelector(".tree-node-menu");
+  const item = menu?.closest(".tree-node");
+  if (!tree || !menu || !item || tree.hidden) return;
+  menu.classList.remove("open-up");
+  const treeRect = tree.getBoundingClientRect();
+  const itemRect = item.getBoundingClientRect();
+  const menuRect = menu.getBoundingClientRect();
+  const spaceBelow = treeRect.bottom - itemRect.bottom;
+  const spaceAbove = itemRect.top - treeRect.top;
+  if (menuRect.height > spaceBelow - 8 && spaceAbove > spaceBelow) {
+    menu.classList.add("open-up");
+  }
+}
+
 function renderViewMode() {
   const workspace = document.querySelector(".workspace");
   const catalog = document.querySelector("#catalogList");
@@ -1317,7 +1333,10 @@ function renderViewMode() {
   workspace.classList.toggle("catalog-tree-mode", isTree);
   document.querySelector("#listModeButton").setAttribute("aria-pressed", String(!isTree));
   document.querySelector("#treeModeButton").setAttribute("aria-pressed", String(isTree));
-  if (isTree) drawTreeEdges();
+  if (isTree) {
+    drawTreeEdges();
+    requestAnimationFrame(updateTreeMenuPlacement);
+  }
 }
 
 function setMeter(id, value, target) {

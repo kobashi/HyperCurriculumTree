@@ -694,16 +694,22 @@ input {
 .tree-node-menu {
   position: absolute;
   z-index: 6;
+  top: calc(100% + 4px);
+  left: 0;
   display: grid;
   grid-template-columns: minmax(170px, 1fr) 30px;
   gap: 5px;
   min-width: 230px;
-  margin-top: 4px;
   padding: 6px;
   border: 1px solid var(--line);
   border-radius: 7px;
   background: #fff;
   box-shadow: var(--shadow);
+}
+
+.tree-node-menu.open-up {
+  top: auto;
+  bottom: calc(100% + 4px);
 }
 
 .tree-node-menu select,

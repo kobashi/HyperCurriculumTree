@@ -496,6 +496,8 @@ input {
 }
 
 .tree-view {
+  --tree-section-left-offset: 15px;
+  --tree-section-right-offset: 8px;
   position: relative;
   display: grid;
   gap: 10px;
@@ -528,8 +530,11 @@ input {
   top: 0;
   z-index: 4;
   align-items: end;
+  padding-left: var(--tree-section-left-offset);
+  padding-right: var(--tree-section-right-offset);
   padding-bottom: 2px;
   background: #f8faf8;
+  box-sizing: border-box;
 }
 
 .tree-term {

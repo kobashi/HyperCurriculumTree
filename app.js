@@ -661,7 +661,6 @@ function courseForTreeNode(node) {
 }
 
 function treeSectionForCourse(course) {
-  if (course.qualificationEligible || course.intensive) return "集中・資格認定";
   if (course.category === "basicRequired") return "基礎教育必修";
   if (course.category === "basicElective") return "基礎教育選択";
   if (course.category === "commonRequired") return "コース共通";
@@ -673,9 +672,6 @@ function treeSectionForCourse(course) {
 }
 
 function treeLaneForCourse(course) {
-  if (course.qualificationEligible) return "資格取得・科目履修";
-  if (course.intensive) return "集中講義";
-  if (course.teacherRequired) return "教職必修";
   return categoryLabels[course.category] || "科目";
 }
 
@@ -704,7 +700,6 @@ const treeSectionOrder = [
   "サウンド制作コース",
   "メディアデザインコース",
   "専門選択",
-  "集中・資格認定",
   "他学科履修",
   "教職課程に関する科目"
 ];
@@ -1085,7 +1080,6 @@ function sectionClass(section) {
   if (section === "サウンド制作コース") return "sound";
   if (section === "メディアデザインコース") return "design";
   if (section === "専門選択") return "specialized";
-  if (section === "集中・資格認定") return "intensive";
   if (section === "他学科履修") return "other";
   if (section === "教職課程に関する科目") return "teacher";
   return "common";
@@ -1101,9 +1095,7 @@ function visibleTreeNodes() {
     const course = courseForTreeNode(node);
     if (!course || !visibleCourseIds.has(course.id)) return;
     usedCourseIds.add(course.id);
-    nodes.push(course.qualificationEligible || course.intensive
-      ? { ...node, section: treeSectionForCourse(course), lane: treeLaneForCourse(course) }
-      : node);
+    nodes.push(node);
   });
 
   courses.forEach((course) => {

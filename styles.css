@@ -53,7 +53,7 @@ button:hover {
 }
 
 .app-shell {
-  width: min(1680px, calc(100vw - 32px));
+  width: min(2400px, calc(100vw - 24px));
   margin: 0 auto;
   padding: 24px 0 32px;
 }
@@ -190,31 +190,35 @@ input {
 }
 
 .workspace.catalog-tree-mode {
-  grid-template-columns: minmax(0, 1fr);
-  justify-items: start;
+  grid-template-areas:
+    "catalog catalog"
+    "plan status";
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.7fr);
+  align-items: start;
 }
 
 .workspace.catalog-tree-mode .catalog-panel,
 .workspace.catalog-tree-mode .plan-panel,
 .workspace.catalog-tree-mode .status-panel {
-  width: 100%;
+  width: auto;
+  max-width: none;
 }
 
 .workspace.catalog-tree-mode .catalog-panel {
+  grid-area: catalog;
   position: static;
   max-height: none;
   overflow: visible;
-  width: min(100%, 1430px);
 }
 
 .workspace.catalog-tree-mode .plan-panel {
-  width: min(100%, 980px);
+  grid-area: plan;
 }
 
 .workspace.catalog-tree-mode .status-panel {
+  grid-area: status;
   position: static;
   max-height: none;
-  width: min(100%, 640px);
 }
 
 .catalog-panel,
@@ -268,6 +272,10 @@ input {
   color: var(--muted);
   font-size: 12px;
   font-weight: 800;
+}
+
+.tree-option[hidden] {
+  display: none !important;
 }
 
 .tree-option input {
@@ -512,8 +520,10 @@ input {
   position: relative;
   display: grid;
   gap: 10px;
+  width: fit-content;
+  max-width: 100%;
   margin-top: 14px;
-  overflow: auto;
+  overflow: visible;
   padding: 8px 8px 16px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -521,7 +531,7 @@ input {
 }
 
 .catalog-tree {
-  max-height: calc(100vh - 230px);
+  max-height: none;
 }
 
 .tree-view[hidden] {
@@ -1083,6 +1093,23 @@ input {
   }
 }
 
+@media (min-width: 2200px) {
+  .workspace.catalog-tree-mode {
+    grid-template-areas: "catalog plan status";
+    grid-template-columns: minmax(1420px, 1.6fr) minmax(460px, 1fr) minmax(340px, 0.85fr);
+  }
+}
+
+@media (max-width: 1180px) {
+  .workspace.catalog-tree-mode {
+    grid-template-areas:
+      "catalog"
+      "plan"
+      "status";
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 760px) {
   .app-shell {
     width: min(100vw - 18px, 1500px);
@@ -1092,6 +1119,14 @@ input {
   .controls,
   .summary-grid,
   .plan-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace.catalog-tree-mode {
+    grid-template-areas:
+      "catalog"
+      "plan"
+      "status";
     grid-template-columns: 1fr;
   }
 }

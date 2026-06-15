@@ -53,7 +53,7 @@ button:hover {
 }
 
 .app-shell {
-  width: min(1500px, calc(100vw - 32px));
+  width: min(1680px, calc(100vw - 32px));
   margin: 0 auto;
   padding: 24px 0 32px;
 }
@@ -204,7 +204,7 @@ input {
   position: static;
   max-height: none;
   overflow: visible;
-  width: min(100%, 1380px);
+  width: min(100%, 1430px);
 }
 
 .workspace.catalog-tree-mode .plan-panel {
@@ -226,12 +226,15 @@ input {
   box-shadow: var(--shadow);
 }
 
-.catalog-panel,
-.status-panel {
+.catalog-panel {
   position: sticky;
   top: 12px;
   max-height: calc(100vh - 24px);
   overflow: auto;
+  padding: 14px;
+}
+
+.status-panel {
   padding: 14px;
 }
 
@@ -460,27 +463,35 @@ input {
 }
 
 .view-toggle {
-  display: flex;
-  gap: 2px;
-  padding: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #eef2f0;
-}
-
-.view-toggle button {
-  min-height: 30px;
-  padding: 0 10px;
-  border-color: transparent;
-  background: transparent;
+  color: var(--ink);
   font-size: 12px;
   font-weight: 800;
 }
 
-.view-toggle button[aria-pressed="true"] {
-  border-color: rgba(20, 108, 104, 0.22);
+.view-toggle-label {
+  color: var(--muted);
+}
+
+.view-toggle-value {
+  min-width: 3.8em;
+  padding: 2px 8px;
+  border: 1px solid rgba(20, 108, 104, 0.22);
+  border-radius: 999px;
   background: #fff;
   color: var(--brand-dark);
+  text-align: center;
+}
+
+.view-toggle[aria-pressed="true"] .view-toggle-value {
+  background: #d9ece8;
 }
 
 .plan-grid {

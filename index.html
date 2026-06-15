@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>情報メディア学科 履修計画チェッカー</title>
-    <link rel="stylesheet" href="styles.css?v=catalog-tree-20260615j">
+    <link rel="stylesheet" href="styles.css?v=catalog-tree-20260615l">
   </head>
   <body>
     <main class="app-shell">
@@ -78,10 +78,10 @@
           <div class="panel-head">
             <h2>科目</h2>
             <div class="catalog-tools">
-              <div class="view-toggle" aria-label="科目表示モード">
-                <button id="listModeButton" type="button" aria-pressed="true">リスト</button>
-                <button id="treeModeButton" type="button" aria-pressed="false">ツリー</button>
-              </div>
+              <button id="viewModeToggle" class="view-toggle" type="button" aria-pressed="false" aria-label="科目表示モード">
+                <span class="view-toggle-label">表示</span>
+                <span id="viewModeValue" class="view-toggle-value">リスト</span>
+              </button>
               <label id="treeCodeToggleWrap" class="tree-option" hidden>
                 <input id="treeCodeToggle" type="checkbox">
                 <span>番号</span>
@@ -89,6 +89,10 @@
               <label id="treeMetaToggleWrap" class="tree-option" hidden>
                 <input id="treeMetaToggle" type="checkbox">
                 <span>補足</span>
+              </label>
+              <label id="treeOtherDeptToggleWrap" class="tree-option" hidden>
+                <input id="treeOtherDeptToggle" type="checkbox">
+                <span>他学科</span>
               </label>
               <select id="categoryFilter" aria-label="カテゴリ">
                 <option value="all">すべて</option>
@@ -140,6 +144,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=catalog-tree-20260615j"></script>
+    <script src="app.js?v=catalog-tree-20260615l"></script>
   </body>
 </html>

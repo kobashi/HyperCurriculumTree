@@ -9,7 +9,8 @@ const TERMS = [
   { id: "4後", year: 4, label: "4年後期" }
 ];
 
-const COURSES = ["情報システム", "映像メディア", "サウンド制作", "メディアデザイン"];
+const NO_COURSE = "なし";
+const COURSES = [NO_COURSE, "情報システム", "映像メディア", "サウンド制作", "メディアデザイン"];
 
 const aliases = new Map([
   ["Webプログラミング", "Ｗｅｂプログラミング"],
@@ -433,7 +434,7 @@ const prereqs = {
 };
 
 const state = {
-  course: "情報システム",
+  course: NO_COURSE,
   teacher: false,
   gpa: 1,
   secondYearGpa: 1,
@@ -441,6 +442,7 @@ const state = {
   viewMode: "list",
   showTreeCodes: false,
   showTreeMeta: false,
+  showTreeOtherDept: false,
   teacherNotice: "",
   openCourseId: null,
   openTreeNodeId: null,
@@ -638,7 +640,7 @@ const allCourses = buildCourses();
 
 function currentCourseRequiredKeys() {
   return new Set(allCourses
-    .filter((course) => course.category === "courseRequired" && course.course === state.course)
+    .filter((course) => state.course !== NO_COURSE && course.category === "courseRequired" && course.course === state.course)
     .map((course) => course.key));
 }
 
@@ -653,7 +655,7 @@ function courseForTreeNode(node) {
       null;
   }
   const courseName = node.section.replace(/コース$/, "");
-  if (courseName === state.course) {
+  if (state.course !== NO_COURSE && courseName === state.course) {
     return candidates.find((course) => course.category === "courseRequired" && course.course === state.course) ||
       candidates.find((course) => course.category === "specializedElective") ||
       candidates[0] ||
@@ -810,7 +812,7 @@ function teacherPlanCourses() {
   const preferred = new Map();
   allCourses.filter((course) =>
     (course.category === "teacher" || course.teacherRequired) &&
-    (course.category !== "courseRequired" || course.course === state.course)
+    (course.category !== "courseRequired" || (state.course !== NO_COURSE && course.course === state.course))
   ).forEach((course) => {
     const key = course.key;
     const existing = preferred.get(key);
@@ -839,7 +841,7 @@ function autoFill() {
   state.openTreeNodeId = null;
   resetCatalogFilters();
   allCourses.forEach((course) => {
-    if (course.category === "courseRequired" && course.course !== state.course) return;
+    if (course.category === "courseRequired" && (state.course === NO_COURSE || course.course !== state.course)) return;
     if (course.category === "teacher" && !state.teacher) return;
     if (["basicRequired", "commonRequired", "courseRequired"].includes(course.category)) {
       state.planned.set(course.id, openingTermForCourse(course));
@@ -1102,7 +1104,7 @@ function sectionClass(section) {
 }
 
 function visibleTreeNodes() {
-  const courses = visibleCourses();
+  const courses = visibleCourses().filter((course) => state.showTreeOtherDept || course.category !== "otherDept");
   const visibleCourseIds = new Set(courses.map((course) => course.id));
   const usedCourseIds = new Set();
   const nodes = [];
@@ -1340,6 +1342,8 @@ function renderViewMode() {
   const treeCodeToggle = document.querySelector("#treeCodeToggle");
   const treeMetaToggleWrap = document.querySelector("#treeMetaToggleWrap");
   const treeMetaToggle = document.querySelector("#treeMetaToggle");
+  const treeOtherDeptToggleWrap = document.querySelector("#treeOtherDeptToggleWrap");
+  const treeOtherDeptToggle = document.querySelector("#treeOtherDeptToggle");
   const isTree = state.viewMode === "tree";
   catalog.hidden = isTree;
   tree.hidden = !isTree;
@@ -1347,9 +1351,14 @@ function renderViewMode() {
   treeCodeToggle.checked = state.showTreeCodes;
   treeMetaToggleWrap.hidden = !isTree;
   treeMetaToggle.checked = state.showTreeMeta;
+  treeOtherDeptToggleWrap.hidden = !isTree;
+  treeOtherDeptToggle.checked = state.showTreeOtherDept;
   workspace.classList.toggle("catalog-tree-mode", isTree);
-  document.querySelector("#listModeButton").setAttribute("aria-pressed", String(!isTree));
-  document.querySelector("#treeModeButton").setAttribute("aria-pressed", String(isTree));
+  const viewModeToggle = document.querySelector("#viewModeToggle");
+  const viewModeValue = document.querySelector("#viewModeValue");
+  viewModeToggle.setAttribute("aria-pressed", String(isTree));
+  viewModeToggle.setAttribute("aria-label", `科目表示モード: ${isTree ? "ツリー" : "リスト"}`);
+  viewModeValue.textContent = isTree ? "ツリー" : "リスト";
   if (isTree) {
     drawTreeEdges();
     requestAnimationFrame(updateTreeMenuPlacement);
@@ -1486,14 +1495,14 @@ function init() {
   document.querySelectorAll(".year-filter, .term-filter").forEach((input) => {
     input.addEventListener("change", render);
   });
-  document.querySelector("#listModeButton").addEventListener("click", () => {
-    state.viewMode = "list";
-    state.openTreeNodeId = null;
-    render();
-  });
-  document.querySelector("#treeModeButton").addEventListener("click", () => {
-    state.viewMode = "tree";
-    state.openCourseId = null;
+  document.querySelector("#viewModeToggle").addEventListener("click", () => {
+    if (state.viewMode === "tree") {
+      state.viewMode = "list";
+      state.openTreeNodeId = null;
+    } else {
+      state.viewMode = "tree";
+      state.openCourseId = null;
+    }
     render();
   });
   document.querySelector("#treeCodeToggle").addEventListener("change", (event) => {
@@ -1502,6 +1511,11 @@ function init() {
   });
   document.querySelector("#treeMetaToggle").addEventListener("change", (event) => {
     state.showTreeMeta = event.target.checked;
+    render();
+  });
+  document.querySelector("#treeOtherDeptToggle").addEventListener("change", (event) => {
+    state.showTreeOtherDept = event.target.checked;
+    state.openTreeNodeId = null;
     render();
   });
   document.querySelector("#autoFillButton").addEventListener("click", autoFill);

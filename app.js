@@ -1316,7 +1316,7 @@ function renderTree() {
   const nodes = visibleTreeNodes();
   const displayTerms = treeTerms(nodes);
   tree.style.setProperty("--tree-grid-template", `136px repeat(${displayTerms.length}, minmax(152px, 1fr))`);
-  tree.style.setProperty("--tree-grid-min-width", `${136 + (displayTerms.length * 152) + (displayTerms.length * 6)}px`);
+  tree.style.setProperty("--tree-grid-min-width", `${136 + (displayTerms.length * 152) + (displayTerms.length * 12)}px`);
   const termLabels = displayTerms.map((term) => `<div class="tree-term">${term.label}</div>`).join("");
   const connectionCounts = treeConnectionCounts(nodes);
   const sections = [...new Set(nodes.map((node) => node.section))]
@@ -1454,15 +1454,21 @@ function drawTreeEdges() {
         y1 = a.top - treeRect.top + tree.scrollTop;
         y2 = b.bottom - treeRect.top + tree.scrollTop;
       }
-      const midY = (y1 + y2) / 2;
-      d = `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
+      const spanY = Math.abs(y2 - y1);
+      const curveY = Math.max(18, spanY * 0.32);
+      const cp1y = y1 + (y2 >= y1 ? curveY : -curveY);
+      const cp2y = y2 - (y2 >= y1 ? curveY : -curveY);
+      d = `M ${x1} ${y1} C ${x1} ${cp1y}, ${x2} ${cp2y}, ${x2} ${y2}`;
     } else {
       x1 = a.right - treeRect.left + tree.scrollLeft;
       y1 = a.top + a.height / 2 - treeRect.top + tree.scrollTop;
       x2 = b.left - treeRect.left + tree.scrollLeft;
       y2 = b.top + b.height / 2 - treeRect.top + tree.scrollTop;
-      const mid = Math.max(x1 + 18, (x1 + x2) / 2);
-      d = `M ${x1} ${y1} C ${mid} ${y1}, ${mid} ${y2}, ${x2} ${y2}`;
+      const spanX = Math.max(24, Math.abs(x2 - x1));
+      const curveX = Math.min(Math.max(4, spanX * 0.34), Math.max(4, (spanX / 2) - 2));
+      const cp1x = x1 + curveX;
+      const cp2x = x2 - curveX;
+      d = `M ${x1} ${y1} C ${cp1x} ${y1}, ${cp2x} ${y2}, ${x2} ${y2}`;
     }
     path.setAttribute("d", d);
     path.setAttribute("class", `tree-edge${fromCounts.outgoing > 1 ? " is-branch-edge" : ""}${toCounts.incoming > 1 ? " is-merge-edge" : ""}`);

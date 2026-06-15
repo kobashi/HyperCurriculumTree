@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>情報メディア学科 履修計画チェッカー</title>
-    <link rel="stylesheet" href="styles.css?v=catalog-tree-20260615m">
+    <link rel="stylesheet" href="styles.css?v=catalog-tree-20260615n">
   </head>
   <body>
     <main class="app-shell">
@@ -94,16 +94,6 @@
                 <input id="treeOtherDeptToggle" type="checkbox">
                 <span>他学科</span>
               </label>
-              <select id="categoryFilter" aria-label="カテゴリ">
-                <option value="all">すべて</option>
-                <option value="basicRequired">基礎必修</option>
-                <option value="basicElective">基礎選択</option>
-                <option value="commonRequired">専門共通</option>
-                <option value="courseRequired">コース必修</option>
-                <option value="specializedElective">専門選択</option>
-                <option value="otherDept">他学科</option>
-                <option value="teacher">教職</option>
-              </select>
             </div>
           </div>
           <div class="catalog-filters" aria-label="科目表示フィルタ">
@@ -115,6 +105,13 @@
               <label><input class="year-filter" type="checkbox" value="4" checked>4</label>
               <label><input class="term-filter" type="checkbox" value="前" checked>前</label>
               <label><input class="term-filter" type="checkbox" value="後" checked>後</label>
+              <label><input class="category-filter" type="checkbox" value="basicRequired" checked>基必</label>
+              <label><input class="category-filter" type="checkbox" value="basicElective" checked>基選</label>
+              <label><input class="category-filter" type="checkbox" value="commonRequired" checked>共通</label>
+              <label><input class="category-filter" type="checkbox" value="courseRequired" checked>コ必</label>
+              <label><input class="category-filter" type="checkbox" value="specializedElective" checked>専選</label>
+              <label><input class="category-filter" type="checkbox" value="otherDept">他学</label>
+              <label><input class="category-filter" type="checkbox" value="teacher">教職</label>
             </fieldset>
           </div>
           <div id="catalogList" class="catalog-list"></div>
@@ -144,6 +141,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=catalog-tree-20260615m"></script>
+    <script src="app.js?v=catalog-tree-20260615n"></script>
   </body>
 </html>

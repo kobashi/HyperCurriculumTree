@@ -172,6 +172,8 @@ const specializedElectives = [
 ];
 
 const basicElectives = [
+  ["BE-000", "プラクティカル・イングリッシュⅢ", 2, 2, "前"],
+  ["BE-000A", "プラクティカル・イングリッシュⅣ", 2, 2, "後"],
   ["BE-001", "哲学", 2, "前"],
   ["BE-002", "心理学", 2, "前"],
   ["BE-003", "海外事情", 2, "前"],
@@ -240,6 +242,7 @@ const officialTreeNodes = [
   ["common-info-processing", "情報処理演習", "professional", "コース共通", "情報処理系列", "1後", "初級", "2104", true],
   ["common-data-science", "データサイエンス", "professional", "コース共通", "情報処理系列", "2後", "中級", "4103", false],
   ["common-ai", "人工知能", "professional", "コース共通", "情報処理系列", "3前", "中級", "5102", false],
+  ["common-info-concepts", "情報学概論", "professional", "コース共通", "情報資格系列", "1前", "初級", "1104", true],
   ["common-media-theory", "情報メディア論", "professional", "コース共通", "総合・その他", "1前", "初級", "1105", false],
   ["common-ethics", "情報社会の倫理と職業", "professional", "コース共通", "総合・その他", "1後", "中級", "2106", true],
   ["common-it-management", "ＩＴマネジメント", "professional", "コース共通", "情報資格系列", "1後", "初級", "2105", false],
@@ -302,8 +305,8 @@ const officialTreeNodes = [
   ["sound-broadcast", "放送・配信論", "professional", "サウンド制作コース", "音響技術系列", "3後", "上級", "6203", false],
   ["sound-production-work", "サウンドプロダクション", "professional", "サウンド制作コース", "音響技術系列", "3後", "上級", "6303", false],
   ["sound-midi-1", "ＭＩＤＩ制作演習Ⅰ", "professional", "サウンド制作コース", "楽曲制作系列", "1後", "初級", "2301", false],
-  ["sound-music-theory", "音楽理論", "professional", "サウンド制作コース", "楽曲制作系列", "2前", "初中級", "3302", false],
   ["sound-midi-2", "ＭＩＤＩ制作演習Ⅱ", "professional", "サウンド制作コース", "楽曲制作系列", "2前", "初中級", "3303", false],
+  ["sound-music-theory", "音楽理論", "professional", "サウンド制作コース", "楽曲制作系列", "2前", "初中級", "3302", false],
   ["sound-creation", "サウンドクリエーション", "professional", "サウンド制作コース", "楽曲制作系列", "2後", "中級", "4304", false],
 
   ["design-graphic", "グラフィックデザイン", "professional", "メディアデザインコース", "メディアデザイン系列", "1後", "初級", "2401", false],
@@ -356,11 +359,10 @@ const officialTreeEdges = [
   ["common-program-exercise-1", "common-data-science"],
   ["common-info-processing", "common-data-science"],
   ["common-data-science", "common-ai"],
+  ["common-info-concepts", "common-it-management"],
   ["common-media-theory", "common-ethics"],
   ["common-it-management", "common-it-strategy"],
   ["common-it-strategy", "common-fe"],
-  ["common-it-strategy", "common-software-basic"],
-  ["common-it-strategy", "common-info-management"],
   ["common-special-seminar-1", "common-special-seminar-2"],
   ["common-special-seminar-2", "common-art-design"],
   ["common-seminar-1", "common-seminar-2"],
@@ -370,8 +372,6 @@ const officialTreeEdges = [
   ["system-algorithm", "system-game-programming"],
   ["system-game-programming", "system-program-3"],
   ["system-program-3", "system-program-4"],
-  ["system-program-3", "system-sound-programming"],
-  ["system-program-4", "system-knowledge"],
   ["system-network-1", "system-network-2"],
   ["system-network-2", "system-mobile"],
   ["system-intro", "system-basic-theory"],
@@ -391,10 +391,9 @@ const officialTreeEdges = [
   ["sound-acoustics", "sound-production"],
   ["sound-ear-training", "sound-production"],
   ["sound-production", "sound-recording"],
-  ["sound-midi-1", "sound-music-theory"],
   ["sound-midi-1", "sound-midi-2"],
+  ["sound-midi-2", "sound-music-theory"],
   ["sound-music-theory", "sound-creation"],
-  ["sound-midi-2", "sound-creation"],
   ["design-graphic", "design-exercise-1"],
   ["design-exercise-1", "design-exercise-2"],
   ["design-exercise-2", "design-multimedia"],
@@ -416,6 +415,8 @@ const officialTreeEdges = [
 
 const prereqs = {
   "プラクティカル・イングリッシュⅡ": ["プラクティカル・イングリッシュⅠ"],
+  "プラクティカル・イングリッシュⅢ": ["プラクティカル・イングリッシュⅡ"],
+  "プラクティカル・イングリッシュⅣ": ["プラクティカル・イングリッシュⅢ"],
   "ＩＣＴ基礎": ["情報リテラシー"],
   "フレッシュマンセミナーⅡ": ["フレッシュマンセミナーⅠ"],
   "基礎演習Ⅰ": ["フレッシュマンセミナーⅡ"],
@@ -424,10 +425,39 @@ const prereqs = {
   "数的処理Ⅱ": ["数的処理Ⅰ"],
   "キャリアデザインⅡ": ["キャリアデザインⅠ"],
   "プログラム演習Ⅰ": ["プログラミング入門"],
+  "プログラム演習Ⅱ": ["プログラム演習Ⅰ"],
+  "プログラム演習Ⅲ": ["プログラム演習Ⅱ"],
+  "プログラム演習Ⅳ": ["プログラム演習Ⅲ"],
+  "データサイエンス": ["プログラム演習Ⅰ", "情報処理演習"],
+  "人工知能": ["データサイエンス"],
+  "情報社会の倫理と職業": ["情報メディア論"],
+  "ＩＴマネジメント": ["情報学概論"],
   "ＩＴストラテジ": ["ＩＴマネジメント"],
+  "基本情報技術": ["ＩＴストラテジ"],
+  "専門演習Ⅰ": ["基礎演習Ⅱ"],
   "専門演習Ⅱ": ["専門演習Ⅰ"],
   "卒業演習Ⅰ": ["専門演習Ⅱ"],
   "卒業演習Ⅱ": ["卒業演習Ⅰ"],
+  "ゲームプログラミング": ["アルゴリズムとデータ構造"],
+  "コンピュータネットワークⅡ": ["コンピュータネットワークⅠ"],
+  "モバイル情報論": ["コンピュータネットワークⅡ"],
+  "情報基礎理論": ["情報システム入門"],
+  "メディア情報技術": ["情報基礎理論"],
+  "システム開発論": ["メディア情報技術"],
+  "データベース": ["システム開発論"],
+  "映像制作演習Ⅱ": ["映像制作演習Ⅰ"],
+  "映像加工技術": ["映像制作演習Ⅱ"],
+  "メディアアート": ["映像加工技術"],
+  "アニメーション": ["デジタルアート入門"],
+  "音響実務": ["デジタルサウンド入門"],
+  "ＭＩＤＩ制作演習Ⅱ": ["ＭＩＤＩ制作演習Ⅰ"],
+  "音楽理論": ["ＭＩＤＩ制作演習Ⅱ"],
+  "音響制作演習": ["音響学", "聴能・音感演習"],
+  "レコーディング演習": ["音響制作演習"],
+  "サウンドクリエーション": ["音楽理論"],
+  "デジタルファブリケーション": ["ＣＧ基礎", "ＣＡＤ"],
+  "Ｗｅｂデザイン": ["Ｗｅｂプログラミング"],
+  "Ｗｅｂ解析": ["Ｗｅｂデザイン"],
   "フランス語Ⅱ": ["フランス語Ⅰ"],
   "中国語Ⅱ": ["中国語Ⅰ"],
   "韓国語Ⅱ": ["韓国語Ⅰ"]
@@ -597,8 +627,17 @@ function buildCourses() {
   specializedElectives.forEach(([id, name, credits, year, term, teacherRequired = false]) => {
     courses.push(makeCourse({ id, name, credits, year, term, category: "specializedElective", teacherRequired }));
   });
-  basicElectives.forEach(([id, name, credits, term, teacherRequired = false]) => {
-    courses.push(makeCourse({ id, name, credits, year: null, term, category: "basicElective", teacherRequired }));
+  basicElectives.forEach(([id, name, credits, yearOrTerm, termOrTeacherRequired = false, teacherRequired = false]) => {
+    const hasYear = typeof yearOrTerm === "number";
+    courses.push(makeCourse({
+      id,
+      name,
+      credits,
+      year: hasYear ? yearOrTerm : null,
+      term: hasYear ? termOrTeacherRequired : yearOrTerm,
+      category: "basicElective",
+      teacherRequired: hasYear ? teacherRequired : termOrTeacherRequired
+    }));
   });
   otherDeptNames.forEach((name, index) => {
     courses.push(makeCourse({
@@ -698,6 +737,8 @@ function syntheticTreeNodeForCourse(course) {
 const treeShortNameMap = new Map([
   ["プラクティカル・イングリッシュⅠ", "プラクティカル英語Ⅰ"],
   ["プラクティカル・イングリッシュⅡ", "プラクティカル英語Ⅱ"],
+  ["プラクティカル・イングリッシュⅢ", "プラクティカル英語Ⅲ"],
+  ["プラクティカル・イングリッシュⅣ", "プラクティカル英語Ⅳ"],
   ["フードビジネス・イングリッシュⅠ", "フードビジネス英語Ⅰ"],
   ["フードビジネス・イングリッシュⅡ", "フードビジネス英語Ⅱ"],
   ["総合的な学習の時間の指導法", "総合的な学習時間の指導法"],
@@ -746,9 +787,9 @@ function validatePlannedCourse(course) {
 }
 
 function visibleCourses() {
-  const filter = document.querySelector("#categoryFilter").value;
   const years = new Set([...document.querySelectorAll(".year-filter:checked")].map((input) => Number(input.value)));
   const terms = new Set([...document.querySelectorAll(".term-filter:checked")].map((input) => input.value));
+  const categories = new Set([...document.querySelectorAll(".category-filter:checked")].map((input) => input.value));
   const currentRequired = currentCourseRequiredKeys();
   return allCourses.filter((course) => {
     const retainedTeacherCourse = course.category === "teacher" && !state.teacher && state.planned.has(course.id);
@@ -756,7 +797,7 @@ function visibleCourses() {
     if (course.category === "courseRequired" && course.course !== state.course) return false;
     if (course.category === "specializedElective" && currentRequired.has(course.key)) return false;
     if (course.category === "teacher" && !state.teacher && !state.planned.has(course.id)) return false;
-    if (filter !== "all" && course.category !== filter) return false;
+    if (!categories.has(course.category)) return false;
     if (course.qualificationEligible) return years.size > 0 && terms.size > 0;
     if (!course.year) return terms.has(course.term);
     return years.has(course.year) && terms.has(course.term);
@@ -801,10 +842,11 @@ function setPlanned(courseId, term) {
 }
 
 function resetCatalogFilters() {
-  const categoryFilter = document.querySelector("#categoryFilter");
-  if (categoryFilter) categoryFilter.value = "all";
   document.querySelectorAll(".year-filter, .term-filter").forEach((input) => {
     input.checked = true;
+  });
+  document.querySelectorAll(".category-filter").forEach((input) => {
+    input.checked = !["otherDept", "teacher"].includes(input.value) || (input.value === "teacher" && state.teacher);
   });
 }
 
@@ -1287,13 +1329,34 @@ function drawTreeEdges() {
     const toCounts = connectionCounts.get(edge.to) || { incoming: 0, outgoing: 0 };
     const a = from.getBoundingClientRect();
     const b = to.getBoundingClientRect();
-    const x1 = a.right - treeRect.left + tree.scrollLeft;
-    const y1 = a.top + a.height / 2 - treeRect.top + tree.scrollTop;
-    const x2 = b.left - treeRect.left + tree.scrollLeft;
-    const y2 = b.top + b.height / 2 - treeRect.top + tree.scrollTop;
-    const mid = Math.max(x1 + 18, (x1 + x2) / 2);
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    path.setAttribute("d", `M ${x1} ${y1} C ${mid} ${y1}, ${mid} ${y2}, ${x2} ${y2}`);
+    const sameColumn = Math.abs(a.left - b.left) < 12;
+    let x1;
+    let y1;
+    let x2;
+    let y2;
+    let d;
+    if (sameColumn) {
+      x1 = a.left + a.width / 2 - treeRect.left + tree.scrollLeft;
+      x2 = b.left + b.width / 2 - treeRect.left + tree.scrollLeft;
+      if (b.top >= a.top) {
+        y1 = a.bottom - treeRect.top + tree.scrollTop;
+        y2 = b.top - treeRect.top + tree.scrollTop;
+      } else {
+        y1 = a.top - treeRect.top + tree.scrollTop;
+        y2 = b.bottom - treeRect.top + tree.scrollTop;
+      }
+      const midY = (y1 + y2) / 2;
+      d = `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
+    } else {
+      x1 = a.right - treeRect.left + tree.scrollLeft;
+      y1 = a.top + a.height / 2 - treeRect.top + tree.scrollTop;
+      x2 = b.left - treeRect.left + tree.scrollLeft;
+      y2 = b.top + b.height / 2 - treeRect.top + tree.scrollTop;
+      const mid = Math.max(x1 + 18, (x1 + x2) / 2);
+      d = `M ${x1} ${y1} C ${mid} ${y1}, ${mid} ${y2}, ${x2} ${y2}`;
+    }
+    path.setAttribute("d", d);
     path.setAttribute("class", `tree-edge${fromCounts.outgoing > 1 ? " is-branch-edge" : ""}${toCounts.incoming > 1 ? " is-merge-edge" : ""}`);
     path.setAttribute("marker-end", "url(#tree-edge-arrow)");
     svg.appendChild(path);
@@ -1491,8 +1554,7 @@ function init() {
     state.manualOther = Number(event.target.value || 0);
     render();
   });
-  document.querySelector("#categoryFilter").addEventListener("change", render);
-  document.querySelectorAll(".year-filter, .term-filter").forEach((input) => {
+  document.querySelectorAll(".year-filter, .term-filter, .category-filter").forEach((input) => {
     input.addEventListener("change", render);
   });
   document.querySelector("#viewModeToggle").addEventListener("click", () => {

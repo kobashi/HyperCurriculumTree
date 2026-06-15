@@ -261,6 +261,145 @@ const treeMetaByName = new Map([
   ["ボランティア活動", { section: "基礎教育科目", lane: "総合科目", courseNumber: "9229", level: "中級" }]
 ]);
 
+const treeRowByCourseName = new Map([
+  ["プラクティカル・イングリッシュⅠ", 1],
+  ["プラクティカル・イングリッシュⅡ", 1],
+  ["プラクティカル・イングリッシュⅢ", 1],
+  ["プラクティカル・イングリッシュⅣ", 1],
+  ["フランス語Ⅰ", 2],
+  ["フランス語Ⅱ", 2],
+  ["中国語Ⅰ", 3],
+  ["中国語Ⅱ", 3],
+  ["韓国語Ⅰ", 4],
+  ["韓国語Ⅱ", 4],
+  ["スポーツⅠ", 1],
+  ["スポーツⅡ", 1],
+  ["アウトドアスポーツⅠ", 2],
+  ["アウトドアスポーツⅡ", 2],
+  ["健康と栄養", 3],
+  ["スポーツ科学", 3],
+  ["自然科学Ⅰ", 1],
+  ["自然科学Ⅱ", 1],
+  ["数的処理Ⅰ", 2],
+  ["数的処理Ⅱ", 2],
+  ["統計学", 3],
+  ["フレッシュマンセミナーⅠ", 1],
+  ["フレッシュマンセミナーⅡ", 1],
+  ["基礎演習Ⅰ", 2],
+  ["基礎演習Ⅱ", 2],
+  ["キャリアデザインⅠ", 3],
+  ["キャリアデザインⅡ", 3],
+  ["地域の課題", 4],
+  ["ボランティア活動", 4],
+  ["哲学", 1],
+  ["芸術", 1],
+  ["心理学", 2],
+  ["人間関係論", 2],
+  ["現代日本史", 3],
+  ["日本語力Ⅰ", 4],
+  ["日本語力Ⅱ", 4],
+  ["日本国憲法", 1],
+  ["経済学", 1],
+  ["経営学", 2],
+  ["法学", 2],
+  ["社会学", 3],
+  ["海外事情", 4],
+  ["海外研修Ⅰ", 5],
+  ["海外研修Ⅱ", 5],
+  ["情報リテラシー", 1],
+  ["ＩＣＴ基礎", 1]
+]);
+
+const treeRowByNodeId = new Map([
+  ["common-programming-intro", 1],
+  ["common-program-exercise-1", 1],
+  ["common-data-science", 1],
+  ["common-ai", 1],
+  ["common-info-processing", 2],
+  ["common-info-concepts", 1],
+  ["common-it-management", 1],
+  ["common-it-strategy", 1],
+  ["common-fe", 1],
+  ["common-it-passport", 2],
+  ["common-software-basic", 2],
+  ["common-info-management", 3],
+  ["common-media-theory", 1],
+  ["common-ethics", 1],
+  ["common-internship", 2],
+  ["common-special-seminar-1", 2],
+  ["common-special-seminar-2", 2],
+  ["common-art-design", 2],
+  ["common-seminar-1", 1],
+  ["common-seminar-2", 1],
+  ["common-graduation-1", 1],
+  ["common-graduation-2", 1],
+
+  ["system-program-2", 1],
+  ["system-program-3", 1],
+  ["system-program-4", 1],
+  ["system-algorithm", 2],
+  ["system-game-programming", 2],
+  ["system-sound-programming", 2],
+  ["system-knowledge", 2],
+  ["system-web-programming", 1],
+  ["system-network-1", 2],
+  ["system-network-2", 2],
+  ["system-mobile", 2],
+  ["system-intro", 1],
+  ["system-basic-theory", 1],
+  ["system-media-tech", 1],
+  ["system-development", 1],
+  ["system-database", 2],
+
+  ["movie-production-1", 1],
+  ["movie-production-2", 1],
+  ["movie-processing", 1],
+  ["movie-media-art", 1],
+  ["movie-history", 2],
+  ["movie-scenario", 2],
+  ["movie-documentary", 2],
+  ["movie-cm", 3],
+  ["movie-broadcast", 3],
+  ["movie-digital-art", 1],
+  ["movie-animation", 1],
+  ["movie-cg-basic", 1],
+  ["movie-cg-exercise", 1],
+  ["movie-color", 2],
+  ["movie-photo", 2],
+  ["movie-multimedia", 2],
+
+  ["sound-digital-intro", 1],
+  ["sound-practice", 1],
+  ["sound-acoustics", 1],
+  ["sound-production", 1],
+  ["sound-recording", 1],
+  ["sound-ear-training", 2],
+  ["sound-stage", 2],
+  ["sound-lighting", 3],
+  ["sound-broadcast", 3],
+  ["sound-production-work", 4],
+  ["sound-midi-1", 1],
+  ["sound-music-theory", 1],
+  ["sound-creation", 1],
+  ["sound-midi-2", 2],
+  ["design-intro", 1],
+  ["design-graphic", 1],
+  ["design-exercise-1", 1],
+  ["design-exercise-2", 1],
+  ["design-multimedia", 1],
+  ["design-living", 1],
+  ["design-color", 2],
+  ["design-cg-basic", 1],
+  ["design-digital-fabrication", 1],
+  ["design-cad", 2],
+  ["design-web-programming", 1],
+  ["design-web-design", 1],
+  ["design-web-analysis", 1],
+  ["design-media-culture", 2],
+  ["design-documentary-scenario", 3],
+  ["design-documentary", 3]
+]);
+
 const otherDeptNames = [
   "デザイン基礎", "フードサイエンス基礎", "食品流通論", "簿記", "パッケージデザイン",
   "商学", "食品学Ⅱ", "食とデザインⅠ", "カフェ・レストランプロデュース", "食文化論",
@@ -819,7 +958,8 @@ function syntheticTreeNodeForCourse(course) {
     term: meta.term || openingTermForCourse(course),
     level: meta.level || "",
     courseNumber: meta.courseNumber || course.id,
-    teacherRequired: course.teacherRequired
+    teacherRequired: course.teacherRequired,
+    row: meta.row || treeRowByCourseName.get(course.name) || 1
   };
 }
 
@@ -1260,7 +1400,7 @@ function visibleTreeNodes() {
     const course = courseForTreeNode(node);
     if (!course || !visibleCourseIds.has(course.id)) return;
     usedCourseIds.add(course.id);
-    nodes.push(node);
+    nodes.push({ ...node, row: treeRowByNodeId.get(node.id) || node.row || 1 });
   });
 
   courses.forEach((course) => {
@@ -1342,59 +1482,66 @@ function renderTree() {
     block.innerHTML = `<div class="tree-section-title">${section}</div>`;
 
     lanes.forEach((lane) => {
+      const laneNodes = sectionNodes.filter((node) => node.lane === lane);
+      const laneRows = [...new Set(laneNodes.map((node) => node.row || 1))].sort((a, b) => a - b);
       const row = document.createElement("div");
       row.className = "tree-row";
       row.innerHTML = `<div class="tree-lane">${lane}</div>`;
       displayTerms.forEach((term) => {
         const cell = document.createElement("div");
         cell.className = "tree-cell";
-        sectionNodes
-          .filter((node) => node.lane === lane && node.term === term.id)
-          .forEach((node) => {
-            const course = courseForTreeNode(node);
-            if (!course) return;
-            const treeName = treeDisplayName(node.displayName);
-            validatePlannedCourse(course);
-            const disabled = course.category === "teacher" && !state.teacher;
-            const counts = connectionCounts.get(node.id) || { incoming: 0, outgoing: 0 };
-            const item = document.createElement("article");
-            item.className = `tree-node level-${node.level || "none"}${state.planned.has(course.id) ? " is-planned" : ""}${disabled ? " is-disabled" : ""}${counts.outgoing > 1 ? " is-branch" : ""}${counts.incoming > 1 ? " is-merge" : ""}${state.openTreeNodeId === node.id ? " is-open" : ""}${state.showTreeMeta ? " has-meta" : ""}${state.showTreeCodes ? " has-code" : ""}`;
-            item.dataset.nodeId = node.id;
-            item.dataset.courseId = course.id;
-            item.dataset.incoming = counts.incoming;
-            item.dataset.outgoing = counts.outgoing;
-            item.innerHTML = `
-              <button type="button" class="tree-node-button" ${disabled ? "disabled" : ""} aria-expanded="${state.openTreeNodeId === node.id ? "true" : "false"}">
-                ${state.showTreeCodes ? `<span class="tree-node-code">${node.courseNumber}</span>` : ""}
-                <span class="tree-node-name" style="--tree-name-size:${treeNameFontSize(treeName)}px" title="${node.displayName}">${treeName}</span>
-                ${state.showTreeMeta ? `<span class="tree-node-meta">${node.level || categoryLabels[course.category]}${course.teacherRequired || node.teacherRequired ? " / 教" : ""}${state.planned.has(course.id) ? ` / ${plannedButtonLabel(course)}` : ""}</span>` : ""}
-              </button>
-            `;
-            const button = item.querySelector(".tree-node-button");
-            button.addEventListener("click", () => {
-              state.openTreeNodeId = state.openTreeNodeId === node.id ? null : node.id;
-              state.openCourseId = null;
-              render();
+        laneRows.forEach((laneRow) => {
+          const slot = document.createElement("div");
+          slot.className = "tree-slot";
+          laneNodes
+            .filter((node) => node.term === term.id && (node.row || 1) === laneRow)
+            .forEach((node) => {
+              const course = courseForTreeNode(node);
+              if (!course) return;
+              const treeName = treeDisplayName(node.displayName);
+              validatePlannedCourse(course);
+              const disabled = course.category === "teacher" && !state.teacher;
+              const counts = connectionCounts.get(node.id) || { incoming: 0, outgoing: 0 };
+              const item = document.createElement("article");
+              item.className = `tree-node level-${node.level || "none"}${state.planned.has(course.id) ? " is-planned" : ""}${disabled ? " is-disabled" : ""}${counts.outgoing > 1 ? " is-branch" : ""}${counts.incoming > 1 ? " is-merge" : ""}${state.openTreeNodeId === node.id ? " is-open" : ""}${state.showTreeMeta ? " has-meta" : ""}${state.showTreeCodes ? " has-code" : ""}`;
+              item.dataset.nodeId = node.id;
+              item.dataset.courseId = course.id;
+              item.dataset.incoming = counts.incoming;
+              item.dataset.outgoing = counts.outgoing;
+              item.innerHTML = `
+                <button type="button" class="tree-node-button" ${disabled ? "disabled" : ""} aria-expanded="${state.openTreeNodeId === node.id ? "true" : "false"}">
+                  ${state.showTreeCodes ? `<span class="tree-node-code">${node.courseNumber}</span>` : ""}
+                  <span class="tree-node-name" style="--tree-name-size:${treeNameFontSize(treeName)}px" title="${node.displayName}">${treeName}</span>
+                  ${state.showTreeMeta ? `<span class="tree-node-meta">${node.level || categoryLabels[course.category]}${course.teacherRequired || node.teacherRequired ? " / 教" : ""}${state.planned.has(course.id) ? ` / ${plannedButtonLabel(course)}` : ""}</span>` : ""}
+                </button>
+              `;
+              const button = item.querySelector(".tree-node-button");
+              button.addEventListener("click", () => {
+                state.openTreeNodeId = state.openTreeNodeId === node.id ? null : node.id;
+                state.openCourseId = null;
+                render();
+              });
+              if (state.openTreeNodeId === node.id) {
+                const menu = document.createElement("div");
+                menu.className = "tree-node-menu";
+                const select = document.createElement("select");
+                select.setAttribute("aria-label", `${course.name}の配置`);
+                select.innerHTML = optionMarkupForCourse(course);
+                select.value = state.planned.get(course.id) || "none";
+                select.addEventListener("change", (event) => setPlanned(course.id, event.target.value));
+                const remove = document.createElement("button");
+                remove.type = "button";
+                remove.className = "remove-button";
+                remove.textContent = "×";
+                remove.setAttribute("aria-label", `${course.name}を外す`);
+                remove.addEventListener("click", () => setPlanned(course.id, "none"));
+                menu.append(select, remove);
+                item.appendChild(menu);
+              }
+              slot.appendChild(item);
             });
-            if (state.openTreeNodeId === node.id) {
-              const menu = document.createElement("div");
-              menu.className = "tree-node-menu";
-              const select = document.createElement("select");
-              select.setAttribute("aria-label", `${course.name}の配置`);
-              select.innerHTML = optionMarkupForCourse(course);
-              select.value = state.planned.get(course.id) || "none";
-              select.addEventListener("change", (event) => setPlanned(course.id, event.target.value));
-              const remove = document.createElement("button");
-              remove.type = "button";
-              remove.className = "remove-button";
-              remove.textContent = "×";
-              remove.setAttribute("aria-label", `${course.name}を外す`);
-              remove.addEventListener("click", () => setPlanned(course.id, "none"));
-              menu.append(select, remove);
-              item.appendChild(menu);
-            }
-            cell.appendChild(item);
-          });
+          cell.appendChild(slot);
+        });
         row.appendChild(cell);
       });
       block.appendChild(row);

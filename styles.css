@@ -662,6 +662,12 @@ input {
   min-height: 56px;
 }
 
+.tree-slot {
+  display: grid;
+  align-content: start;
+  min-height: 34px;
+}
+
 .tree-node {
   position: relative;
   z-index: 3;

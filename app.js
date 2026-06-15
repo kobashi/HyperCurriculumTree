@@ -8,6 +8,7 @@ const TERMS = [
   { id: "4前", year: 4, label: "4年前期" },
   { id: "4後", year: 4, label: "4年後期" }
 ];
+const TREE_UNASSIGNED_TERM = "none";
 
 const NO_COURSE = "なし";
 const COURSES = [NO_COURSE, "情報システム", "映像メディア", "サウンド制作", "メディアデザイン"];
@@ -200,8 +201,65 @@ const basicElectives = [
   ["BE-024", "アウトドアスポーツⅡ", 1, "後"],
   ["BE-025", "スポーツ科学", 2, "後"],
   ["BE-026", "地域の課題", 2, "後"],
-  ["BE-027", "ボランティア活動", 2, "後"]
+  ["BE-027", "ボランティア活動", 2, "後"],
+  ["BE-028", "海外研修Ⅰ", 2, null],
+  ["BE-029", "海外研修Ⅱ", 2, null]
 ];
+
+const treeMetaByName = new Map([
+  ["哲学", { section: "基礎教育科目", lane: "人間と文化への理解", courseNumber: "9201", level: "初級" }],
+  ["芸術", { section: "基礎教育科目", lane: "人間と文化への理解", courseNumber: "9202", level: "初級" }],
+  ["心理学", { section: "基礎教育科目", lane: "人間と文化への理解", courseNumber: "9203", level: "初級" }],
+  ["人間関係論", { section: "基礎教育科目", lane: "人間と文化への理解", courseNumber: "9204", level: "初級" }],
+  ["現代日本史", { section: "基礎教育科目", lane: "人間と文化への理解", courseNumber: "9205", level: "初級" }],
+  ["日本語力Ⅰ", { section: "基礎教育科目", lane: "人間と文化への理解", courseNumber: "3103", level: "中級" }],
+  ["日本語力Ⅱ", { section: "基礎教育科目", lane: "人間と文化への理解", courseNumber: "3104", level: "中級" }],
+
+  ["海外事情", { section: "基礎教育科目", lane: "現代社会への理解", courseNumber: "9206", level: "初級" }],
+  ["海外研修Ⅰ", { section: "基礎教育科目", lane: "現代社会への理解", courseNumber: "9207", level: "初級", term: TREE_UNASSIGNED_TERM }],
+  ["海外研修Ⅱ", { section: "基礎教育科目", lane: "現代社会への理解", courseNumber: "9208", level: "初級", term: TREE_UNASSIGNED_TERM }],
+  ["日本国憲法", { section: "基礎教育科目", lane: "現代社会への理解", courseNumber: "9209", level: "初級" }],
+  ["経済学", { section: "基礎教育科目", lane: "現代社会への理解", courseNumber: "9210", level: "初級" }],
+  ["経営学", { section: "基礎教育科目", lane: "現代社会への理解", courseNumber: "9211", level: "初級" }],
+  ["法学", { section: "基礎教育科目", lane: "現代社会への理解", courseNumber: "9212", level: "初級" }],
+  ["社会学", { section: "基礎教育科目", lane: "現代社会への理解", courseNumber: "9213", level: "初級" }],
+
+  ["自然科学Ⅰ", { section: "基礎教育科目", lane: "自然科学への理解", courseNumber: "9214", level: "初級" }],
+  ["自然科学Ⅱ", { section: "基礎教育科目", lane: "自然科学への理解", courseNumber: "9215", level: "初級" }],
+  ["統計学", { section: "基礎教育科目", lane: "自然科学への理解", courseNumber: "9216", level: "初級" }],
+  ["数的処理Ⅰ", { section: "基礎教育科目", lane: "自然科学への理解", courseNumber: "2104", level: "初級" }],
+  ["数的処理Ⅱ", { section: "基礎教育科目", lane: "自然科学への理解", courseNumber: "2105", level: "初級" }],
+
+  ["プラクティカル・イングリッシュⅠ", { section: "基礎教育科目", lane: "外国語", courseNumber: "1101", level: "初級" }],
+  ["プラクティカル・イングリッシュⅡ", { section: "基礎教育科目", lane: "外国語", courseNumber: "2101", level: "初級" }],
+  ["プラクティカル・イングリッシュⅢ", { section: "基礎教育科目", lane: "外国語", courseNumber: "3201", level: "中級" }],
+  ["プラクティカル・イングリッシュⅣ", { section: "基礎教育科目", lane: "外国語", courseNumber: "4201", level: "中級" }],
+  ["フランス語Ⅰ", { section: "基礎教育科目", lane: "外国語", courseNumber: "9217", level: "初級" }],
+  ["フランス語Ⅱ", { section: "基礎教育科目", lane: "外国語", courseNumber: "9218", level: "初級" }],
+  ["中国語Ⅰ", { section: "基礎教育科目", lane: "外国語", courseNumber: "9219", level: "初級" }],
+  ["中国語Ⅱ", { section: "基礎教育科目", lane: "外国語", courseNumber: "9220", level: "初級" }],
+  ["韓国語Ⅰ", { section: "基礎教育科目", lane: "外国語", courseNumber: "9221", level: "初級" }],
+  ["韓国語Ⅱ", { section: "基礎教育科目", lane: "外国語", courseNumber: "9222", level: "初級" }],
+
+  ["スポーツ科学", { section: "基礎教育科目", lane: "健康と運動への理解", courseNumber: "9223", level: "初級" }],
+  ["スポーツⅠ", { section: "基礎教育科目", lane: "健康と運動への理解", courseNumber: "9224", level: "初級" }],
+  ["スポーツⅡ", { section: "基礎教育科目", lane: "健康と運動への理解", courseNumber: "9225", level: "初級" }],
+  ["アウトドアスポーツⅠ", { section: "基礎教育科目", lane: "健康と運動への理解", courseNumber: "9226", level: "初級" }],
+  ["アウトドアスポーツⅡ", { section: "基礎教育科目", lane: "健康と運動への理解", courseNumber: "9227", level: "初級" }],
+  ["健康と栄養", { section: "基礎教育科目", lane: "健康と運動への理解", courseNumber: "1102", level: "初級" }],
+
+  ["情報リテラシー", { section: "基礎教育科目", lane: "情報技術への理解", courseNumber: "1103", level: "初級" }],
+  ["ＩＣＴ基礎", { section: "基礎教育科目", lane: "情報技術への理解", courseNumber: "2102", level: "初級" }],
+
+  ["フレッシュマンセミナーⅠ", { section: "基礎教育科目", lane: "総合科目", courseNumber: "1104", level: "初級" }],
+  ["フレッシュマンセミナーⅡ", { section: "基礎教育科目", lane: "総合科目", courseNumber: "2103", level: "初級" }],
+  ["基礎演習Ⅰ", { section: "基礎教育科目", lane: "総合科目", courseNumber: "3107", level: "中級" }],
+  ["基礎演習Ⅱ", { section: "基礎教育科目", lane: "総合科目", courseNumber: "4101", level: "中級" }],
+  ["キャリアデザインⅠ", { section: "基礎教育科目", lane: "総合科目", courseNumber: "4102", level: "中級" }],
+  ["キャリアデザインⅡ", { section: "基礎教育科目", lane: "総合科目", courseNumber: "5101", level: "上級" }],
+  ["地域の課題", { section: "基礎教育科目", lane: "総合科目", courseNumber: "9228", level: "中級" }],
+  ["ボランティア活動", { section: "基礎教育科目", lane: "総合科目", courseNumber: "9229", level: "中級" }]
+]);
 
 const otherDeptNames = [
   "デザイン基礎", "フードサイエンス基礎", "食品流通論", "簿記", "パッケージデザイン",
@@ -322,6 +380,7 @@ const officialTreeNodes = [
   ["design-web-design", "Ｗｅｂデザイン", "professional", "メディアデザインコース", "Webデザイン系列", "2後", "中級", "4402", true],
   ["design-web-analysis", "Ｗｅｂ解析", "professional", "メディアデザインコース", "Webデザイン系列", "3前", "上級", "5402", false],
   ["design-media-culture", "メディア文化論", "professional", "メディアデザインコース", "Webデザイン系列", "3前", "中級", "5403", false],
+  ["design-documentary-scenario", "ドキュメンタリー・シナリオ", "professional", "メディアデザインコース", "Webデザイン系列", "3前", "中級", "5202", false],
   ["design-documentary", "ドキュメンタリー演習", "professional", "メディアデザインコース", "Webデザイン系列", "3後", "上級", "6202", false],
   ["design-intro", "メディアデザイン入門", "professional", "メディアデザインコース", "総合・その他", "1前", "初級", "1401", false],
 
@@ -362,6 +421,7 @@ const officialTreeEdges = [
   ["common-info-concepts", "common-it-management"],
   ["common-media-theory", "common-ethics"],
   ["common-it-management", "common-it-strategy"],
+  ["common-it-management", "common-software-basic"],
   ["common-it-strategy", "common-fe"],
   ["common-special-seminar-1", "common-special-seminar-2"],
   ["common-special-seminar-2", "common-art-design"],
@@ -379,30 +439,45 @@ const officialTreeEdges = [
   ["system-media-tech", "system-development"],
   ["system-development", "system-database"],
   ["movie-production-1", "movie-production-2"],
+  ["movie-history", "movie-production-2"],
   ["movie-production-2", "movie-processing"],
   ["movie-processing", "movie-media-art"],
-  ["movie-processing", "movie-documentary"],
-  ["movie-processing", "movie-broadcast"],
+  ["movie-processing", "movie-scenario"],
+  ["movie-processing", "movie-cm"],
+  ["movie-scenario", "movie-documentary"],
+  ["movie-cm", "movie-broadcast"],
   ["movie-digital-art", "movie-animation"],
   ["movie-animation", "movie-cg-basic"],
   ["movie-cg-basic", "movie-cg-exercise"],
   ["sound-digital-intro", "sound-practice"],
+  ["sound-digital-intro", "sound-midi-1"],
   ["sound-practice", "sound-acoustics"],
   ["sound-acoustics", "sound-production"],
   ["sound-ear-training", "sound-production"],
   ["sound-production", "sound-recording"],
+  ["sound-production", "sound-stage"],
+  ["sound-production", "sound-broadcast"],
+  ["sound-production", "sound-production-work"],
+  ["sound-midi-1", "sound-music-theory"],
   ["sound-midi-1", "sound-midi-2"],
-  ["sound-midi-2", "sound-music-theory"],
   ["sound-music-theory", "sound-creation"],
+  ["sound-midi-2", "sound-creation"],
   ["design-graphic", "design-exercise-1"],
+  ["design-color", "design-exercise-2"],
   ["design-exercise-1", "design-exercise-2"],
   ["design-exercise-2", "design-multimedia"],
   ["design-multimedia", "design-living"],
+  ["design-intro", "design-graphic"],
+  ["design-intro", "design-cg-basic"],
+  ["design-intro", "design-cad"],
+  ["design-intro", "design-web-programming"],
   ["design-cg-basic", "design-digital-fabrication"],
   ["design-cad", "design-digital-fabrication"],
   ["design-web-programming", "design-web-design"],
   ["design-web-design", "design-web-analysis"],
-  ["design-media-culture", "design-documentary"],
+  ["design-digital-fabrication", "design-living"],
+  ["design-web-analysis", "design-living"],
+  ["design-documentary-scenario", "design-documentary"],
   ["teacher-principles", "teacher-curriculum"],
   ["teacher-role", "teacher-curriculum"],
   ["teacher-curriculum", "teacher-psychology"],
@@ -450,14 +525,22 @@ const prereqs = {
   "メディアアート": ["映像加工技術"],
   "アニメーション": ["デジタルアート入門"],
   "音響実務": ["デジタルサウンド入門"],
+  "音響学": ["音響実務"],
+  "聴能・音感演習": ["音響実務"],
   "ＭＩＤＩ制作演習Ⅱ": ["ＭＩＤＩ制作演習Ⅰ"],
-  "音楽理論": ["ＭＩＤＩ制作演習Ⅱ"],
+  "音楽理論": ["ＭＩＤＩ制作演習Ⅰ"],
   "音響制作演習": ["音響学", "聴能・音感演習"],
   "レコーディング演習": ["音響制作演習"],
-  "サウンドクリエーション": ["音楽理論"],
+  "舞台制作": ["音響制作演習"],
+  "サウンドプロダクション": ["音響制作演習"],
+  "サウンドクリエーション": ["音楽理論", "ＭＩＤＩ制作演習Ⅱ"],
+  "ＣＧ演習": ["ＣＧ基礎"],
   "デジタルファブリケーション": ["ＣＧ基礎", "ＣＡＤ"],
+  "メディアデザイン演習Ⅰ": ["グラフィックデザイン"],
+  "メディアデザイン演習Ⅱ": ["メディアデザイン演習Ⅰ"],
   "Ｗｅｂデザイン": ["Ｗｅｂプログラミング"],
   "Ｗｅｂ解析": ["Ｗｅｂデザイン"],
+  "ドキュメンタリー演習": ["ドキュメンタリー・シナリオ"],
   "フランス語Ⅱ": ["フランス語Ⅰ"],
   "中国語Ⅱ": ["中国語Ⅰ"],
   "韓国語Ⅱ": ["韓国語Ⅰ"]
@@ -493,6 +576,7 @@ const standardTermOverrides = {
 
 function validTermsForCourse(course) {
   if (course.qualificationEligible) return TERMS;
+  if (!course.year && !course.term) return TERMS;
   if (!course.year) return TERMS.filter((term) => term.id.endsWith(course.term));
   return TERMS.filter((term) => term.year >= course.year && term.id.endsWith(course.term));
 }
@@ -704,6 +788,8 @@ function courseForTreeNode(node) {
 }
 
 function treeSectionForCourse(course) {
+  const meta = treeMetaByName.get(course.name);
+  if (meta?.section) return meta.section;
   if (course.category === "basicRequired") return "基礎教育必修";
   if (course.category === "basicElective") return "基礎教育選択";
   if (course.category === "commonRequired") return "コース共通";
@@ -715,21 +801,24 @@ function treeSectionForCourse(course) {
 }
 
 function treeLaneForCourse(course) {
+  const meta = treeMetaByName.get(course.name);
+  if (meta?.lane) return meta.lane;
   return categoryLabels[course.category] || "科目";
 }
 
 function syntheticTreeNodeForCourse(course) {
+  const meta = treeMetaByName.get(course.name) || {};
   return {
     id: `course-${course.id}`,
     courseId: course.id,
     courseName: course.name,
     displayName: course.name,
     page: course.category === "teacher" ? "teacher" : "catalog",
-    section: treeSectionForCourse(course),
-    lane: treeLaneForCourse(course),
-    term: openingTermForCourse(course),
-    level: "",
-    courseNumber: course.id,
+    section: meta.section || treeSectionForCourse(course),
+    lane: meta.lane || treeLaneForCourse(course),
+    term: meta.term || openingTermForCourse(course),
+    level: meta.level || "",
+    courseNumber: meta.courseNumber || course.id,
     teacherRequired: course.teacherRequired
   };
 }
@@ -757,6 +846,7 @@ function treeNameFontSize(name) {
 }
 
 const treeSectionOrder = [
+  "基礎教育科目",
   "基礎教育必修",
   "基礎教育選択",
   "コース共通",
@@ -768,6 +858,13 @@ const treeSectionOrder = [
   "他学科履修",
   "教職課程に関する科目"
 ];
+
+function treeTerms(nodes) {
+  if (nodes.some((node) => node.term === TREE_UNASSIGNED_TERM)) {
+    return [...TERMS, { id: TREE_UNASSIGNED_TERM, year: null, label: "配当年次なし" }];
+  }
+  return TERMS;
+}
 
 function optionMarkupForCourse(course) {
   const validTerms = validTermsForCourse(course);
@@ -799,6 +896,7 @@ function visibleCourses() {
     if (course.category === "teacher" && !state.teacher && !state.planned.has(course.id)) return false;
     if (!categories.has(course.category)) return false;
     if (course.qualificationEligible) return years.size > 0 && terms.size > 0;
+    if (!course.year && !course.term) return years.size > 0 && terms.size > 0;
     if (!course.year) return terms.has(course.term);
     return years.has(course.year) && terms.has(course.term);
   });
@@ -1028,7 +1126,13 @@ function renderCatalog() {
 
     const tags = document.createElement("div");
     tags.className = "tags";
-    const termTag = course.qualificationEligible ? "履修/資格" : `${course.year ? `${course.year}年` : "年次なし"}${course.term}`;
+    const termTag = course.qualificationEligible
+      ? "履修/資格"
+      : course.year
+        ? `${course.year}年${course.term}`
+        : course.term
+          ? `年次なし${course.term}`
+          : "配当年次なし";
     const tagTexts = [categoryLabels[course.category], course.course, termTag].filter(Boolean);
     tagTexts.forEach((text) => {
       const tag = document.createElement("span");
@@ -1132,6 +1236,7 @@ function renderPlan() {
 }
 
 function sectionClass(section) {
+  if (section === "基礎教育科目") return "basic-required";
   if (section === "基礎教育必修") return "basic-required";
   if (section === "基礎教育選択") return "basic-elective";
   if (section === "コース共通") return "common";
@@ -1208,8 +1313,11 @@ function treeConnectionCounts(nodes = visibleTreeNodes()) {
 function renderTree() {
   const tree = document.querySelector("#treeView");
   tree.innerHTML = "";
-  const termLabels = TERMS.map((term) => `<div class="tree-term">${term.label}</div>`).join("");
   const nodes = visibleTreeNodes();
+  const displayTerms = treeTerms(nodes);
+  tree.style.setProperty("--tree-grid-template", `136px repeat(${displayTerms.length}, minmax(152px, 1fr))`);
+  tree.style.setProperty("--tree-grid-min-width", `${136 + (displayTerms.length * 152) + (displayTerms.length * 6)}px`);
+  const termLabels = displayTerms.map((term) => `<div class="tree-term">${term.label}</div>`).join("");
   const connectionCounts = treeConnectionCounts(nodes);
   const sections = [...new Set(nodes.map((node) => node.section))]
     .sort((a, b) => {
@@ -1237,7 +1345,7 @@ function renderTree() {
       const row = document.createElement("div");
       row.className = "tree-row";
       row.innerHTML = `<div class="tree-lane">${lane}</div>`;
-      TERMS.forEach((term) => {
+      displayTerms.forEach((term) => {
         const cell = document.createElement("div");
         cell.className = "tree-cell";
         sectionNodes

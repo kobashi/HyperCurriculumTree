@@ -541,9 +541,9 @@ input {
 .tree-header,
 .tree-row {
   display: grid;
-  grid-template-columns: 136px repeat(8, minmax(152px, 1fr));
+  grid-template-columns: var(--tree-grid-template, 136px repeat(8, minmax(152px, 1fr)));
   gap: 6px;
-  min-width: 1374px;
+  min-width: var(--tree-grid-min-width, 1374px);
 }
 
 .tree-header {
@@ -573,7 +573,7 @@ input {
   z-index: auto;
   display: grid;
   gap: 6px;
-  min-width: 1374px;
+  min-width: var(--tree-grid-min-width, 1374px);
   padding: 8px;
   border-radius: 8px;
   border-left: 7px solid var(--brand);

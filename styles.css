@@ -250,6 +250,11 @@ input {
   gap: 12px;
 }
 
+.catalog-panel .panel-head {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
 .panel-head select {
   width: 132px;
 }
@@ -257,6 +262,8 @@ input {
 .catalog-tools {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -406,8 +413,8 @@ input {
 }
 
 .tag.teacher {
-  background: #fae9df;
-  color: var(--accent);
+  background: #e4e9e8;
+  color: var(--muted);
 }
 
 .tag.qualification {
@@ -470,36 +477,69 @@ input {
   gap: 8px;
 }
 
-.view-toggle {
+.view-mode-switch {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-height: 34px;
-  padding: 0 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #eef2f0;
+  margin: 0;
+  padding: 0;
   color: var(--ink);
   font-size: 12px;
   font-weight: 800;
 }
 
-.view-toggle-label {
+.view-mode-switch-label {
   color: var(--muted);
 }
 
-.view-toggle-value {
-  min-width: 3.8em;
-  padding: 2px 8px;
-  border: 1px solid rgba(20, 108, 104, 0.22);
-  border-radius: 999px;
-  background: #fff;
-  color: var(--brand-dark);
-  text-align: center;
+.view-mode-switch-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
 }
 
-.view-toggle[aria-pressed="true"] .view-toggle-value {
+.view-mode-switch-track {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(20, 108, 104, 0.22);
+  border-radius: 999px;
+  background: #d7e1de;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.view-mode-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(23, 33, 37, 0.18);
+  transition: transform 160ms ease;
+}
+
+.view-mode-switch-value {
+  min-width: 2.2em;
+  color: var(--brand-dark);
+  text-align: left;
+}
+
+.view-mode-switch-input:checked + .view-mode-switch-track {
+  border-color: rgba(20, 108, 104, 0.3);
   background: #d9ece8;
+}
+
+.view-mode-switch-input:checked + .view-mode-switch-track .view-mode-switch-thumb {
+  transform: translateX(20px);
+}
+
+.view-mode-switch-input:focus-visible + .view-mode-switch-track {
+  outline: 2px solid rgba(20, 108, 104, 0.3);
+  outline-offset: 2px;
 }
 
 .plan-grid {

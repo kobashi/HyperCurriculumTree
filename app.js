@@ -72,7 +72,7 @@ const requiredBasic = [
   ["B-REQ-08", "基礎演習Ⅰ", 2, 2, "前", false],
   ["B-REQ-09", "基礎演習Ⅱ", 2, 2, "後", false],
   ["B-REQ-10", "日本語力Ⅰ", 1, 2, "前", false],
-  ["B-REQ-11", "日本語力Ⅱ", 1, 2, "後", false],
+  ["B-REQ-11", "日本語力Ⅱ", 1, 2, "前", false],
   ["B-REQ-12", "数的処理Ⅰ", 1, 1, "後", false],
   ["B-REQ-13", "数的処理Ⅱ", 1, 1, "後", false],
   ["B-REQ-14", "キャリアデザインⅠ", 1, 2, "後", false],
@@ -635,8 +635,6 @@ const prereqs = {
   "フレッシュマンセミナーⅡ": ["フレッシュマンセミナーⅠ"],
   "基礎演習Ⅰ": ["フレッシュマンセミナーⅡ"],
   "基礎演習Ⅱ": ["基礎演習Ⅰ"],
-  "日本語力Ⅱ": ["日本語力Ⅰ"],
-  "数的処理Ⅱ": ["数的処理Ⅰ"],
   "キャリアデザインⅡ": ["キャリアデザインⅠ"],
   "プログラム演習Ⅰ": ["プログラミング入門"],
   "プログラム演習Ⅱ": ["プログラム演習Ⅰ"],
@@ -702,7 +700,6 @@ const state = {
 };
 
 const standardTermOverrides = {
-  "数的処理Ⅱ": "2後",
   "日本国憲法": "1前",
   "経営学": "2前",
   "スポーツⅠ": "1前",
@@ -752,6 +749,20 @@ const categoryLabels = {
   otherDept: "他学科",
   teacher: "教職"
 };
+
+const categoryFormalLabels = {
+  basicRequired: "基礎教育必修",
+  basicElective: "基礎教育選択",
+  commonRequired: "専門教育コース共通必修",
+  courseRequired: "専門教育コース必修",
+  specializedElective: "専門教育選択",
+  otherDept: "他学科履修",
+  teacher: "教職課程に関する科目"
+};
+
+function categoryTitle(category) {
+  return categoryFormalLabels[category] || categoryLabels[category] || "";
+}
 
 const capExcludedCourseNames = new Set([
   "アウトドアスポーツⅠ",
@@ -1274,10 +1285,12 @@ function renderCatalog() {
           ? `年次なし${course.term}`
           : "配当年次なし";
     const tagTexts = [categoryLabels[course.category], course.course, termTag].filter(Boolean);
-    tagTexts.forEach((text) => {
+    tagTexts.forEach((text, index) => {
       const tag = document.createElement("span");
       tag.className = "tag";
       tag.textContent = text;
+      if (index === 0) tag.title = categoryTitle(course.category);
+      if (text === "履修/資格") tag.title = "科目履修 / 資格取得";
       tags.appendChild(tag);
     });
     if (course.teacherRequired) {
@@ -1365,7 +1378,7 @@ function renderPlan() {
           ${courses.map((course) => `
             <div class="planned-course${isCapExcludedInPlan(course) ? " cap-excluded" : ""}">
               <span>${course.name}</span>
-              <small>${categoryLabels[course.category]} / ${course.credits}単位${isRecognitionPlanned(course) ? ` / ${recognitionMethodLabel(course)}` : ""}${course.category === "teacher" ? " / 要件外" : ""}${isCapExcludedInPlan(course) ? " / 上限外" : ""}</small>
+              <small title="${categoryTitle(course.category)}">${categoryLabels[course.category]} / ${course.credits}単位${isRecognitionPlanned(course) ? ` / ${recognitionMethodLabel(course)}` : ""}${course.category === "teacher" ? " / 要件外" : ""}${isCapExcludedInPlan(course) ? " / 上限外" : ""}</small>
             </div>
           `).join("")}
         </div>`;
@@ -1680,9 +1693,9 @@ function renderViewMode() {
   workspace.classList.toggle("catalog-tree-mode", isTree);
   const viewModeToggle = document.querySelector("#viewModeToggle");
   const viewModeValue = document.querySelector("#viewModeValue");
-  viewModeToggle.setAttribute("aria-pressed", String(isTree));
+  viewModeToggle.checked = !isTree;
   viewModeToggle.setAttribute("aria-label", `科目表示モード: ${isTree ? "ツリー" : "リスト"}`);
-  viewModeValue.textContent = isTree ? "ツリー" : "リスト";
+  viewModeValue.textContent = isTree ? "OFF" : "ON";
   if (isTree) {
     drawTreeEdges();
     requestAnimationFrame(updateTreeMenuPlacement);
@@ -1706,11 +1719,35 @@ function renderSummary(stats) {
 }
 
 function requirement(title, ok, detail) {
-  return `<article class="requirement ${ok ? "ok" : "missing"}"><strong><span>${title}</span><span class="status">${ok ? "達成" : "未達"}</span></strong><p>${detail}</p></article>`;
+  return `<article class="requirement ${ok ? "ok" : "missing"}"><strong><span>${title}</span><span class="status">${ok ? "達成" : "未達"}</span></strong><p>${annotateRequirementTerms(detail)}</p></article>`;
 }
 
 function infoRequirement(title, detail) {
-  return `<article class="requirement info"><strong><span>${title}</span><span class="status">情報</span></strong><p>${detail}</p></article>`;
+  return `<article class="requirement info"><strong><span>${title}</span><span class="status">情報</span></strong><p>${annotateRequirementTerms(detail)}</p></article>`;
+}
+
+const requirementTermTitles = {
+  "要件外": "卒業要件124単位や各内訳要件に算入されない単位です。",
+  "振替": "基礎教育選択の超過分のうち、その他の卒業要件へ回して数える単位です。",
+  "基礎振替": "基礎教育選択の超過分から、その他の卒業要件52単位へ算入した単位です。",
+  "他学科": "他学科履修として卒業要件に算入した単位です。",
+  "単位認定": "資格取得などにより認定された単位です。",
+  "基礎選択超過": "基礎教育選択14単位を超え、振替上限を超えたため要件外になった単位です。",
+  "他学科超過": "他学科履修12単位の上限を超えたため要件外になった単位です。"
+};
+
+function escapeRegExp(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function annotateRequirementTerms(text) {
+  let html = text;
+  Object.entries(requirementTermTitles)
+    .sort(([a], [b]) => b.length - a.length)
+    .forEach(([term, title]) => {
+      html = html.replace(new RegExp(escapeRegExp(term), "g"), `<span title="${title}">${term}</span>`);
+    });
+  return html;
 }
 
 function renderRequirements(stats) {
@@ -1818,8 +1855,8 @@ function init() {
   document.querySelectorAll(".year-filter, .term-filter, .category-filter").forEach((input) => {
     input.addEventListener("change", render);
   });
-  document.querySelector("#viewModeToggle").addEventListener("click", () => {
-    if (state.viewMode === "tree") {
+  document.querySelector("#viewModeToggle").addEventListener("change", (event) => {
+    if (event.target.checked) {
       state.viewMode = "list";
       state.openTreeNodeId = null;
     } else {

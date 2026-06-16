@@ -713,7 +713,6 @@ const state = {
   filtersOpen: false,
   showTreeCodes: false,
   showTreeMeta: false,
-  showTreeOtherDept: false,
   teacherNotice: "",
   openCourseId: null,
   openTreeNodeId: null,
@@ -1553,7 +1552,7 @@ function sectionClass(section) {
 }
 
 function visibleTreeNodes() {
-  const courses = visibleCourses().filter((course) => state.showTreeOtherDept || course.category !== "otherDept");
+  const courses = visibleCourses();
   const visibleCourseIds = new Set(courses.map((course) => course.id));
   const usedCourseIds = new Set();
   const nodes = [];
@@ -1827,8 +1826,6 @@ function renderViewMode() {
   const treeCodeToggle = document.querySelector("#treeCodeToggle");
   const treeMetaToggleWrap = document.querySelector("#treeMetaToggleWrap");
   const treeMetaToggle = document.querySelector("#treeMetaToggle");
-  const treeOtherDeptToggleWrap = document.querySelector("#treeOtherDeptToggleWrap");
-  const treeOtherDeptToggle = document.querySelector("#treeOtherDeptToggle");
   const isTree = state.viewMode === "tree";
   catalog.hidden = isTree;
   tree.hidden = !isTree;
@@ -1836,8 +1833,6 @@ function renderViewMode() {
   treeCodeToggle.checked = state.showTreeCodes;
   treeMetaToggleWrap.hidden = !isTree;
   treeMetaToggle.checked = state.showTreeMeta;
-  treeOtherDeptToggleWrap.hidden = !isTree;
-  treeOtherDeptToggle.checked = state.showTreeOtherDept;
   filters.hidden = !state.filtersOpen;
   filterToggle.setAttribute("aria-expanded", String(state.filtersOpen));
   workspace.classList.toggle("catalog-tree-mode", isTree);
@@ -2022,11 +2017,6 @@ function init() {
   });
   document.querySelector("#treeMetaToggle").addEventListener("change", (event) => {
     state.showTreeMeta = event.target.checked;
-    render();
-  });
-  document.querySelector("#treeOtherDeptToggle").addEventListener("change", (event) => {
-    state.showTreeOtherDept = event.target.checked;
-    state.openTreeNodeId = null;
     render();
   });
   document.querySelector("#autoFillButton").addEventListener("click", autoFill);

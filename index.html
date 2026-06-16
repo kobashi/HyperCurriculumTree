@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="styles.css?v=catalog-tree-20260615r">
   </head>
   <body>
+    <div id="fxLayer" aria-hidden="true"></div>
     <main class="app-shell">
       <section class="topbar" aria-label="設定">
         <div>
@@ -37,6 +38,14 @@
           <label class="switch">
             <input id="teacherToggle" type="checkbox">
             <span>教職課程</span>
+          </label>
+          <label class="switch audio-switch">
+            <input id="fxToggle" type="checkbox" checked>
+            <span>SE</span>
+          </label>
+          <label class="switch audio-switch">
+            <input id="bgmToggle" type="checkbox" checked>
+            <span>BGM</span>
           </label>
         </div>
       </section>
@@ -142,6 +151,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=catalog-tree-20260615r"></script>
+    <script src="app.js?v=playful-ux-20260616a"></script>
   </body>
 </html>

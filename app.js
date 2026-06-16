@@ -713,11 +713,210 @@ const state = {
   filtersOpen: false,
   showTreeCodes: false,
   showTreeMeta: false,
+  soundFx: true,
+  soundBgm: true,
   teacherNotice: "",
   openCourseId: null,
   openTreeNodeId: null,
   planned: new Map()
 };
+
+const arcadeAudio = {
+  context: null,
+  master: null,
+  bgmTimer: null,
+  bgmStep: 0
+};
+
+const arcadeMusic = {
+  melody: [523.25, 659.25, 783.99, 659.25, 587.33, 659.25, 698.46, 659.25],
+  bass: [130.81, 130.81, 98, 98, 130.81, 130.81, 87.31, 87.31]
+};
+
+function ensureArcadeAudio() {
+  if (typeof window === "undefined") return null;
+  if (!arcadeAudio.context) {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return null;
+    arcadeAudio.context = new AudioContext();
+    arcadeAudio.master = arcadeAudio.context.createGain();
+    arcadeAudio.master.gain.value = 0.34;
+    arcadeAudio.master.connect(arcadeAudio.context.destination);
+  }
+  return arcadeAudio.context;
+}
+
+function withArcadeAudio(run) {
+  const ctx = ensureArcadeAudio();
+  if (!ctx) return;
+  const execute = () => run(ctx);
+  if (ctx.state === "suspended") {
+    void ctx.resume().then(execute).catch(execute);
+  } else {
+    execute();
+  }
+}
+
+function stopArcadeBgm() {
+  if (arcadeAudio.bgmTimer) clearInterval(arcadeAudio.bgmTimer);
+  arcadeAudio.bgmTimer = null;
+}
+
+function tone(ctx, {
+  freq,
+  duration = 0.09,
+  type = "square",
+  gain = 0.06,
+  detune = 0,
+  slide = 0,
+  delay = 0,
+  filter = 2200
+}) {
+  const osc = ctx.createOscillator();
+  const amp = ctx.createGain();
+  const lp = ctx.createBiquadFilter();
+  const start = ctx.currentTime + delay;
+  const end = start + duration;
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, start);
+  if (slide) osc.frequency.exponentialRampToValueAtTime(Math.max(42, freq + slide), end);
+  osc.detune.setValueAtTime(detune, start);
+  lp.type = "lowpass";
+  lp.frequency.value = filter;
+  amp.gain.setValueAtTime(0.0001, start);
+  amp.gain.exponentialRampToValueAtTime(Math.max(0.0001, gain), start + 0.012);
+  amp.gain.exponentialRampToValueAtTime(0.0001, end);
+  osc.connect(lp);
+  lp.connect(amp);
+  amp.connect(arcadeAudio.master);
+  osc.start(start);
+  osc.stop(end + 0.05);
+}
+
+function fxLayer() {
+  return document.querySelector("#fxLayer");
+}
+
+function burstAtPoint(x, y, kind = "confirm", scale = 1) {
+  const layer = fxLayer();
+  if (!layer) return;
+  const palette = {
+    confirm: [164, 176, 182, 166, 154, 142],
+    remove: [8, 12, 356, 350, 22, 16],
+    boost: [47, 39, 54, 63, 28, 34],
+    switch: [184, 190, 196, 202, 176, 168],
+    error: [0, 4, 8, 14, 18, 22]
+  };
+  const hues = palette[kind] || palette.confirm;
+  const count = kind === "boost" ? 12 : 8;
+  for (let index = 0; index < count; index += 1) {
+    const spark = document.createElement("span");
+    const hue = hues[index % hues.length] + (Math.random() * 12 - 6);
+    const angle = (Math.PI * 2 * index) / count + (Math.random() * 0.28 - 0.14);
+    const distance = (28 + Math.random() * 46) * scale * (kind === "boost" ? 1.25 : 1);
+    const size = (4 + Math.random() * 6) * (kind === "boost" ? 1.15 : 1);
+    spark.className = `fx-particle${kind === "boost" && index % 3 === 0 ? " fx-star" : ""}`;
+    spark.style.left = `${x}px`;
+    spark.style.top = `${y}px`;
+    spark.style.setProperty("--dx", `${Math.cos(angle) * distance}px`);
+    spark.style.setProperty("--dy", `${Math.sin(angle) * distance}px`);
+    spark.style.setProperty("--size", `${size}px`);
+    spark.style.setProperty("--hue", `${Math.round(hue)}`);
+    layer.appendChild(spark);
+    spark.addEventListener("animationend", () => spark.remove(), { once: true });
+  }
+}
+
+function burstAtElement(el, kind = "confirm", scale = 1) {
+  if (!el || typeof el.getBoundingClientRect !== "function") return;
+  const rect = el.getBoundingClientRect();
+  burstAtPoint(rect.left + (rect.width / 2), rect.top + (rect.height / 2), kind, scale);
+}
+
+function pulseBody(kind = "confirm") {
+  const body = document.body;
+  if (!body) return;
+  body.classList.remove("fx-shake");
+  void body.offsetWidth;
+  body.classList.add("fx-shake");
+  window.setTimeout(() => body.classList.remove("fx-shake"), kind === "boost" ? 280 : 220);
+}
+
+function playArcadeSfx(kind) {
+  if (!state.soundFx) return;
+  withArcadeAudio((ctx) => {
+    const patterns = {
+      confirm: [
+        { freq: 523.25, duration: 0.08, type: "square", gain: 0.05, slide: 94, filter: 4200 },
+        { freq: 659.25, duration: 0.10, type: "triangle", gain: 0.045, slide: 140, delay: 0.04, filter: 3600 }
+      ],
+      remove: [
+        { freq: 196, duration: 0.12, type: "sawtooth", gain: 0.04, slide: -60, filter: 1800 },
+        { freq: 155.56, duration: 0.16, type: "square", gain: 0.03, slide: -24, delay: 0.03, filter: 1200 }
+      ],
+      boost: [
+        { freq: 392, duration: 0.11, type: "square", gain: 0.04, slide: 196, filter: 5200 },
+        { freq: 523.25, duration: 0.12, type: "triangle", gain: 0.045, slide: 262, delay: 0.04, filter: 5000 },
+        { freq: 783.99, duration: 0.14, type: "square", gain: 0.05, slide: 156, delay: 0.08, filter: 4600 }
+      ],
+      switch: [
+        { freq: 659.25, duration: 0.06, type: "square", gain: 0.03, slide: 42, filter: 3500 },
+        { freq: 587.33, duration: 0.06, type: "triangle", gain: 0.025, slide: 28, delay: 0.04, filter: 3000 }
+      ],
+      error: [
+        { freq: 164.81, duration: 0.14, type: "sawtooth", gain: 0.05, slide: -96, filter: 1500 },
+        { freq: 103.83, duration: 0.18, type: "square", gain: 0.04, slide: -48, delay: 0.05, filter: 1000 }
+      ]
+    };
+    (patterns[kind] || patterns.confirm).forEach((pattern) => tone(ctx, pattern));
+  });
+}
+
+function startArcadeBgm() {
+  if (!state.soundBgm) return;
+  withArcadeAudio((ctx) => {
+    if (arcadeAudio.bgmTimer) return;
+    const tick = () => {
+      if (!state.soundBgm) return;
+      const step = arcadeAudio.bgmStep += 1;
+      const index = step % arcadeMusic.melody.length;
+      const melody = arcadeMusic.melody[index];
+      const bass = arcadeMusic.bass[Math.floor(index / 2) % arcadeMusic.bass.length];
+      tone(ctx, { freq: melody, duration: 0.12, type: "square", gain: 0.022, slide: 18, filter: 3000 });
+      if (index % 2 === 0) {
+        tone(ctx, { freq: bass, duration: 0.18, type: "triangle", gain: 0.018, slide: -6, delay: 0.01, filter: 1000 });
+      }
+    };
+    tick();
+    arcadeAudio.bgmTimer = window.setInterval(tick, 210);
+  });
+}
+
+function syncArcadeAudio() {
+  if (state.soundBgm) {
+    startArcadeBgm();
+  } else {
+    stopArcadeBgm();
+  }
+}
+
+function syncArcadeToggleLabels() {
+  const fxToggle = document.querySelector("#fxToggle");
+  const bgmToggle = document.querySelector("#bgmToggle");
+  if (fxToggle) fxToggle.checked = state.soundFx;
+  if (bgmToggle) bgmToggle.checked = state.soundBgm;
+}
+
+function triggerArcadeFeedback(kind, source) {
+  const element = source && source.nodeType === 1 ? source : null;
+  if (element) {
+    burstAtElement(element, kind);
+  } else {
+    burstAtPoint(window.innerWidth / 2, window.innerHeight / 5, kind, 1.05);
+  }
+  playArcadeSfx(kind);
+  if (kind === "boost") pulseBody(kind);
+}
 
 const standardTermOverrides = {
   "日本国憲法": "1前",
@@ -1228,19 +1427,32 @@ function isValidPlannedValue(course, value) {
   return validTermsForCourse(course).some((term) => term.id === value) && !course.qualificationEligible;
 }
 
-function setPlanned(courseId, term) {
+function setPlanned(courseId, term, options = {}) {
   const course = allCourses.find((item) => item.id === courseId);
+  const before = state.planned.get(courseId);
+  let feedback = null;
   if (term === "none") {
-    state.planned.delete(courseId);
+    if (state.planned.delete(courseId)) feedback = "remove";
   } else if (parseRecognitionValue(term)) {
     const recognition = parseRecognitionValue(term);
     const valid = course?.qualificationEligible && recognitionTermsForMethod(course, recognition.method).some((item) => item.id === recognition.term);
-    if (valid) state.planned.set(courseId, term);
+    if (valid) {
+      state.planned.set(courseId, term);
+      feedback = before === term ? null : "confirm";
+    } else {
+      feedback = "error";
+    }
   } else {
-    if (course && isValidPlannedValue(course, term)) state.planned.set(courseId, term);
+    if (course && isValidPlannedValue(course, term)) {
+      state.planned.set(courseId, term);
+      feedback = before === term ? null : "confirm";
+    } else if (course) {
+      feedback = "error";
+    }
   }
   state.openCourseId = null;
   state.openTreeNodeId = null;
+  if (feedback) triggerArcadeFeedback(feedback, options.source);
   render();
 }
 
@@ -1278,7 +1490,7 @@ function addTeacherPlanCourses() {
   return added;
 }
 
-function autoFill() {
+function autoFill(options = {}) {
   state.planned.clear();
   state.openCourseId = null;
   state.openTreeNodeId = null;
@@ -1292,6 +1504,9 @@ function autoFill() {
   });
   if (state.teacher) {
     addTeacherPlanCourses();
+  }
+  if (!options.silent) {
+    triggerArcadeFeedback("boost");
   }
   render();
 }
@@ -1465,7 +1680,7 @@ function renderCatalog() {
     select.setAttribute("aria-label", `${course.name}の配置`);
     select.innerHTML = optionMarkupForCourse(course);
     select.value = state.planned.get(course.id) || "none";
-    select.addEventListener("change", (event) => setPlanned(course.id, event.target.value));
+    select.addEventListener("change", (event) => setPlanned(course.id, event.target.value, { source: select }));
 
     const opening = document.createElement("button");
     opening.type = "button";
@@ -1475,6 +1690,7 @@ function renderCatalog() {
     opening.setAttribute("aria-label", `${course.name}の履修時期を選択${state.planned.has(course.id) ? `: ${plannedLabel(course)}` : ""}`);
     opening.addEventListener("click", () => {
       state.openCourseId = state.openCourseId === course.id ? null : course.id;
+      triggerArcadeFeedback("switch", opening);
       render();
     });
 
@@ -1483,7 +1699,7 @@ function renderCatalog() {
     remove.className = "remove-button";
     remove.textContent = "×";
     remove.setAttribute("aria-label", `${course.name}を外す`);
-    remove.addEventListener("click", () => setPlanned(course.id, "none"));
+    remove.addEventListener("click", () => setPlanned(course.id, "none", { source: remove }));
 
     actions.append(opening, remove);
     info.append(title, tags);
@@ -1685,6 +1901,7 @@ function renderTree() {
               button.addEventListener("click", () => {
                 state.openTreeNodeId = state.openTreeNodeId === node.id ? null : node.id;
                 state.openCourseId = null;
+                triggerArcadeFeedback("switch", button);
                 render();
               });
               if (state.openTreeNodeId === node.id) {
@@ -1694,13 +1911,13 @@ function renderTree() {
                 select.setAttribute("aria-label", `${course.name}の配置`);
                 select.innerHTML = optionMarkupForCourse(course);
                 select.value = state.planned.get(course.id) || "none";
-                select.addEventListener("change", (event) => setPlanned(course.id, event.target.value));
+                select.addEventListener("change", (event) => setPlanned(course.id, event.target.value, { source: select }));
                 const remove = document.createElement("button");
                 remove.type = "button";
                 remove.className = "remove-button";
                 remove.textContent = "×";
                 remove.setAttribute("aria-label", `${course.name}を外す`);
-                remove.addEventListener("click", () => setPlanned(course.id, "none"));
+                remove.addEventListener("click", () => setPlanned(course.id, "none", { source: remove }));
                 menu.append(select, remove);
                 item.appendChild(menu);
               }
@@ -1826,6 +2043,8 @@ function renderViewMode() {
   const treeCodeToggle = document.querySelector("#treeCodeToggle");
   const treeMetaToggleWrap = document.querySelector("#treeMetaToggleWrap");
   const treeMetaToggle = document.querySelector("#treeMetaToggle");
+  const fxToggle = document.querySelector("#fxToggle");
+  const bgmToggle = document.querySelector("#bgmToggle");
   const isTree = state.viewMode === "tree";
   catalog.hidden = isTree;
   tree.hidden = !isTree;
@@ -1833,6 +2052,8 @@ function renderViewMode() {
   treeCodeToggle.checked = state.showTreeCodes;
   treeMetaToggleWrap.hidden = !isTree;
   treeMetaToggle.checked = state.showTreeMeta;
+  fxToggle.checked = state.soundFx;
+  bgmToggle.checked = state.soundBgm;
   filters.hidden = !state.filtersOpen;
   filterToggle.setAttribute("aria-expanded", String(state.filtersOpen));
   workspace.classList.toggle("catalog-tree-mode", isTree);
@@ -1966,6 +2187,7 @@ function init() {
         .filter((course) => course.category === "courseRequired" && course.course === state.course)
         .forEach((course) => state.planned.set(course.id, openingTermForCourse(course)));
     }
+    triggerArcadeFeedback("switch", courseSelect);
     render();
   });
 
@@ -1980,6 +2202,7 @@ function init() {
     state.openCourseId = null;
     state.openTreeNodeId = null;
     resetCatalogFilters();
+    triggerArcadeFeedback(state.teacher ? "boost" : "switch", event.currentTarget);
     render();
   });
   document.querySelector("#gpaInput").addEventListener("change", (event) => {
@@ -1999,6 +2222,7 @@ function init() {
   });
   document.querySelector("#filterToggle").addEventListener("click", () => {
     state.filtersOpen = !state.filtersOpen;
+    triggerArcadeFeedback("switch", document.querySelector("#filterToggle"));
     render();
   });
   document.querySelector("#viewModeToggle").addEventListener("change", (event) => {
@@ -2009,14 +2233,28 @@ function init() {
       state.viewMode = "list";
       state.openTreeNodeId = null;
     }
+    triggerArcadeFeedback("switch", event.currentTarget);
     render();
   });
   document.querySelector("#treeCodeToggle").addEventListener("change", (event) => {
     state.showTreeCodes = event.target.checked;
+    triggerArcadeFeedback("switch", event.currentTarget);
     render();
   });
   document.querySelector("#treeMetaToggle").addEventListener("change", (event) => {
     state.showTreeMeta = event.target.checked;
+    triggerArcadeFeedback("switch", event.currentTarget);
+    render();
+  });
+  document.querySelector("#fxToggle").addEventListener("change", (event) => {
+    state.soundFx = event.target.checked;
+    if (state.soundFx) triggerArcadeFeedback("switch", event.currentTarget);
+    render();
+  });
+  document.querySelector("#bgmToggle").addEventListener("change", (event) => {
+    state.soundBgm = event.target.checked;
+    triggerArcadeFeedback(state.soundBgm ? "boost" : "remove", event.currentTarget);
+    syncArcadeAudio();
     render();
   });
   document.querySelector("#autoFillButton").addEventListener("click", autoFill);
@@ -2024,9 +2262,19 @@ function init() {
     state.planned.clear();
     state.openCourseId = null;
     state.openTreeNodeId = null;
+    triggerArcadeFeedback("remove", document.querySelector("#clearButton"));
     render();
   });
-  autoFill();
+  document.addEventListener("pointerdown", syncArcadeAudio, { once: true, capture: true });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      stopArcadeBgm();
+    } else {
+      syncArcadeAudio();
+    }
+  });
+  syncArcadeToggleLabels();
+  autoFill({ silent: true });
 }
 
 init();

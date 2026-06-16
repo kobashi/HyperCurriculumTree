@@ -646,6 +646,7 @@ input {
 .tree-section-basic-required {
   background: #e9f3fb;
   border-left-color: #4a91bd;
+  gap: 8px;
 }
 
 .tree-section-basic-elective {
@@ -697,6 +698,7 @@ input {
   color: var(--ink);
   font-size: 14px;
   font-weight: 700;
+  cursor: help;
 }
 
 .tree-lane {
@@ -711,6 +713,7 @@ input {
   background: rgba(255, 255, 255, 0.62);
   font-size: 12px;
   font-weight: 700;
+  cursor: help;
 }
 
 .tree-cell {
@@ -724,6 +727,49 @@ input {
   display: grid;
   align-content: start;
   min-height: 34px;
+}
+
+.tree-section-basic-required .tree-cell {
+  gap: 6px;
+  min-height: 40px;
+}
+
+.tree-section-basic-required .tree-slot {
+  min-height: 23px;
+}
+
+.tree-section-common .tree-cell,
+.tree-section-system .tree-cell,
+.tree-section-movie .tree-cell,
+.tree-section-sound .tree-cell,
+.tree-section-design .tree-cell,
+.tree-section-specialized .tree-cell {
+  gap: 6px;
+  min-height: 40px;
+}
+
+.tree-section-common .tree-slot,
+.tree-section-system .tree-slot,
+.tree-section-movie .tree-slot,
+.tree-section-sound .tree-slot,
+.tree-section-design .tree-slot,
+.tree-section-specialized .tree-slot {
+  min-height: 23px;
+}
+
+.tree-row.is-centered-lane .tree-cell {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.tree-section-basic-required .tree-row.is-centered-lane .tree-cell {
+  min-height: 36px;
+}
+
+.tree-row.is-centered-lane .tree-slot {
+  width: 100%;
+  min-height: 0;
 }
 
 .tree-node {
@@ -742,25 +788,47 @@ input {
   width: 100%;
   min-height: 0;
   padding: 5px 9px;
+  border: 1.5px solid rgba(23, 33, 37, 0.3);
   border-color: rgba(23, 33, 37, 0.3);
   border-radius: 6px;
   background: #fff;
   text-align: left;
   align-items: start;
+  cursor: default;
 }
 
-.tree-node.is-branch .tree-node-button {
-  box-shadow: inset -3px 0 0 rgba(34, 126, 126, 0.7);
+.tree-node.has-tooltip .tree-node-button {
+  cursor: help;
 }
 
-.tree-node.is-merge .tree-node-button {
-  box-shadow: inset 3px 0 0 rgba(142, 91, 33, 0.72);
+.tree-node.required-basic .tree-node-button {
+  border-color: #4a91bd;
+  box-shadow: 0 0 0 1px rgba(74, 145, 189, 0.18);
 }
 
-.tree-node.is-branch.is-merge .tree-node-button {
-  box-shadow:
-    inset 3px 0 0 rgba(142, 91, 33, 0.72),
-    inset -3px 0 0 rgba(34, 126, 126, 0.7);
+.tree-node.required-common .tree-node-button {
+  border-color: #7c878b;
+  box-shadow: 0 0 0 1px rgba(124, 135, 139, 0.18);
+}
+
+.tree-node.required-system .tree-node-button {
+  border-color: #26947b;
+  box-shadow: 0 0 0 1px rgba(38, 148, 123, 0.18);
+}
+
+.tree-node.required-movie .tree-node-button {
+  border-color: #8dbd3d;
+  box-shadow: 0 0 0 1px rgba(141, 189, 61, 0.2);
+}
+
+.tree-node.required-sound .tree-node-button {
+  border-color: #e1b72c;
+  box-shadow: 0 0 0 1px rgba(225, 183, 44, 0.2);
+}
+
+.tree-node.required-design .tree-node-button {
+  border-color: #d69332;
+  box-shadow: 0 0 0 1px rgba(214, 147, 50, 0.2);
 }
 
 .tree-node-button[aria-expanded="true"],
@@ -864,36 +932,8 @@ input {
   stroke-linejoin: round;
 }
 
-.tree-edge.is-branch-edge {
-  stroke: rgba(34, 126, 126, 0.66);
-  stroke-width: 2.4;
-}
-
-.tree-edge.is-merge-edge {
-  stroke: rgba(142, 91, 33, 0.68);
-  stroke-width: 2.4;
-}
-
-.tree-edge.is-branch-edge.is-merge-edge {
-  stroke: rgba(112, 70, 151, 0.7);
-  stroke-width: 2.8;
-}
-
 .tree-edge-arrow {
   fill: rgba(20, 108, 104, 0.62);
-}
-
-.tree-edge-hub {
-  stroke: #fff;
-  stroke-width: 1.5;
-}
-
-.tree-edge-hub.branch {
-  fill: #227e7e;
-}
-
-.tree-edge-hub.merge {
-  fill: #8e5b21;
 }
 
 .year-column {

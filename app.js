@@ -163,7 +163,7 @@ const specializedElectives = [
   ["SE-026", "舞台制作", 2, 3, "後"],
   ["SE-027", "サウンドプロダクション", 2, 3, "後"],
   ["SE-028", "ＣＡＤ", 2, 2, "前"],
-  ["SE-029", "メディア文化論", 2, 3, "前"],
+  ["SE-029", "メディア文化論", 2, 2, "後"],
   ["SE-030", "デジタルファブリケーション", 2, 3, "前"],
   ["SE-031", "インターンシップ", 2, 1, "前"],
   ["SE-032", "情報メディア特別演習Ⅰ", 2, 3, "前"],
@@ -177,14 +177,14 @@ const basicElectives = [
   ["BE-000A", "プラクティカル・イングリッシュⅣ", 2, 2, "後"],
   ["BE-001", "哲学", 2, "前"],
   ["BE-002", "心理学", 2, "前"],
-  ["BE-003", "海外事情", 2, "前"],
-  ["BE-004", "芸術", 2, "後"],
+  ["BE-003", "海外事情", 2, "後"],
+  ["BE-004", "芸術", 2, "前"],
   ["BE-005", "人間関係論", 2, "後"],
   ["BE-006", "現代日本史", 2, "後"],
   ["BE-007", "日本国憲法", 2, "前", true],
   ["BE-008", "経営学", 2, "前"],
   ["BE-009", "社会学", 2, "前"],
-  ["BE-010", "法学", 2, "後"],
+  ["BE-010", "法学", 2, "前"],
   ["BE-011", "経済学", 2, "後"],
   ["BE-012", "自然科学Ⅰ", 2, "前"],
   ["BE-013", "統計学", 2, "前"],
@@ -201,7 +201,7 @@ const basicElectives = [
   ["BE-024", "アウトドアスポーツⅡ", 1, "後"],
   ["BE-025", "スポーツ科学", 2, "後"],
   ["BE-026", "地域の課題", 2, "後"],
-  ["BE-027", "ボランティア活動", 2, "後"],
+  ["BE-027", "ボランティア活動", 2, "前"],
   ["BE-028", "海外研修Ⅰ", 2, null],
   ["BE-029", "海外研修Ⅱ", 2, null]
 ];
@@ -216,8 +216,8 @@ const treeMetaByName = new Map([
   ["日本語力Ⅱ", { section: "基礎教育科目", lane: "人間と文化への理解", courseNumber: "3104", level: "中級" }],
 
   ["海外事情", { section: "基礎教育科目", lane: "現代社会への理解", courseNumber: "9206", level: "初級" }],
-  ["海外研修Ⅰ", { section: "基礎教育科目", lane: "現代社会への理解", courseNumber: "9207", level: "初級", term: TREE_UNASSIGNED_TERM }],
-  ["海外研修Ⅱ", { section: "基礎教育科目", lane: "現代社会への理解", courseNumber: "9208", level: "初級", term: TREE_UNASSIGNED_TERM }],
+  ["海外研修Ⅰ", { section: "基礎教育科目", lane: "現代社会への理解", courseNumber: "9207", level: "初級", term: "1前" }],
+  ["海外研修Ⅱ", { section: "基礎教育科目", lane: "現代社会への理解", courseNumber: "9208", level: "初級", term: "1前" }],
   ["日本国憲法", { section: "基礎教育科目", lane: "現代社会への理解", courseNumber: "9209", level: "初級" }],
   ["経済学", { section: "基礎教育科目", lane: "現代社会への理解", courseNumber: "9210", level: "初級" }],
   ["経営学", { section: "基礎教育科目", lane: "現代社会への理解", courseNumber: "9211", level: "初級" }],
@@ -282,32 +282,32 @@ const treeRowByCourseName = new Map([
   ["自然科学Ⅱ", 1],
   ["数的処理Ⅰ", 2],
   ["数的処理Ⅱ", 2],
-  ["統計学", 3],
-  ["フレッシュマンセミナーⅠ", 1],
-  ["フレッシュマンセミナーⅡ", 1],
+  ["統計学", 2],
+  ["フレッシュマンセミナーⅠ", 2],
+  ["フレッシュマンセミナーⅡ", 2],
   ["基礎演習Ⅰ", 2],
   ["基礎演習Ⅱ", 2],
-  ["キャリアデザインⅠ", 3],
-  ["キャリアデザインⅡ", 3],
-  ["地域の課題", 4],
-  ["ボランティア活動", 4],
+  ["キャリアデザインⅠ", 1],
+  ["キャリアデザインⅡ", 1],
+  ["地域の課題", 1],
+  ["ボランティア活動", 1],
   ["哲学", 1],
-  ["芸術", 1],
-  ["心理学", 2],
+  ["芸術", 2],
+  ["心理学", 3],
   ["人間関係論", 2],
   ["現代日本史", 3],
-  ["日本語力Ⅰ", 4],
-  ["日本語力Ⅱ", 4],
+  ["日本語力Ⅰ", 2],
+  ["日本語力Ⅱ", 2],
   ["日本国憲法", 1],
   ["経済学", 1],
   ["経営学", 2],
-  ["法学", 2],
-  ["社会学", 3],
-  ["海外事情", 4],
+  ["法学", 3],
+  ["社会学", 4],
+  ["海外事情", 5],
   ["海外研修Ⅰ", 5],
   ["海外研修Ⅱ", 5],
-  ["情報リテラシー", 1],
-  ["ＩＣＴ基礎", 1]
+  ["情報リテラシー", 2],
+  ["ＩＣＴ基礎", 2]
 ]);
 
 const treeRowByNodeId = new Map([
@@ -322,7 +322,7 @@ const treeRowByNodeId = new Map([
   ["common-fe", 1],
   ["common-it-passport", 2],
   ["common-software-basic", 2],
-  ["common-info-management", 3],
+  ["common-info-management", 1],
   ["common-media-theory", 1],
   ["common-ethics", 1],
   ["common-internship", 2],
@@ -338,13 +338,13 @@ const treeRowByNodeId = new Map([
   ["system-program-3", 1],
   ["system-program-4", 1],
   ["system-algorithm", 2],
-  ["system-game-programming", 2],
+  ["system-game-programming", 3],
   ["system-sound-programming", 2],
   ["system-knowledge", 2],
   ["system-web-programming", 1],
-  ["system-network-1", 2],
-  ["system-network-2", 2],
-  ["system-mobile", 2],
+  ["system-network-1", 1],
+  ["system-network-2", 1],
+  ["system-mobile", 1],
   ["system-intro", 1],
   ["system-basic-theory", 1],
   ["system-media-tech", 1],
@@ -356,17 +356,17 @@ const treeRowByNodeId = new Map([
   ["movie-processing", 1],
   ["movie-media-art", 1],
   ["movie-history", 2],
-  ["movie-scenario", 2],
-  ["movie-documentary", 2],
-  ["movie-cm", 3],
-  ["movie-broadcast", 3],
+  ["movie-scenario", 3],
+  ["movie-documentary", 3],
+  ["movie-cm", 2],
+  ["movie-broadcast", 2],
   ["movie-digital-art", 1],
   ["movie-animation", 1],
   ["movie-cg-basic", 1],
   ["movie-cg-exercise", 1],
-  ["movie-color", 2],
-  ["movie-photo", 2],
-  ["movie-multimedia", 2],
+  ["movie-color", 1],
+  ["movie-photo", 1],
+  ["movie-multimedia", 1],
 
   ["sound-digital-intro", 1],
   ["sound-practice", 1],
@@ -382,6 +382,8 @@ const treeRowByNodeId = new Map([
   ["sound-music-theory", 1],
   ["sound-creation", 1],
   ["sound-midi-2", 2],
+  ["sound-sound-programming", 1],
+  ["sound-multimedia", 2],
   ["design-intro", 1],
   ["design-graphic", 1],
   ["design-exercise-1", 1],
@@ -395,9 +397,9 @@ const treeRowByNodeId = new Map([
   ["design-web-programming", 1],
   ["design-web-design", 1],
   ["design-web-analysis", 1],
-  ["design-media-culture", 2],
-  ["design-documentary-scenario", 3],
-  ["design-documentary", 3]
+  ["design-media-culture", 1],
+  ["design-documentary-scenario", 1],
+  ["design-documentary", 1]
 ]);
 
 const otherDeptNames = [
@@ -447,7 +449,7 @@ const officialTreeNodes = [
   ["common-it-strategy", "ＩＴストラテジ", "professional", "コース共通", "情報資格系列", "2前", "初級", "3105", false],
   ["common-software-basic", "ソフトウェア基礎", "professional", "コース共通", "情報資格系列", "2前", "中級", "3106", true],
   ["common-fe", "基本情報技術", "professional", "コース共通", "情報資格系列", "2後", "中級", "9102", false],
-  ["common-info-management", "情報管理", "professional", "コース共通", "情報資格系列", "2前", "中級", "3109", true],
+  ["common-info-management", "情報管理", "professional", "コース共通", "総合・その他", "2前", "中級", "3109", true],
   ["common-internship", "インターンシップ", "professional", "コース共通", "総合・その他", "1前", "上級", "9103", false],
   ["common-special-seminar-1", "情報メディア特別演習Ⅰ", "professional", "コース共通", "総合・その他", "3前", "中級", "5111", false],
   ["common-special-seminar-2", "情報メディア特別演習Ⅱ", "professional", "コース共通", "総合・その他", "3後", "中級", "6111", false],
@@ -505,6 +507,8 @@ const officialTreeNodes = [
   ["sound-midi-2", "ＭＩＤＩ制作演習Ⅱ", "professional", "サウンド制作コース", "楽曲制作系列", "2前", "初中級", "3303", false],
   ["sound-music-theory", "音楽理論", "professional", "サウンド制作コース", "楽曲制作系列", "2前", "初中級", "3302", false],
   ["sound-creation", "サウンドクリエーション", "professional", "サウンド制作コース", "楽曲制作系列", "2後", "中級", "4304", false],
+  ["sound-sound-programming", "サウンドプログラミング", "professional", "サウンド制作コース", "総合・その他", "3前", "上級", "5112", false],
+  ["sound-multimedia", "マルチメディア", "professional", "サウンド制作コース", "総合・その他", "3前", "中級", "5204", true],
 
   ["design-graphic", "グラフィックデザイン", "professional", "メディアデザインコース", "メディアデザイン系列", "1後", "初級", "2401", false],
   ["design-exercise-1", "メディアデザイン演習Ⅰ", "professional", "メディアデザインコース", "メディアデザイン系列", "2前", "初級", "3401", false],
@@ -518,9 +522,9 @@ const officialTreeNodes = [
   ["design-web-programming", "Ｗｅｂプログラミング", "professional", "メディアデザインコース", "Webデザイン系列", "2前", "中級", "3108", false],
   ["design-web-design", "Ｗｅｂデザイン", "professional", "メディアデザインコース", "Webデザイン系列", "2後", "中級", "4402", true],
   ["design-web-analysis", "Ｗｅｂ解析", "professional", "メディアデザインコース", "Webデザイン系列", "3前", "上級", "5402", false],
-  ["design-media-culture", "メディア文化論", "professional", "メディアデザインコース", "Webデザイン系列", "3前", "中級", "5403", false],
-  ["design-documentary-scenario", "ドキュメンタリー・シナリオ", "professional", "メディアデザインコース", "Webデザイン系列", "3前", "中級", "5202", false],
-  ["design-documentary", "ドキュメンタリー演習", "professional", "メディアデザインコース", "Webデザイン系列", "3後", "上級", "6202", false],
+  ["design-media-culture", "メディア文化論", "professional", "メディアデザインコース", "総合・その他", "2後", "中級", "5403", false],
+  ["design-documentary-scenario", "ドキュメンタリー・シナリオ", "professional", "メディアデザインコース", "総合・その他", "3前", "中級", "5202", false],
+  ["design-documentary", "ドキュメンタリー演習", "professional", "メディアデザインコース", "総合・その他", "3後", "上級", "6202", false],
   ["design-intro", "メディアデザイン入門", "professional", "メディアデザインコース", "総合・その他", "1前", "初級", "1401", false],
 
   ["teacher-principles", "教育原理", "teacher", "教職課程に関する科目", "教職", "1前", "", "M5Z1201", false],
@@ -555,34 +559,36 @@ const officialTreeNodes = [
 const officialTreeEdges = [
   ["common-programming-intro", "common-program-exercise-1"],
   ["common-program-exercise-1", "common-data-science"],
+  ["common-program-exercise-1", "system-algorithm"],
   ["common-info-processing", "common-data-science"],
+  ["common-info-processing", "system-program-2"],
+  ["common-info-processing", "system-algorithm"],
   ["common-data-science", "common-ai"],
   ["common-info-concepts", "common-it-management"],
-  ["common-media-theory", "common-ethics"],
   ["common-it-management", "common-it-strategy"],
   ["common-it-management", "common-software-basic"],
   ["common-it-strategy", "common-fe"],
+  ["common-software-basic", "common-fe"],
   ["common-special-seminar-1", "common-special-seminar-2"],
-  ["common-special-seminar-2", "common-art-design"],
   ["common-seminar-1", "common-seminar-2"],
   ["common-seminar-2", "common-graduation-1"],
   ["common-graduation-1", "common-graduation-2"],
   ["system-program-2", "system-program-3"],
+  ["system-program-2", "system-sound-programming"],
   ["system-algorithm", "system-game-programming"],
-  ["system-game-programming", "system-program-3"],
+  ["system-algorithm", "system-program-3"],
   ["system-program-3", "system-program-4"],
   ["system-network-1", "system-network-2"],
   ["system-network-2", "system-mobile"],
   ["system-intro", "system-basic-theory"],
   ["system-basic-theory", "system-media-tech"],
   ["system-media-tech", "system-development"],
-  ["system-development", "system-database"],
+  ["system-media-tech", "system-database"],
   ["movie-production-1", "movie-production-2"],
   ["movie-history", "movie-production-2"],
   ["movie-production-2", "movie-processing"],
+  ["movie-production-2", "movie-cm"],
   ["movie-processing", "movie-media-art"],
-  ["movie-processing", "movie-scenario"],
-  ["movie-processing", "movie-cm"],
   ["movie-scenario", "movie-documentary"],
   ["movie-cm", "movie-broadcast"],
   ["movie-digital-art", "movie-animation"],
@@ -594,13 +600,11 @@ const officialTreeEdges = [
   ["sound-acoustics", "sound-production"],
   ["sound-ear-training", "sound-production"],
   ["sound-production", "sound-recording"],
-  ["sound-production", "sound-stage"],
-  ["sound-production", "sound-broadcast"],
-  ["sound-production", "sound-production-work"],
   ["sound-midi-1", "sound-music-theory"],
   ["sound-midi-1", "sound-midi-2"],
   ["sound-music-theory", "sound-creation"],
   ["sound-midi-2", "sound-creation"],
+  ["system-program-2", "sound-sound-programming"],
   ["design-graphic", "design-exercise-1"],
   ["design-color", "design-exercise-2"],
   ["design-exercise-1", "design-exercise-2"],
@@ -609,6 +613,7 @@ const officialTreeEdges = [
   ["design-intro", "design-graphic"],
   ["design-intro", "design-cg-basic"],
   ["design-intro", "design-cad"],
+  ["design-intro", "system-web-programming"],
   ["design-intro", "design-web-programming"],
   ["design-cg-basic", "design-digital-fabrication"],
   ["design-cad", "design-digital-fabrication"],
@@ -631,32 +636,35 @@ const prereqs = {
   "プラクティカル・イングリッシュⅡ": ["プラクティカル・イングリッシュⅠ"],
   "プラクティカル・イングリッシュⅢ": ["プラクティカル・イングリッシュⅡ"],
   "プラクティカル・イングリッシュⅣ": ["プラクティカル・イングリッシュⅢ"],
+  "自然科学Ⅱ": ["自然科学Ⅰ"],
   "ＩＣＴ基礎": ["情報リテラシー"],
   "フレッシュマンセミナーⅡ": ["フレッシュマンセミナーⅠ"],
   "基礎演習Ⅰ": ["フレッシュマンセミナーⅡ"],
   "基礎演習Ⅱ": ["基礎演習Ⅰ"],
   "キャリアデザインⅡ": ["キャリアデザインⅠ"],
+  "スポーツⅡ": ["スポーツⅠ"],
   "プログラム演習Ⅰ": ["プログラミング入門"],
-  "プログラム演習Ⅱ": ["プログラム演習Ⅰ"],
-  "プログラム演習Ⅲ": ["プログラム演習Ⅱ"],
+  "プログラム演習Ⅱ": ["プログラム演習Ⅰ", "情報処理演習"],
+  "プログラム演習Ⅲ": ["プログラム演習Ⅱ", "アルゴリズムとデータ構造"],
   "プログラム演習Ⅳ": ["プログラム演習Ⅲ"],
   "データサイエンス": ["プログラム演習Ⅰ", "情報処理演習"],
   "人工知能": ["データサイエンス"],
-  "情報社会の倫理と職業": ["情報メディア論"],
   "ＩＴマネジメント": ["情報学概論"],
   "ＩＴストラテジ": ["ＩＴマネジメント"],
-  "基本情報技術": ["ＩＴストラテジ"],
+  "基本情報技術": ["ＩＴストラテジ", "ソフトウェア基礎"],
   "専門演習Ⅰ": ["基礎演習Ⅱ"],
   "専門演習Ⅱ": ["専門演習Ⅰ"],
   "卒業演習Ⅰ": ["専門演習Ⅱ"],
   "卒業演習Ⅱ": ["卒業演習Ⅰ"],
+  "アルゴリズムとデータ構造": ["プログラム演習Ⅰ", "情報処理演習"],
   "ゲームプログラミング": ["アルゴリズムとデータ構造"],
+  "サウンドプログラミング": ["プログラム演習Ⅱ"],
   "コンピュータネットワークⅡ": ["コンピュータネットワークⅠ"],
   "モバイル情報論": ["コンピュータネットワークⅡ"],
   "情報基礎理論": ["情報システム入門"],
   "メディア情報技術": ["情報基礎理論"],
   "システム開発論": ["メディア情報技術"],
-  "データベース": ["システム開発論"],
+  "データベース": ["メディア情報技術"],
   "映像制作演習Ⅱ": ["映像制作演習Ⅰ"],
   "映像加工技術": ["映像制作演習Ⅱ"],
   "メディアアート": ["映像加工技術"],
@@ -668,8 +676,6 @@ const prereqs = {
   "音楽理論": ["ＭＩＤＩ制作演習Ⅰ"],
   "音響制作演習": ["音響学", "聴能・音感演習"],
   "レコーディング演習": ["音響制作演習"],
-  "舞台制作": ["音響制作演習"],
-  "サウンドプロダクション": ["音響制作演習"],
   "サウンドクリエーション": ["音楽理論", "ＭＩＤＩ制作演習Ⅱ"],
   "ＣＧ演習": ["ＣＧ基礎"],
   "デジタルファブリケーション": ["ＣＧ基礎", "ＣＡＤ"],
@@ -702,17 +708,21 @@ const state = {
 
 const standardTermOverrides = {
   "日本国憲法": "1前",
-  "経営学": "2前",
+  "経営学": "1前",
+  "法学": "1前",
+  "海外事情": "1後",
   "スポーツⅠ": "1前",
   "スポーツⅡ": "1後",
-  "哲学": "2前",
+  "哲学": "1前",
   "心理学": "2後",
-  "統計学": "2前",
-  "地域の課題": "2後"
+  "統計学": "1前",
+  "地域の課題": "1後",
+  "ボランティア活動": "1前"
 };
 
 function validTermsForCourse(course) {
   if (course.qualificationEligible) return TERMS;
+  if (["芸術", "海外研修Ⅰ", "海外研修Ⅱ"].includes(course.name)) return TERMS;
   if (!course.year && !course.term) return TERMS;
   if (!course.year) return TERMS.filter((term) => term.id.endsWith(course.term));
   return TERMS.filter((term) => term.year >= course.year && term.id.endsWith(course.term));
@@ -796,6 +806,15 @@ function plannedLabel(course) {
   const term = TERMS.find((item) => item.id === plannedTerm(course));
   if (!term) return "";
   return isRecognitionPlanned(course) ? `${recognitionMethodLabel(course)} ${term.label}` : term.label;
+}
+
+function courseTermTag(course) {
+  if (course.name === "芸術") return "前期・後期";
+  if (["海外研修Ⅰ", "海外研修Ⅱ"].includes(course.name)) return "履修時期任意";
+  if (course.qualificationEligible) return "履修/資格";
+  if (course.year) return `${course.year}年${course.term}`;
+  if (course.term) return `配当年次なし・${course.term === "前" ? "前期" : "後期"}`;
+  return "配当年次なし";
 }
 
 function plannedButtonLabel(course) {
@@ -975,11 +994,30 @@ function syntheticTreeNodeForCourse(course) {
   };
 }
 
+function treeNodeTooltip(course, node, treeName) {
+  const lines = [];
+  if (treeName !== node.displayName) lines.push(`正式名: ${node.displayName}`);
+  if (course.category === "basicRequired") lines.push("基礎教育必修");
+  if (course.category === "commonRequired") lines.push("コース共通必修");
+  if (course.category === "courseRequired") lines.push(`${course.course}コース必修`);
+  if (course.teacherRequired || node.teacherRequired) lines.push("教職必修");
+  return lines.join("\n");
+}
+
+function treeRequiredClass(course, node) {
+  if (course.category === "basicRequired") return " required-basic";
+  if (course.category === "commonRequired") return " required-common";
+  if (course.category === "courseRequired") {
+    if (node.section === "情報システムコース") return " required-system";
+    if (node.section === "映像メディアコース") return " required-movie";
+    if (node.section === "サウンド制作コース") return " required-sound";
+    if (node.section === "メディアデザインコース") return " required-design";
+    return " required-course";
+  }
+  return "";
+}
+
 const treeShortNameMap = new Map([
-  ["プラクティカル・イングリッシュⅠ", "プラクティカル英語Ⅰ"],
-  ["プラクティカル・イングリッシュⅡ", "プラクティカル英語Ⅱ"],
-  ["プラクティカル・イングリッシュⅢ", "プラクティカル英語Ⅲ"],
-  ["プラクティカル・イングリッシュⅣ", "プラクティカル英語Ⅳ"],
   ["フードビジネス・イングリッシュⅠ", "フードビジネス英語Ⅰ"],
   ["フードビジネス・イングリッシュⅡ", "フードビジネス英語Ⅱ"],
   ["総合的な学習の時間の指導法", "総合的な学習時間の指導法"],
@@ -992,9 +1030,10 @@ function treeDisplayName(name) {
 
 function treeNameFontSize(name) {
   const length = Array.from((name || "").normalize("NFKC")).length;
-  if (length >= 16) return 8.6;
-  if (length >= 13) return 9.2;
-  return 10.5;
+  if (/^プラクティカル・イングリッシュ[ⅠⅡⅢⅣ]$/.test(name || "")) return 7.7;
+  if (length >= 16) return 8.1;
+  if (length >= 13) return 8.7;
+  return 10;
 }
 
 const treeSectionOrder = [
@@ -1010,6 +1049,118 @@ const treeSectionOrder = [
   "他学科履修",
   "教職課程に関する科目"
 ];
+
+const treeLaneOrder = {
+  "基礎教育科目": [
+    "人間と文化への理解",
+    "現代社会への理解",
+    "自然科学への理解",
+    "外国語",
+    "健康と運動への理解",
+    "情報技術への理解",
+    "総合科目"
+  ],
+  "コース共通": [
+    "演習",
+    "情報資格系列",
+    "総合・その他",
+    "情報処理系列"
+  ],
+  "情報システムコース": [
+    "プログラミング系列",
+    "システム開発系列",
+    "ネットワーク系列"
+  ],
+  "映像メディアコース": [
+    "映像制作系列",
+    "画像処理・CG系列",
+    "総合・その他"
+  ],
+  "サウンド制作コース": [
+    "音響技術系列",
+    "楽曲制作系列",
+    "総合・その他"
+  ],
+  "メディアデザインコース": [
+    "メディアデザイン系列",
+    "プロダクトデザイン系列",
+    "Webデザイン系列",
+    "総合・その他"
+  ]
+};
+
+const centeredTreeLanes = new Set([
+  "基礎教育科目::情報技術への理解",
+  "コース共通::演習",
+  "情報システムコース::ネットワーク系列",
+  "映像メディアコース::画像処理・CG系列",
+  "映像メディアコース::総合・その他",
+  "メディアデザインコース::Webデザイン系列",
+  "メディアデザインコース::総合・その他"
+]);
+
+const treeSectionDescriptions = {
+  "基礎教育科目": "専門性を支え、広げるための基礎学力と基礎知識を修得する科目群です。",
+  "基礎教育必修": "大学生としての基礎学力と教養を高めるための必修科目群です。",
+  "基礎教育選択": "大学生としての基礎学力と教養を広げるための選択科目群です。",
+  "コース共通": "各コース共通の専門科目を通じて、情報メディアに関する基礎的知識を修得する科目群です。",
+  "情報システムコース": "モバイルアプリやゲーム、社会インフラ向け情報システムの開発・運用管理や、企画提案ができる人材を養成するコースです。",
+  "映像メディアコース": "映像制作、アニメーション、CGなどを学び、映像作品制作技術、色彩の知識、プログラミング技術を備えた人材を養成するコースです。",
+  "サウンド制作コース": "音響技術と楽曲制作を中心に学び、音響技術者、サウンドクリエータ、音源開発エンジニアなどを養成するコースです。",
+  "メディアデザインコース": "グラフィック、Web、UI、デジタルファブリケーションを学び、情報創造とコミュニケーションのためのデザイン技法を修得するコースです。",
+  "専門選択": "各コースで専門性や複合スキルを深めるために選択して修得する専門科目群です。",
+  "他学科履修": "他学科で開講する科目のうち、卒業要件に算入できる科目群です。",
+  "教職課程に関する科目": "高等学校教諭一種免許状取得に向けて段階的に履修する教職課程科目です。"
+};
+
+const treeLaneDescriptions = {
+  "人間と文化への理解": "哲学、芸術、心理学などを通じて、人間や文化への理解を広げる領域です。",
+  "現代社会への理解": "日本国憲法、経営学、社会学などを通じて、現代社会の仕組みを学ぶ領域です。",
+  "自然科学への理解": "自然科学や統計学、数的処理を通じて、論理的・数量的な基礎力を養う領域です。",
+  "外国語": "英語と第2外国語を通じて、言語運用力と異文化理解を深める領域です。",
+  "健康と運動への理解": "スポーツ、アウトドア、健康と栄養を通じて、心身の基礎を整える領域です。",
+  "情報技術への理解": "情報リテラシーやICT基礎を通じて、大学で学ぶための情報活用力を養う領域です。",
+  "総合科目": "セミナー、演習、キャリア形成などを通じて、学び方と社会人基礎力を培う領域です。",
+  "情報処理系列": "プログラミング入門からデータサイエンス、人工知能へつながる情報処理の系列です。",
+  "情報資格系列": "情報学概論、ITマネジメント、ITストラテジなどを通じて情報資格や実務基礎へつながる系列です。",
+  "プログラミング系列": "プログラム演習とアルゴリズムを軸に、ゲームや応用開発へ発展する系列です。",
+  "ネットワーク系列": "ネットワーク基礎からモバイル情報論まで、ネットワークと通信技術を学ぶ系列です。",
+  "システム開発系列": "情報システム入門からデータベースまで、システム開発と運用の流れを学ぶ系列です。",
+  "映像制作系列": "映像制作演習から加工、ドキュメンタリー、配信へつながる映像制作の系列です。",
+  "画像処理・CG系列": "デジタルアート入門、アニメーション、CG基礎・演習へつながる系列です。",
+  "音響技術系列": "音響実務、音響学、音響制作演習、レコーディングへつながる音響技術の系列です。",
+  "楽曲制作系列": "MIDI制作演習と音楽理論からサウンドクリエーションへつながる系列です。",
+  "メディアデザイン系列": "グラフィックデザインからメディアデザイン演習、暮しとデザインへつながる系列です。",
+  "プロダクトデザイン系列": "CG基礎とCADを土台に、デジタルファブリケーションへつながる系列です。",
+  "Webデザイン系列": "WebプログラミングからWebデザイン、Web解析へつながる系列です。",
+  "総合・その他": "各コース内で系列横断的に学ぶ補完科目や応用科目のまとまりです。",
+  "教職": "教職課程の半期ごとの必修群を段階的に積み上げていくまとまりです。"
+};
+
+function treeSectionTitle(section) {
+  return treeSectionDescriptions[section] || "";
+}
+
+function treeLaneTitle(lane) {
+  return treeLaneDescriptions[lane] || "";
+}
+
+function sortTreeLanes(section, lanes) {
+  const preferred = treeLaneOrder[section];
+  if (!preferred) return lanes;
+  return [...lanes].sort((a, b) => {
+    const aIndex = preferred.indexOf(a);
+    const bIndex = preferred.indexOf(b);
+    if (aIndex === -1 && bIndex === -1) return a.localeCompare(b, "ja");
+    if (aIndex === -1) return 1;
+    if (bIndex === -1) return -1;
+    return aIndex - bIndex;
+  });
+}
+
+function laneRowSequence(section, lane, laneNodes) {
+  return [...new Set(laneNodes.map((node) => node.row || 1))].sort((a, b) => a - b);
+}
 
 function treeTerms(nodes) {
   if (nodes.some((node) => node.term === TREE_UNASSIGNED_TERM)) {
@@ -1280,13 +1431,7 @@ function renderCatalog() {
 
     const tags = document.createElement("div");
     tags.className = "tags";
-    const termTag = course.qualificationEligible
-      ? "履修/資格"
-      : course.year
-        ? `${course.year}年${course.term}`
-        : course.term
-          ? `年次なし${course.term}`
-          : "配当年次なし";
+    const termTag = courseTermTag(course);
     const tagTexts = [categoryLabels[course.category], course.course, termTag].filter(Boolean);
     tagTexts.forEach((text, index) => {
       const tag = document.createElement("span");
@@ -1441,8 +1586,10 @@ function visibleTreeEdges(nodes = visibleTreeNodes()) {
     const toNodes = nodesByCourseKey.get(normalizeName(courseName)) || [];
     requiredNames.forEach((requiredName) => {
       const fromNodes = nodesByCourseKey.get(normalizeName(requiredName)) || [];
-      fromNodes.forEach((fromNode) => {
-        toNodes.forEach((toNode) => {
+      toNodes.forEach((toNode) => {
+        const sectionMatched = fromNodes.filter((fromNode) => fromNode.section === toNode.section);
+        const sourceNodes = sectionMatched.length ? sectionMatched : fromNodes;
+        sourceNodes.forEach((fromNode) => {
           edges.push({ from: fromNode.id, to: toNode.id });
         });
       });
@@ -1492,17 +1639,19 @@ function renderTree() {
 
   sections.forEach((section) => {
     const sectionNodes = nodes.filter((node) => node.section === section);
-    const lanes = [...new Set(sectionNodes.map((node) => node.lane))];
+    const lanes = sortTreeLanes(section, [...new Set(sectionNodes.map((node) => node.lane))]);
     const block = document.createElement("section");
     block.className = `tree-section tree-section-${sectionClass(section)}`;
-    block.innerHTML = `<div class="tree-section-title">${section}</div>`;
+    const sectionTitle = treeSectionTitle(section);
+    block.innerHTML = `<div class="tree-section-title"${sectionTitle ? ` title="${sectionTitle}"` : ""}>${section}</div>`;
 
     lanes.forEach((lane) => {
       const laneNodes = sectionNodes.filter((node) => node.lane === lane);
-      const laneRows = [...new Set(laneNodes.map((node) => node.row || 1))].sort((a, b) => a - b);
+      const laneRows = laneRowSequence(section, lane, laneNodes);
       const row = document.createElement("div");
-      row.className = "tree-row";
-      row.innerHTML = `<div class="tree-lane">${lane}</div>`;
+      row.className = `tree-row${centeredTreeLanes.has(`${section}::${lane}`) ? " is-centered-lane" : ""}`;
+      const laneTitle = treeLaneTitle(lane);
+      row.innerHTML = `<div class="tree-lane"${laneTitle ? ` title="${laneTitle}"` : ""}>${lane}</div>`;
       displayTerms.forEach((term) => {
         const cell = document.createElement("div");
         cell.className = "tree-cell";
@@ -1515,20 +1664,21 @@ function renderTree() {
               const course = courseForTreeNode(node);
               if (!course) return;
               const treeName = treeDisplayName(node.displayName);
+              const tooltip = treeNodeTooltip(course, node, treeName);
               validatePlannedCourse(course);
               const disabled = course.category === "teacher" && !state.teacher;
               const counts = connectionCounts.get(node.id) || { incoming: 0, outgoing: 0 };
               const item = document.createElement("article");
-              item.className = `tree-node level-${node.level || "none"}${state.planned.has(course.id) ? " is-planned" : ""}${disabled ? " is-disabled" : ""}${counts.outgoing > 1 ? " is-branch" : ""}${counts.incoming > 1 ? " is-merge" : ""}${state.openTreeNodeId === node.id ? " is-open" : ""}${state.showTreeMeta ? " has-meta" : ""}${state.showTreeCodes ? " has-code" : ""}`;
+              item.className = `tree-node level-${node.level || "none"}${treeRequiredClass(course, node)}${tooltip ? " has-tooltip" : ""}${state.planned.has(course.id) ? " is-planned" : ""}${disabled ? " is-disabled" : ""}${state.openTreeNodeId === node.id ? " is-open" : ""}${state.showTreeMeta ? " has-meta" : ""}${state.showTreeCodes ? " has-code" : ""}`;
               item.dataset.nodeId = node.id;
               item.dataset.courseId = course.id;
               item.dataset.incoming = counts.incoming;
               item.dataset.outgoing = counts.outgoing;
               item.innerHTML = `
-                <button type="button" class="tree-node-button" ${disabled ? "disabled" : ""} aria-expanded="${state.openTreeNodeId === node.id ? "true" : "false"}">
+                <button type="button" class="tree-node-button" ${disabled ? "disabled" : ""} aria-expanded="${state.openTreeNodeId === node.id ? "true" : "false"}"${tooltip ? ` title="${tooltip}"` : ""}>
                   ${state.showTreeCodes ? `<span class="tree-node-code">${node.courseNumber}</span>` : ""}
-                  <span class="tree-node-name" style="--tree-name-size:${treeNameFontSize(treeName)}px" title="${node.displayName}">${treeName}</span>
-                  ${state.showTreeMeta ? `<span class="tree-node-meta">${node.level || categoryLabels[course.category]}${course.teacherRequired || node.teacherRequired ? " / 教" : ""}${state.planned.has(course.id) ? ` / ${plannedButtonLabel(course)}` : ""}</span>` : ""}
+                  <span class="tree-node-name" style="--tree-name-size:${treeNameFontSize(treeName)}px">${treeName}</span>
+                  ${state.showTreeMeta ? `<span class="tree-node-meta">${node.level || categoryLabels[course.category]}${state.planned.has(course.id) ? ` / ${plannedButtonLabel(course)}` : ""}</span>` : ""}
                 </button>
               `;
               const button = item.querySelector(".tree-node-button");
@@ -1585,19 +1735,26 @@ function drawTreeEdges() {
   const connectionCounts = treeConnectionCounts(nodes);
   const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
   defs.innerHTML = `
-    <marker id="tree-edge-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+    <marker id="tree-edge-arrow" viewBox="0 0 10 10" refX="8.2" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 z" class="tree-edge-arrow"></path>
     </marker>
   `;
   svg.appendChild(defs);
-  const branchHubs = new Map();
-  const mergeHubs = new Map();
+  const leftAnchorPoint = (fromRect, toRect) => {
+    const fromCenter = fromRect.top + (fromRect.height / 2);
+    const toCenter = toRect.top + (toRect.height / 2);
+    const delta = fromCenter - toCenter;
+    let ratio = 0.5;
+    if (Math.abs(delta) > 8) ratio = delta < 0 ? 0.28 : 0.72;
+    return {
+      x: toRect.left - treeRect.left + tree.scrollLeft,
+      y: toRect.top + (toRect.height * ratio) - treeRect.top + tree.scrollTop
+    };
+  };
   visibleTreeEdges(nodes).forEach((edge) => {
     const from = tree.querySelector(`[data-node-id="${edge.from}"] .tree-node-button`);
     const to = tree.querySelector(`[data-node-id="${edge.to}"] .tree-node-button`);
     if (!from || !to) return;
-    const fromCounts = connectionCounts.get(edge.from) || { incoming: 0, outgoing: 0 };
-    const toCounts = connectionCounts.get(edge.to) || { incoming: 0, outgoing: 0 };
     const a = from.getBoundingClientRect();
     const b = to.getBoundingClientRect();
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
@@ -1625,36 +1782,21 @@ function drawTreeEdges() {
     } else {
       x1 = a.right - treeRect.left + tree.scrollLeft;
       y1 = a.top + a.height / 2 - treeRect.top + tree.scrollTop;
-      x2 = b.left - treeRect.left + tree.scrollLeft;
-      y2 = b.top + b.height / 2 - treeRect.top + tree.scrollTop;
+      ({ x: x2, y: y2 } = leftAnchorPoint(a, b));
       const spanX = Math.max(24, Math.abs(x2 - x1));
-      const curveX = Math.min(Math.max(4, spanX * 0.34), Math.max(4, (spanX / 2) - 2));
+      const spanY = Math.abs(y2 - y1);
+      const curveX = Math.min(Math.max(12, spanX * 0.28), Math.max(12, (spanX / 2) - 4));
+      const swayY = Math.min(18, Math.max(0, spanY * 0.16));
       const cp1x = x1 + curveX;
       const cp2x = x2 - curveX;
-      d = `M ${x1} ${y1} C ${cp1x} ${y1}, ${cp2x} ${y2}, ${x2} ${y2}`;
+      const cp1y = y1 + (y2 > y1 ? swayY : y2 < y1 ? -swayY : 0);
+      const cp2y = y2 - (y2 > y1 ? swayY : y2 < y1 ? -swayY : 0);
+      d = `M ${x1} ${y1} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`;
     }
     path.setAttribute("d", d);
-    path.setAttribute("class", `tree-edge${fromCounts.outgoing > 1 ? " is-branch-edge" : ""}${toCounts.incoming > 1 ? " is-merge-edge" : ""}`);
+    path.setAttribute("class", "tree-edge");
     path.setAttribute("marker-end", "url(#tree-edge-arrow)");
     svg.appendChild(path);
-    if (fromCounts.outgoing > 1) branchHubs.set(edge.from, { x: x1, y: y1 });
-    if (toCounts.incoming > 1) mergeHubs.set(edge.to, { x: x2, y: y2 });
-  });
-  branchHubs.forEach((point) => {
-    const hub = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    hub.setAttribute("class", "tree-edge-hub branch");
-    hub.setAttribute("cx", point.x);
-    hub.setAttribute("cy", point.y);
-    hub.setAttribute("r", 4);
-    svg.appendChild(hub);
-  });
-  mergeHubs.forEach((point) => {
-    const hub = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    hub.setAttribute("class", "tree-edge-hub merge");
-    hub.setAttribute("cx", point.x);
-    hub.setAttribute("cy", point.y);
-    hub.setAttribute("r", 4);
-    svg.appendChild(hub);
   });
 }
 
@@ -1749,13 +1891,9 @@ function escapeRegExp(text) {
 }
 
 function annotateRequirementTerms(text) {
-  let html = text;
-  Object.entries(requirementTermTitles)
-    .sort(([a], [b]) => b.length - a.length)
-    .forEach(([term, title]) => {
-      html = html.replace(new RegExp(escapeRegExp(term), "g"), `<span title="${title}">${term}</span>`);
-    });
-  return html;
+  const terms = Object.keys(requirementTermTitles).sort((a, b) => b.length - a.length);
+  const pattern = new RegExp(terms.map(escapeRegExp).join("|"), "g");
+  return text.replace(pattern, (term) => `<span title="${requirementTermTitles[term]}">${term}</span>`);
 }
 
 function renderRequirements(stats) {

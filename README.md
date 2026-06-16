@@ -60,6 +60,7 @@ python3 -m http.server 4180
 - `他学科履修科目.md`: 他学科履修資料
 - `履修上のルールなど.md`: 卒業要件、CAP、資格認定などの整理
 - `補足資料.md`: 補足リファレンス
+- `docs/development-workflow-checklist.md`: 同種プロジェクトを効率よく進めるための手順とチェックポイント
 
 ## 資料方針
 

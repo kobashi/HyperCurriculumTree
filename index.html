@@ -86,6 +86,7 @@
                 </span>
                 <span id="viewModeValue" class="view-mode-switch-value">OFF</span>
               </label>
+              <button id="filterToggle" class="tree-option filter-toggle" type="button" aria-expanded="false" aria-controls="catalogFilters">絞込</button>
               <label id="treeCodeToggleWrap" class="tree-option" hidden>
                 <input id="treeCodeToggle" type="checkbox">
                 <span>番号</span>
@@ -98,25 +99,25 @@
                 <input id="treeOtherDeptToggle" type="checkbox">
                 <span>他学科</span>
               </label>
+              <div id="catalogFilters" class="catalog-filters" aria-label="科目表示フィルタ" hidden>
+                <fieldset>
+                  <legend>絞込</legend>
+                  <label><input class="year-filter" type="checkbox" value="1" checked>1</label>
+                  <label><input class="year-filter" type="checkbox" value="2" checked>2</label>
+                  <label><input class="year-filter" type="checkbox" value="3" checked>3</label>
+                  <label><input class="year-filter" type="checkbox" value="4" checked>4</label>
+                  <label><input class="term-filter" type="checkbox" value="前" checked>前</label>
+                  <label><input class="term-filter" type="checkbox" value="後" checked>後</label>
+                  <label title="基礎教育必修"><input class="category-filter" type="checkbox" value="basicRequired" checked>基必</label>
+                  <label title="基礎教育選択"><input class="category-filter" type="checkbox" value="basicElective" checked>基選</label>
+                  <label title="専門教育コース共通必修"><input class="category-filter" type="checkbox" value="commonRequired" checked>共通</label>
+                  <label title="専門教育コース必修"><input class="category-filter" type="checkbox" value="courseRequired" checked>コ必</label>
+                  <label title="専門教育選択"><input class="category-filter" type="checkbox" value="specializedElective" checked>専選</label>
+                  <label title="他学科履修"><input class="category-filter" type="checkbox" value="otherDept">他学</label>
+                  <label title="教職課程に関する科目"><input class="category-filter" type="checkbox" value="teacher">教職</label>
+                </fieldset>
+              </div>
             </div>
-          </div>
-          <div class="catalog-filters" aria-label="科目表示フィルタ">
-            <fieldset>
-              <legend>絞込</legend>
-              <label><input class="year-filter" type="checkbox" value="1" checked>1</label>
-              <label><input class="year-filter" type="checkbox" value="2" checked>2</label>
-              <label><input class="year-filter" type="checkbox" value="3" checked>3</label>
-              <label><input class="year-filter" type="checkbox" value="4" checked>4</label>
-              <label><input class="term-filter" type="checkbox" value="前" checked>前</label>
-              <label><input class="term-filter" type="checkbox" value="後" checked>後</label>
-              <label title="基礎教育必修"><input class="category-filter" type="checkbox" value="basicRequired" checked>基必</label>
-              <label title="基礎教育選択"><input class="category-filter" type="checkbox" value="basicElective" checked>基選</label>
-              <label title="専門教育コース共通必修"><input class="category-filter" type="checkbox" value="commonRequired" checked>共通</label>
-              <label title="専門教育コース必修"><input class="category-filter" type="checkbox" value="courseRequired" checked>コ必</label>
-              <label title="専門教育選択"><input class="category-filter" type="checkbox" value="specializedElective" checked>専選</label>
-              <label title="他学科履修"><input class="category-filter" type="checkbox" value="otherDept">他学</label>
-              <label title="教職課程に関する科目"><input class="category-filter" type="checkbox" value="teacher">教職</label>
-            </fieldset>
           </div>
           <div id="catalogList" class="catalog-list"></div>
           <div id="treeView" class="tree-view catalog-tree" hidden></div>

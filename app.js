@@ -690,6 +690,7 @@ const state = {
   secondYearGpa: 1,
   manualOther: 0,
   viewMode: "list",
+  filtersOpen: false,
   showTreeCodes: false,
   showTreeMeta: false,
   showTreeOtherDept: false,
@@ -1677,6 +1678,8 @@ function renderViewMode() {
   const workspace = document.querySelector(".workspace");
   const catalog = document.querySelector("#catalogList");
   const tree = document.querySelector("#treeView");
+  const filters = document.querySelector("#catalogFilters");
+  const filterToggle = document.querySelector("#filterToggle");
   const treeCodeToggleWrap = document.querySelector("#treeCodeToggleWrap");
   const treeCodeToggle = document.querySelector("#treeCodeToggle");
   const treeMetaToggleWrap = document.querySelector("#treeMetaToggleWrap");
@@ -1692,6 +1695,8 @@ function renderViewMode() {
   treeMetaToggle.checked = state.showTreeMeta;
   treeOtherDeptToggleWrap.hidden = !isTree;
   treeOtherDeptToggle.checked = state.showTreeOtherDept;
+  filters.hidden = !state.filtersOpen;
+  filterToggle.setAttribute("aria-expanded", String(state.filtersOpen));
   workspace.classList.toggle("catalog-tree-mode", isTree);
   const viewModeToggle = document.querySelector("#viewModeToggle");
   const viewModeValue = document.querySelector("#viewModeValue");
@@ -1857,6 +1862,10 @@ function init() {
   });
   document.querySelectorAll(".year-filter, .term-filter, .category-filter").forEach((input) => {
     input.addEventListener("change", render);
+  });
+  document.querySelector("#filterToggle").addEventListener("click", () => {
+    state.filtersOpen = !state.filtersOpen;
+    render();
   });
   document.querySelector("#viewModeToggle").addEventListener("change", (event) => {
     if (event.target.checked) {

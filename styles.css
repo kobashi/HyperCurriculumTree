@@ -267,6 +267,19 @@ input {
   gap: 8px;
 }
 
+.filter-toggle {
+  background: #f7faf8;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.filter-toggle[aria-expanded="true"] {
+  border-color: rgba(20, 108, 104, 0.3);
+  background: #e1f0ed;
+  color: var(--brand-dark);
+}
+
 .tree-option {
   display: inline-flex;
   align-items: center;
@@ -300,7 +313,12 @@ input {
 }
 
 .catalog-filters {
+  flex: 1 0 100%;
   margin: 12px 0;
+}
+
+.catalog-filters[hidden] {
+  display: none !important;
 }
 
 .catalog-filters fieldset {

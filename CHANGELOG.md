@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.0.0 - 2026年度版 Ver.1.0
 
 ### Added
 

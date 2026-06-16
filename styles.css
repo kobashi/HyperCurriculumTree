@@ -821,6 +821,11 @@ input {
   box-shadow: 0 0 0 1px rgba(141, 189, 61, 0.2);
 }
 
+.tree-node.recommended-movie .tree-node-button {
+  border-color: #8dbd3d;
+  box-shadow: 0 0 0 1px rgba(141, 189, 61, 0.16);
+}
+
 .tree-node.required-sound .tree-node-button {
   border-color: #e1b72c;
   box-shadow: 0 0 0 1px rgba(225, 183, 44, 0.2);

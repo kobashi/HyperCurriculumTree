@@ -391,6 +391,7 @@ const treeRowByNodeId = new Map([
   ["design-multimedia", 1],
   ["design-living", 1],
   ["design-color", 2],
+  ["design-digital-art-recommended", 1],
   ["design-cg-basic", 1],
   ["design-digital-fabrication", 1],
   ["design-cad", 2],
@@ -516,6 +517,7 @@ const officialTreeNodes = [
   ["design-exercise-2", "メディアデザイン演習Ⅱ", "professional", "メディアデザインコース", "メディアデザイン系列", "2後", "初級", "4401", false],
   ["design-multimedia", "マルチメディア", "professional", "メディアデザインコース", "メディアデザイン系列", "3前", "中級", "5204", true],
   ["design-living", "暮しとデザイン", "professional", "メディアデザインコース", "メディアデザイン系列", "3後", "上級", "6401", false],
+  ["design-digital-art-recommended", "デジタルアート入門", "professional", "メディアデザインコース", "プロダクトデザイン系列", "1前", "初級", "1201", false],
   ["design-cg-basic", "ＣＧ基礎", "professional", "メディアデザインコース", "プロダクトデザイン系列", "2前", "中級", "3203", false],
   ["design-cad", "ＣＡＤ", "professional", "メディアデザインコース", "プロダクトデザイン系列", "2前", "中級", "3402", false],
   ["design-digital-fabrication", "デジタルファブリケーション", "professional", "メディアデザインコース", "プロダクトデザイン系列", "3前", "上級", "5401", false],
@@ -555,6 +557,22 @@ const officialTreeNodes = [
   courseNumber,
   teacherRequired
 }));
+
+const teacherTermGroups = [
+  ["teacher-principles", "teacher-role"],
+  ["teacher-curriculum", "teacher-system"],
+  ["teacher-psychology", "teacher-activities", "teacher-guidance"],
+  ["teacher-counseling", "teacher-special-support", "teacher-integrated-study"],
+  ["teacher-method", "teacher-info-method-1"],
+  ["teacher-practice-guidance", "teacher-info-method-2"],
+  ["teacher-practice"],
+  ["teacher-final"]
+];
+
+const teacherTermEdges = teacherTermGroups.flatMap((group, index) => {
+  const nextGroup = teacherTermGroups[index + 1] || [];
+  return group.flatMap((from) => nextGroup.map((to) => [from, to]));
+});
 
 const officialTreeEdges = [
   ["common-programming-intro", "common-program-exercise-1"],
@@ -609,6 +627,8 @@ const officialTreeEdges = [
   ["design-color", "design-exercise-2"],
   ["design-exercise-1", "design-exercise-2"],
   ["design-exercise-2", "design-multimedia"],
+  ["design-exercise-2", "movie-multimedia"],
+  ["design-exercise-2", "sound-multimedia"],
   ["design-multimedia", "design-living"],
   ["design-intro", "design-graphic"],
   ["design-intro", "design-cg-basic"],
@@ -622,14 +642,7 @@ const officialTreeEdges = [
   ["design-digital-fabrication", "design-living"],
   ["design-web-analysis", "design-living"],
   ["design-documentary-scenario", "design-documentary"],
-  ["teacher-principles", "teacher-curriculum"],
-  ["teacher-role", "teacher-curriculum"],
-  ["teacher-curriculum", "teacher-psychology"],
-  ["teacher-psychology", "teacher-counseling"],
-  ["teacher-counseling", "teacher-info-method-1"],
-  ["teacher-info-method-1", "teacher-info-method-2"],
-  ["teacher-info-method-2", "teacher-practice"],
-  ["teacher-practice", "teacher-final"]
+  ...teacherTermEdges
 ].map(([from, to]) => ({ from, to }));
 
 const prereqs = {
@@ -681,6 +694,7 @@ const prereqs = {
   "デジタルファブリケーション": ["ＣＧ基礎", "ＣＡＤ"],
   "メディアデザイン演習Ⅰ": ["グラフィックデザイン"],
   "メディアデザイン演習Ⅱ": ["メディアデザイン演習Ⅰ"],
+  "マルチメディア": ["メディアデザイン演習Ⅱ"],
   "Ｗｅｂデザイン": ["Ｗｅｂプログラミング"],
   "Ｗｅｂ解析": ["Ｗｅｂデザイン"],
   "ドキュメンタリー演習": ["ドキュメンタリー・シナリオ"],
@@ -866,16 +880,6 @@ function buildCourses() {
         teacherRequired,
         course
       }));
-      courses.push(makeCourse({
-        id: `SE-${course}-${index + 1}`,
-        name,
-        credits: 2,
-        year,
-        term,
-        category: "specializedElective",
-        teacherRequired,
-        course
-      }));
     });
   });
   specializedElectives.forEach(([id, name, credits, year, term, teacherRequired = false]) => {
@@ -931,12 +935,6 @@ function dedupeCourses(courses) {
 
 const allCourses = buildCourses();
 
-function currentCourseRequiredKeys() {
-  return new Set(allCourses
-    .filter((course) => state.course !== NO_COURSE && course.category === "courseRequired" && course.course === state.course)
-    .map((course) => course.key));
-}
-
 function courseForTreeNode(node) {
   if (node.courseId) return allCourses.find((course) => course.id === node.courseId) || null;
   const candidates = allCourses.filter((course) => course.key === normalizeName(node.courseName));
@@ -948,12 +946,8 @@ function courseForTreeNode(node) {
       null;
   }
   const courseName = node.section.replace(/コース$/, "");
-  if (state.course !== NO_COURSE && courseName === state.course) {
-    return candidates.find((course) => course.category === "courseRequired" && course.course === state.course) ||
-      candidates.find((course) => course.category === "specializedElective") ||
-      candidates[0] ||
-      null;
-  }
+  const courseRequiredMatch = candidates.find((course) => course.category === "courseRequired" && course.course === courseName);
+  if (courseRequiredMatch) return courseRequiredMatch;
   return candidates.find((course) => course.category === "specializedElective") || candidates[0] || null;
 }
 
@@ -995,19 +989,31 @@ function syntheticTreeNodeForCourse(course) {
 }
 
 function treeNodeTooltip(course, node, treeName) {
+  const matchedCourseRequired = isCourseRequiredForTreeNode(course, node);
+  const mismatchedCourseRequired = course.category === "courseRequired" && !matchedCourseRequired;
   const lines = [];
   if (treeName !== node.displayName) lines.push(`正式名: ${node.displayName}`);
+  if (isRecommendedTreeNode(node)) lines.push("メディアデザインコース履修推奨科目");
   if (course.category === "basicRequired") lines.push("基礎教育必修");
   if (course.category === "commonRequired") lines.push("コース共通必修");
-  if (course.category === "courseRequired") lines.push(`${course.course}コース必修`);
-  if (course.teacherRequired || node.teacherRequired) lines.push("教職必修");
+  if (matchedCourseRequired) lines.push(`${course.course}コース必修`);
+  if (!mismatchedCourseRequired && (course.teacherRequired || node.teacherRequired)) lines.push("教職必修");
   return lines.join("\n");
 }
 
+function isRecommendedTreeNode(node) {
+  return node.id === "design-digital-art-recommended";
+}
+
+function isCourseRequiredForTreeNode(course, node) {
+  return course.category === "courseRequired" && node.section === `${course.course}コース`;
+}
+
 function treeRequiredClass(course, node) {
+  if (isRecommendedTreeNode(node)) return " recommended-movie";
   if (course.category === "basicRequired") return " required-basic";
   if (course.category === "commonRequired") return " required-common";
-  if (course.category === "courseRequired") {
+  if (isCourseRequiredForTreeNode(course, node)) {
     if (node.section === "情報システムコース") return " required-system";
     if (node.section === "映像メディアコース") return " required-movie";
     if (node.section === "サウンド制作コース") return " required-sound";
@@ -1042,9 +1048,9 @@ const treeSectionOrder = [
   "基礎教育選択",
   "コース共通",
   "情報システムコース",
-  "映像メディアコース",
   "サウンド制作コース",
   "メディアデザインコース",
+  "映像メディアコース",
   "専門選択",
   "他学科履修",
   "教職課程に関する科目"
@@ -1190,12 +1196,9 @@ function visibleCourses() {
   const years = new Set([...document.querySelectorAll(".year-filter:checked")].map((input) => Number(input.value)));
   const terms = new Set([...document.querySelectorAll(".term-filter:checked")].map((input) => input.value));
   const categories = new Set([...document.querySelectorAll(".category-filter:checked")].map((input) => input.value));
-  const currentRequired = currentCourseRequiredKeys();
   return allCourses.filter((course) => {
     const retainedTeacherCourse = course.category === "teacher" && !state.teacher && state.planned.has(course.id);
     if (retainedTeacherCourse) return true;
-    if (course.category === "courseRequired" && course.course !== state.course) return false;
-    if (course.category === "specializedElective" && currentRequired.has(course.key)) return false;
     if (course.category === "teacher" && !state.teacher && !state.planned.has(course.id)) return false;
     if (!categories.has(course.category)) return false;
     if (course.qualificationEligible) return years.size > 0 && terms.size > 0;
@@ -1259,9 +1262,7 @@ function teacherPlanCourses() {
   ).forEach((course) => {
     const key = course.key;
     const existing = preferred.get(key);
-    if (!existing ||
-      course.category === "teacher" ||
-      (course.category === "courseRequired" && existing.category === "specializedElective")) {
+    if (!existing || course.category === "teacher") {
       preferred.set(key, course);
     }
   });

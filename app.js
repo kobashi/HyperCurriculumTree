@@ -1219,6 +1219,8 @@ function bgmArrangementState() {
     const idValue = [...course.id].reduce((sum, char) => sum + char.charCodeAt(0), 0);
     return total + (idValue * (index + 3));
   }, arrangedCourses.length * 17);
+  const arrangedDepth = Math.min(4, arrangedCourses.length);
+  const missingDepth = Math.min(4, missingRequired.length);
   const mutationStep = seed % 16;
   return {
     count: arrangedCourses.length,
@@ -1227,7 +1229,9 @@ function bgmArrangementState() {
     key: bgmCompositionKey(),
     mutationStep,
     missingRequired: missingRequired.length,
-    mutationDepth: Math.min(4, arrangedCourses.length),
+    arrangedDepth,
+    missingDepth,
+    mutationDepth: Math.min(4, arrangedDepth + missingDepth),
     radical: Math.min(1, missingRequired.length / 4)
   };
 }
@@ -1238,32 +1242,35 @@ function isBgmMutationStep(arrangement, step) {
 
 function arrangedMelodyOffset(profile, melodyOffset, step, arrangement) {
   if (melodyOffset === null) return null;
-  if (!isBgmMutationStep(arrangement, step) || arrangement.count === 0) return melodyOffset;
+  if (!isBgmMutationStep(arrangement, step) || arrangement.mutationDepth === 0) return melodyOffset;
   let offset = melodyOffset;
   const direction = arrangement.seed % 2 === 0 ? 1 : -1;
-  if (arrangement.mutationDepth >= 1) {
+  if (arrangement.arrangedDepth >= 1) {
     offset += direction;
   }
-  if (arrangement.mutationDepth >= 2) {
+  if (arrangement.arrangedDepth >= 2) {
     offset += direction;
   }
-  if (arrangement.mutationDepth >= 3) {
+  if (arrangement.arrangedDepth >= 3) {
     offset += direction * 2;
   }
-  if (arrangement.radical > 0) {
+  if (arrangement.missingDepth >= 1) {
     offset += arrangement.missingRequired % 2 === 0 ? 6 : -5;
+  }
+  if (arrangement.missingDepth >= 2) {
+    offset += direction * 2;
   }
   return offset;
 }
 
 function arrangedBassOffset(bassOffset, step, arrangement) {
-  if (!isBgmMutationStep(arrangement, step) || arrangement.count === 0) return bassOffset ?? null;
+  if (!isBgmMutationStep(arrangement, step) || arrangement.mutationDepth === 0) return bassOffset ?? null;
   const direction = arrangement.seed % 2 === 0 ? 1 : -1;
   if (bassOffset !== null && bassOffset !== undefined) {
     return bassOffset + direction * Math.max(1, Math.min(3, arrangement.mutationDepth));
   }
-  if (arrangement.mutationDepth >= 2) return direction * -5;
-  if (arrangement.radical > 0) return arrangement.missingRequired % 2 === 0 ? 1 : -1;
+  if (arrangement.arrangedDepth >= 2) return direction * -5;
+  if (arrangement.missingDepth >= 1) return arrangement.missingRequired % 2 === 0 ? 1 : -1;
   return null;
 }
 
@@ -1275,27 +1282,33 @@ function harmonyForStep(profile, arrangement, step) {
   let kind = "base";
   let label = "通常";
   const outsideTones = [];
-  if (arrangement.count > 0 && isBgmMutationStep(arrangement, step)) {
+  if (arrangement.mutationDepth > 0 && isBgmMutationStep(arrangement, step)) {
     const direction = arrangement.seed % 2 === 0 ? 1 : -1;
-    if (arrangement.mutationDepth >= 1) {
+    if (arrangement.arrangedDepth >= 1) {
       root += direction;
       kind = "arrange";
       label = "履修差";
     }
-    if (arrangement.mutationDepth >= 2) {
+    if (arrangement.arrangedDepth >= 2) {
       voicing = [0, 3, 7, 10];
       kind = "arrange";
       label = "履修差";
     }
-    if (arrangement.mutationDepth >= 3) {
+    if (arrangement.arrangedDepth >= 3) {
       voicing = [0, 3, 6, 10];
       outsideTones.push(root + direction * 4);
       kind = "arrange";
       label = "履修差";
     }
-    if (arrangement.mutationDepth >= 4) {
+    if (arrangement.missingDepth >= 1) {
       root += direction * 2;
       outsideTones.push(root + direction * 6);
+      kind = "arrange";
+      label = "履修差";
+    }
+    if (arrangement.missingDepth >= 2) {
+      voicing = [0, 1, 6, 10];
+      outsideTones.push(root - direction * 3);
       kind = "arrange";
       label = "履修差";
     }
@@ -1333,10 +1346,11 @@ function bgmStepAnalysis(profile, arrangement, step) {
   const bassOffset = arrangedBassOffset(baseBassOffset, step, arrangement);
   const baseDynamics = (profile.dynamics || [1])[beatStep] || 0.82;
   const mutationHit = isBgmMutationStep(arrangement, step);
-  const subtlePulse = arrangement.count > 0 && mutationHit ? arrangement.intensity * 0.12 : 0;
-  const dynamics = baseDynamics * (1 + subtlePulse + (arrangement.radical > 0 && mutationHit ? (beatStep % 4 === 0 ? 0.24 : -0.08) : 0));
-  const arrangeNoise = arrangement.count > 0 && mutationHit;
-  const radicalNoise = arrangement.radical > 0 && mutationHit;
+  const stackedIntensity = Math.max(arrangement.arrangedDepth, arrangement.missingDepth);
+  const subtlePulse = arrangement.mutationDepth > 0 && mutationHit ? Math.min(0.24, stackedIntensity * 0.07) : 0;
+  const dynamics = baseDynamics * (1 + subtlePulse + (arrangement.missingDepth > 0 && mutationHit ? (beatStep % 4 === 0 ? 0.24 : -0.08) : 0));
+  const arrangeNoise = arrangement.mutationDepth > 0 && mutationHit && arrangement.arrangedDepth > 0;
+  const radicalNoise = arrangement.missingDepth > 0 && mutationHit;
   return {
     beatStep,
     mutationHit,
@@ -1435,7 +1449,7 @@ function startArcadeBgm() {
 
       arcadeAudio.bgmStep += 1;
       const swing = step % 2 === 0 ? 0.92 : 1.08;
-      const mutationSwing = analysis.mutationHit ? 1 + (arrangement.intensity * 0.08) + (arrangement.radical > 0 ? 0.04 : 0) : 1;
+      const mutationSwing = analysis.mutationHit ? 1 + (Math.max(arrangement.arrangedDepth, arrangement.missingDepth) * 0.03) + (arrangement.missingDepth > 0 ? 0.04 : 0) : 1;
       arcadeAudio.bgmTimer = window.setTimeout(tick, bgmStepMs(profile) * swing * mutationSwing);
     };
     stopArcadeBgm();
@@ -3115,7 +3129,7 @@ function renderBgmRoll() {
   const analyses = Array.from({ length: 16 }, (_, step) => bgmStepAnalysis(profile, arrangement, step));
   document.querySelector("#bgmRollCourse").textContent = state.course;
   document.querySelector("#bgmRollTempo").textContent = `${profile.bpm || 120} BPM`;
-  document.querySelector("#bgmRollArrange").textContent = `積層 ${arrangement.count} / 変化点 ${arrangement.mutationStep + 1}`;
+  document.querySelector("#bgmRollArrange").textContent = `積層 ${arrangement.arrangedDepth} / 欠損 ${arrangement.missingDepth} / 変化点 ${arrangement.mutationStep + 1}`;
   document.querySelector("#bgmRollRadical").textContent = `外れ値 ${arrangement.missingRequired}`;
   grid.innerHTML = "";
   appendBgmRollCell(grid, "", "bgm-roll-label");

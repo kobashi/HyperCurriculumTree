@@ -1252,6 +1252,7 @@ function bgmMutationSlots(arrangedCourses, missingRequired, seed) {
     seed: hashString(`${seed}|${step}`)
   }));
   const used = new Set();
+  let overflowIndex = 0;
   const assign = (kind, course, index) => {
     const preferred = hashString(`${kind}|${course.id}|${index}|${seed}`) % 16;
     let step = preferred;
@@ -1264,6 +1265,9 @@ function bgmMutationSlots(arrangedCourses, missingRequired, seed) {
           break;
         }
       }
+    } else {
+      step = (seed + overflowIndex) % 16;
+      overflowIndex = (overflowIndex + 1) % 16;
     }
     const slot = slots[step];
     slot[kind] += 1;

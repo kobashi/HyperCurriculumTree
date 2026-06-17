@@ -694,6 +694,18 @@ input {
   animation: arcadeCollect 320ms ease-out;
 }
 
+.course-card.is-missing-required {
+  border-color: #c74f4a;
+  background: linear-gradient(180deg, #fff2f1, #ffe6e4);
+  box-shadow: 0 0 0 1px rgba(199, 79, 74, 0.18) inset, 0 0 20px rgba(199, 79, 74, 0.1);
+}
+
+.course-card.is-prereq-missing {
+  border-color: #8a61c6;
+  background: linear-gradient(180deg, #f6efff, #ede0ff);
+  box-shadow: 0 0 0 1px rgba(138, 97, 198, 0.18) inset, 0 0 20px rgba(138, 97, 198, 0.1);
+}
+
 .course-card.fx-activate {
   animation: nodeActivate 720ms cubic-bezier(0.15, 0.9, 0.2, 1.1) both;
   animation-delay: var(--fx-delay, 0ms);

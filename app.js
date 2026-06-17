@@ -2629,9 +2629,10 @@ function promotionStatus(stats) {
 function renderCatalog() {
   const catalog = document.querySelector("#catalogList");
   catalog.innerHTML = "";
+  const prereqIssues = prerequisiteIssuesByCourse();
   visibleCourses().forEach((course) => {
     const card = document.createElement("article");
-    card.className = `course-card${state.planned.has(course.id) ? " is-planned" : ""}${animatedCourseClass(course.id)}${filterRevealClass(course.id)}`;
+    card.className = `course-card${state.planned.has(course.id) ? " is-planned" : ""}${treeMissingRequiredClass(course)}${treePrereqMissingClass(course, prereqIssues)}${animatedCourseClass(course.id)}${filterRevealClass(course.id)}`;
     card.dataset.courseId = course.id;
     const fxStyle = `${animatedCourseStyle(course.id)}${filterRevealStyle(course.id)}`;
     if (fxStyle) card.setAttribute("style", fxStyle);

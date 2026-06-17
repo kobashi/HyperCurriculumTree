@@ -1072,6 +1072,19 @@ function audioRampTimes(duration, bus) {
   };
 }
 
+function scheduleAudioCleanup(ctx, nodes, endTime) {
+  const delayMs = Math.max(0, (endTime - ctx.currentTime + 0.08) * 1000);
+  window.setTimeout(() => {
+    nodes.forEach((node) => {
+      try {
+        node.disconnect();
+      } catch (error) {
+        // Already disconnected or stopped; nothing to clean up.
+      }
+    });
+  }, delayMs);
+}
+
 function cachedNoiseBuffer(ctx, duration, seed) {
   const length = Math.max(1, Math.floor(ctx.sampleRate * duration));
   if (seed === null) return null;
@@ -1120,6 +1133,8 @@ function tone(ctx, {
   const destination = bus === "bgm" ? arcadeAudio.bgmBus : arcadeAudio.sfxBus;
   const start = ctx.currentTime + delay;
   const end = start + duration;
+  const stopAt = end + Math.max(0.05, delayMix > 0 ? delayTime * 2.4 : 0.05);
+  const cleanupNodes = [osc, lp, amp];
   const ramps = audioRampTimes(duration, bus);
   const peakAt = Math.min(end - 0.006, start + ramps.attack);
   const releaseAt = Math.max(peakAt + 0.004, end - ramps.release);
@@ -1148,6 +1163,7 @@ function tone(ctx, {
     const delayNode = ctx.createDelay(0.8);
     const feedback = ctx.createGain();
     const wet = ctx.createGain();
+    cleanupNodes.push(delayNode, feedback, wet);
     delayNode.delayTime.setValueAtTime(delayTime, start);
     feedback.gain.setValueAtTime(Math.min(0.56, delayFeedback), start);
     wet.gain.setValueAtTime(Math.min(0.32, delayMix), start);
@@ -1158,7 +1174,9 @@ function tone(ctx, {
     wet.connect(destination);
   }
   osc.start(start);
-  osc.stop(end + Math.max(0.05, delayMix > 0 ? delayTime * 2.4 : 0.05));
+  osc.stop(stopAt);
+  if (shaper) cleanupNodes.push(shaper);
+  scheduleAudioCleanup(ctx, cleanupNodes, stopAt);
 }
 
 function noiseHit(ctx, {
@@ -1202,6 +1220,7 @@ function noiseHit(ctx, {
   amp.connect(bus === "bgm" ? arcadeAudio.bgmBus : arcadeAudio.sfxBus);
   source.start(start);
   source.stop(end + 0.02);
+  scheduleAudioCleanup(ctx, [source, filterNode, amp], end + 0.02);
 }
 
 function patternHit(pattern = [], step) {
@@ -1676,123 +1695,139 @@ function startArcadeBgm() {
   withArcadeAudio((ctx) => {
     if (arcadeAudio.bgmTimer) return;
     const tick = () => {
+      arcadeAudio.bgmTimer = null;
       if (!state.soundBgm) return;
+      if (ctx.state === "suspended") {
+        void ctx.resume().catch(() => {});
+      }
       const profile = currentArcadeBgmProfile();
-      const arrangement = bgmArrangementState();
-      const step = arcadeAudio.bgmStep;
-      const analysis = bgmStepAnalysis(profile, arrangement, step);
+      let nextDelay = bgmStepMs(profile);
+      let advanced = false;
+      try {
+        const arrangement = bgmArrangementState();
+        const step = arcadeAudio.bgmStep;
+        const analysis = bgmStepAnalysis(profile, arrangement, step);
 
-      playBgmRhythm(ctx, profile, step, analysis.dynamics, arrangement);
-      if (analysis.arrangeNoise) {
-        noiseHit(ctx, {
-          duration: 0.018,
-          gain: (profile.drumGain || 0.016) * 0.42 * arrangement.intensity,
-          filter: 6800,
-          filterType: "highpass",
-          bus: "bgm",
-          seed: bgmNoiseSeed(profile, arrangement, step, "arrange-hat")
-        });
-      }
-      if (analysis.radicalNoise) {
-        Array.from({ length: analysis.radicalLayers }).forEach((_, index) => {
+        playBgmRhythm(ctx, profile, step, analysis.dynamics, arrangement);
+        if (analysis.arrangeNoise) {
           noiseHit(ctx, {
-            duration: 0.035 + (index * 0.006),
-            gain: (profile.drumGain || 0.016) * (0.42 + (index * 0.12)) * arrangement.radical,
-            filter: Math.max(900, 3000 - (index * 280)),
-            filterType: index % 2 === 0 ? "bandpass" : "highpass",
-            delay: index * 0.018,
+            duration: 0.018,
+            gain: (profile.drumGain || 0.016) * 0.42 * arrangement.intensity,
+            filter: 6800,
+            filterType: "highpass",
             bus: "bgm",
-            seed: bgmNoiseSeed(profile, arrangement, step, `radical-${index}`)
+            seed: bgmNoiseSeed(profile, arrangement, step, "arrange-hat")
           });
-        });
-      }
+        }
+        if (analysis.radicalNoise) {
+          Array.from({ length: analysis.radicalLayers }).forEach((_, index) => {
+            noiseHit(ctx, {
+              duration: 0.035 + (index * 0.006),
+              gain: (profile.drumGain || 0.016) * (0.42 + (index * 0.12)) * arrangement.radical,
+              filter: Math.max(900, 3000 - (index * 280)),
+              filterType: index % 2 === 0 ? "bandpass" : "highpass",
+              delay: index * 0.018,
+              bus: "bgm",
+              seed: bgmNoiseSeed(profile, arrangement, step, `radical-${index}`)
+            });
+          });
+        }
 
-      if (analysis.bassOffset !== null && analysis.bassOffset !== undefined) {
-        tone(ctx, {
-          freq: midiToFreq(profile.root / 2, analysis.harmony.root + analysis.bassOffset),
-          duration: profile.bassDuration || 0.14,
-          type: profile.bassType || "triangle",
-          gain: (profile.bassGain || 0.012) * analysis.dynamics,
-          slide: -profile.detune,
-          delay: 0.006,
-          filter: Math.max(800, profile.filter * 0.42),
-          filterType: profile.bassFilterType || "lowpass",
-          q: profile.bassQ || 0.8,
-          fuzz: profile.bassFuzz || 0,
-          bitDepth: profile.bassBitDepth || 0,
-          delayMix: profile.bassDelayMix || 0,
-          delayTime: profile.bassDelayTime || 0.16,
-          delayFeedback: profile.bassDelayFeedback || 0.18,
-          bus: "bgm"
-        });
-      }
-
-      if (analysis.chordHit) {
-        playBgmChord(ctx, profile, analysis.harmony.root, analysis.dynamics, analysis.harmony.voicing);
-      }
-
-      analysis.harmony.outsideTones.forEach((outsideTone, index) => {
-        tone(ctx, {
-          freq: midiToFreq(profile.root, outsideTone + (profile.leadOctave || 12)),
-          duration: 0.045,
-          type: "sawtooth",
-          gain: (profile.leadGain || 0.012) * analysis.dynamics * 0.72,
-          delay: index * 0.018,
-          filter: Math.max(1100, profile.filter * 0.58),
-          filterType: profile.leadFilterType || "lowpass",
-          q: profile.leadQ || 0.8,
-          fuzz: profile.leadFuzz || 0,
-          bitDepth: profile.leadBitDepth || 0,
-          delayMix: profile.leadDelayMix || 0,
-          delayTime: profile.leadDelayTime || 0.18,
-          delayFeedback: profile.leadDelayFeedback || 0.22,
-          bus: "bgm"
-        });
-      });
-
-      if (analysis.melodyOffset !== null) {
-        const radicalMelody = analysis.radicalNoise && analysis.melodyChanged;
-        tone(ctx, {
-          freq: midiToFreq(profile.root, analysis.harmony.root + analysis.melodyOffset + (profile.leadOctave || 12)),
-          duration: radicalMelody ? 0.055 : profile.leadDuration || 0.09,
-          type: radicalMelody ? "sawtooth" : profile.leadType || "square",
-          gain: (profile.leadGain || 0.012) * analysis.dynamics,
-          slide: radicalMelody ? (analysis.melodyOffset > analysis.baseMelodyOffset ? 22 : -22) : profile.detune,
-          filter: radicalMelody ? Math.max(1200, profile.filter * 0.62) : profile.filter,
-          filterType: radicalMelody ? "bandpass" : profile.leadFilterType || "lowpass",
-          q: radicalMelody ? 3.5 : profile.leadQ || 0.8,
-          fuzz: radicalMelody ? 0.3 : profile.leadFuzz || 0,
-          bitDepth: radicalMelody ? 0 : profile.leadBitDepth || 0,
-          delayMix: radicalMelody ? 0.04 : profile.leadDelayMix || 0,
-          delayTime: profile.leadDelayTime || 0.18,
-          delayFeedback: profile.leadDelayFeedback || 0.22,
-          bus: "bgm"
-        });
-        if (!radicalMelody && profile.leadLayer > 0) {
+        if (analysis.bassOffset !== null && analysis.bassOffset !== undefined) {
           tone(ctx, {
-            freq: midiToFreq(profile.root, analysis.harmony.root + analysis.melodyOffset + (profile.leadOctave || 12) + 12),
-            duration: (profile.leadDuration || 0.09) * 0.72,
-            type: profile.chordType || "triangle",
-            gain: (profile.leadGain || 0.012) * analysis.dynamics * profile.leadLayer,
-            slide: profile.detune * -0.5,
-            delay: 0.012,
-            filter: Math.max(1200, profile.filter * 1.08),
+            freq: midiToFreq(profile.root / 2, analysis.harmony.root + analysis.bassOffset),
+            duration: profile.bassDuration || 0.14,
+            type: profile.bassType || "triangle",
+            gain: (profile.bassGain || 0.012) * analysis.dynamics,
+            slide: -profile.detune,
+            delay: 0.006,
+            filter: Math.max(800, profile.filter * 0.42),
+            filterType: profile.bassFilterType || "lowpass",
+            q: profile.bassQ || 0.8,
+            fuzz: profile.bassFuzz || 0,
+            bitDepth: profile.bassBitDepth || 0,
+            delayMix: profile.bassDelayMix || 0,
+            delayTime: profile.bassDelayTime || 0.16,
+            delayFeedback: profile.bassDelayFeedback || 0.18,
+            bus: "bgm"
+          });
+        }
+
+        if (analysis.chordHit) {
+          playBgmChord(ctx, profile, analysis.harmony.root, analysis.dynamics, analysis.harmony.voicing);
+        }
+
+        analysis.harmony.outsideTones.forEach((outsideTone, index) => {
+          tone(ctx, {
+            freq: midiToFreq(profile.root, outsideTone + (profile.leadOctave || 12)),
+            duration: 0.045,
+            type: "sawtooth",
+            gain: (profile.leadGain || 0.012) * analysis.dynamics * 0.72,
+            delay: index * 0.018,
+            filter: Math.max(1100, profile.filter * 0.58),
             filterType: profile.leadFilterType || "lowpass",
             q: profile.leadQ || 0.8,
-            fuzz: (profile.leadFuzz || 0) * 0.5,
+            fuzz: profile.leadFuzz || 0,
             bitDepth: profile.leadBitDepth || 0,
-            delayMix: (profile.leadDelayMix || 0) * 0.55,
+            delayMix: profile.leadDelayMix || 0,
             delayTime: profile.leadDelayTime || 0.18,
             delayFeedback: profile.leadDelayFeedback || 0.22,
             bus: "bgm"
           });
+        });
+
+        if (analysis.melodyOffset !== null) {
+          const radicalMelody = analysis.radicalNoise && analysis.melodyChanged;
+          tone(ctx, {
+            freq: midiToFreq(profile.root, analysis.harmony.root + analysis.melodyOffset + (profile.leadOctave || 12)),
+            duration: radicalMelody ? 0.055 : profile.leadDuration || 0.09,
+            type: radicalMelody ? "sawtooth" : profile.leadType || "square",
+            gain: (profile.leadGain || 0.012) * analysis.dynamics,
+            slide: radicalMelody ? (analysis.melodyOffset > analysis.baseMelodyOffset ? 22 : -22) : profile.detune,
+            filter: radicalMelody ? Math.max(1200, profile.filter * 0.62) : profile.filter,
+            filterType: radicalMelody ? "bandpass" : profile.leadFilterType || "lowpass",
+            q: radicalMelody ? 3.5 : profile.leadQ || 0.8,
+            fuzz: radicalMelody ? 0.3 : profile.leadFuzz || 0,
+            bitDepth: radicalMelody ? 0 : profile.leadBitDepth || 0,
+            delayMix: radicalMelody ? 0.04 : profile.leadDelayMix || 0,
+            delayTime: profile.leadDelayTime || 0.18,
+            delayFeedback: profile.leadDelayFeedback || 0.22,
+            bus: "bgm"
+          });
+          if (!radicalMelody && profile.leadLayer > 0) {
+            tone(ctx, {
+              freq: midiToFreq(profile.root, analysis.harmony.root + analysis.melodyOffset + (profile.leadOctave || 12) + 12),
+              duration: (profile.leadDuration || 0.09) * 0.72,
+              type: profile.chordType || "triangle",
+              gain: (profile.leadGain || 0.012) * analysis.dynamics * profile.leadLayer,
+              slide: profile.detune * -0.5,
+              delay: 0.012,
+              filter: Math.max(1200, profile.filter * 1.08),
+              filterType: profile.leadFilterType || "lowpass",
+              q: profile.leadQ || 0.8,
+              fuzz: (profile.leadFuzz || 0) * 0.5,
+              bitDepth: profile.leadBitDepth || 0,
+              delayMix: (profile.leadDelayMix || 0) * 0.55,
+              delayTime: profile.leadDelayTime || 0.18,
+              delayFeedback: profile.leadDelayFeedback || 0.22,
+              bus: "bgm"
+            });
+          }
+        }
+
+        arcadeAudio.bgmStep += 1;
+        advanced = true;
+        const swing = step % 2 === 0 ? 0.92 : 1.08;
+        const mutationSwing = analysis.mutationHit ? 1 + (analysis.mutationSlot.depth * 0.03) + (analysis.mutationSlot.missing > 0 ? 0.04 : 0) : 1;
+        nextDelay = bgmStepMs(profile) * swing * mutationSwing;
+      } catch (error) {
+        if (!advanced) arcadeAudio.bgmStep += 1;
+        console.warn("BGM step skipped", error);
+      } finally {
+        if (state.soundBgm && !arcadeAudio.bgmTimer) {
+          arcadeAudio.bgmTimer = window.setTimeout(tick, nextDelay);
         }
       }
-
-      arcadeAudio.bgmStep += 1;
-      const swing = step % 2 === 0 ? 0.92 : 1.08;
-      const mutationSwing = analysis.mutationHit ? 1 + (analysis.mutationSlot.depth * 0.03) + (analysis.mutationSlot.missing > 0 ? 0.04 : 0) : 1;
-      arcadeAudio.bgmTimer = window.setTimeout(tick, bgmStepMs(profile) * swing * mutationSwing);
     };
     stopArcadeBgm();
     arcadeAudio.bgmStep = 0;

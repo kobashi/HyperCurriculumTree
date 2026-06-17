@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>情報メディア学科 履修計画チェッカー</title>
-    <link rel="stylesheet" href="styles.css?v=course-select-actions-20260618">
+    <link rel="stylesheet" href="styles.css?v=menu-controls-20260618">
   </head>
   <body>
     <div id="fxLayer" aria-hidden="true"></div>
@@ -15,10 +15,10 @@
           <h1>情報メディア学科 履修計画チェッカー</h1>
         </div>
         <div class="controls">
-          <label>
-            コース
-            <select id="courseSelect"></select>
-          </label>
+          <div class="menu-control course-menu-control">
+            <button id="courseMenuToggle" class="tree-option filter-toggle" type="button" aria-expanded="false" aria-controls="courseMenu">コース: 未選択</button>
+            <div id="courseMenu" class="settings-menu course-menu" hidden></div>
+          </div>
           <label>
             通算GPA条件
             <select id="gpaInput">
@@ -39,18 +39,23 @@
             <input id="teacherToggle" type="checkbox">
             <span>教職課程</span>
           </label>
-          <label class="switch audio-switch">
-            <input id="fxToggle" type="checkbox" checked>
-            <span>SE</span>
-          </label>
-          <label class="switch audio-switch">
-            <input id="bgmToggle" type="checkbox" checked>
-            <span>BGM</span>
-          </label>
-          <label class="switch audio-switch">
-            <input id="bgmRollToggle" type="checkbox">
-            <span>ロール</span>
-          </label>
+          <div class="menu-control effects-menu-control">
+            <button id="effectsToggle" class="tree-option filter-toggle" type="button" aria-expanded="false" aria-controls="effectsMenu">演出</button>
+            <div id="effectsMenu" class="settings-menu effects-menu" hidden>
+              <label class="switch audio-switch">
+                <input id="fxToggle" type="checkbox" checked>
+                <span>SE</span>
+              </label>
+              <label class="switch audio-switch">
+                <input id="bgmToggle" type="checkbox" checked>
+                <span>BGM</span>
+              </label>
+              <label class="switch audio-switch">
+                <input id="bgmRollToggle" type="checkbox">
+                <span>ロール</span>
+              </label>
+            </div>
+          </div>
           <div class="settings-actions" aria-label="履修計画操作">
             <button id="autoFillButton" type="button" onpointerdown="window.hctAutoFillButton && window.hctAutoFillButton(event)" onclick="window.hctAutoFillButton && window.hctAutoFillButton(event)">必修</button>
             <button id="clearButton" type="button" onpointerdown="window.hctClearButton && window.hctClearButton(event)" onclick="window.hctClearButton && window.hctClearButton(event)">全削除</button>
@@ -173,6 +178,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=course-select-actions-20260618"></script>
+    <script src="app.js?v=menu-controls-20260618"></script>
   </body>
 </html>

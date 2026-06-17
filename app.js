@@ -712,6 +712,8 @@ const state = {
   manualOther: 0,
   viewMode: "list",
   filtersOpen: false,
+  courseMenuOpen: false,
+  effectsOpen: false,
   showTreeCodes: false,
   showTreeMeta: false,
   soundFx: true,
@@ -1639,20 +1641,6 @@ function dedupeCourses(courses) {
     existing.capExcluded = existing.capExcluded || course.capExcluded;
   });
   return [...seen.values()];
-}
-
-function buildCourseSelectOptions() {
-  const addOptions = COURSES.filter((course) => course !== NO_COURSE)
-    .map((course) => `<option value="add:${course}">${course}を追加して選択</option>`)
-    .join("");
-  const resetOptions = COURSES.filter((course) => course !== NO_COURSE)
-    .map((course) => `<option value="reset:${course}">${course}にリセットして選択</option>`)
-    .join("");
-  return [
-    `<option value="${NO_COURSE}">${NO_COURSE}</option>`,
-    `<optgroup label="追加して選択">${addOptions}</optgroup>`,
-    `<optgroup label="リセットして選択">${resetOptions}</optgroup>`
-  ].join("");
 }
 
 const allCourses = buildCourses();
@@ -2976,6 +2964,10 @@ function renderViewMode() {
   const tree = document.querySelector("#treeView");
   const filters = document.querySelector("#catalogFilters");
   const filterToggle = document.querySelector("#filterToggle");
+  const courseMenu = document.querySelector("#courseMenu");
+  const courseMenuToggle = document.querySelector("#courseMenuToggle");
+  const effectsMenu = document.querySelector("#effectsMenu");
+  const effectsToggle = document.querySelector("#effectsToggle");
   const treeCodeToggleWrap = document.querySelector("#treeCodeToggleWrap");
   const treeCodeToggle = document.querySelector("#treeCodeToggle");
   const treeMetaToggleWrap = document.querySelector("#treeMetaToggleWrap");
@@ -2993,6 +2985,11 @@ function renderViewMode() {
   bgmToggle.checked = state.soundBgm;
   filters.hidden = !state.filtersOpen;
   filterToggle.setAttribute("aria-expanded", String(state.filtersOpen));
+  courseMenu.hidden = !state.courseMenuOpen;
+  courseMenuToggle.textContent = `コース: ${state.course}`;
+  courseMenuToggle.setAttribute("aria-expanded", String(state.courseMenuOpen));
+  effectsMenu.hidden = !state.effectsOpen;
+  effectsToggle.setAttribute("aria-expanded", String(state.effectsOpen));
   workspace.classList.toggle("catalog-tree-mode", isTree);
   const viewModeToggle = document.querySelector("#viewModeToggle");
   const viewModeValue = document.querySelector("#viewModeValue");
@@ -3003,6 +3000,22 @@ function renderViewMode() {
     drawTreeEdges();
     requestAnimationFrame(updateTreeMenuPlacement);
   }
+}
+
+function renderCourseMenu() {
+  const menu = document.querySelector("#courseMenu");
+  if (!menu) return;
+  const rows = COURSES.filter((course) => course !== NO_COURSE).map((course) => `
+    <div class="course-menu-row">
+      <span>${course}</span>
+      <button type="button" data-course-action="add" data-course="${course}">追加</button>
+      <button type="button" data-course-action="reset" data-course="${course}">リセット</button>
+    </div>
+  `);
+  menu.innerHTML = [
+    `<button type="button" class="course-menu-unselected" data-course-action="add" data-course="${NO_COURSE}">${NO_COURSE}</button>`,
+    ...rows
+  ].join("");
 }
 
 function signedOffset(value) {
@@ -3168,6 +3181,31 @@ function renderRequirements(stats) {
   document.querySelector("#requirementsList").innerHTML = html.join("");
 }
 
+function applyCourseSelection(nextCourse, mode, source) {
+  cancelPendingPlanClear();
+  const beforePlan = snapshotPlanned();
+  const isResetAction = mode === "reset";
+  state.course = nextCourse;
+  if (isResetAction) {
+    [...state.planned.keys()].forEach((id) => {
+      const course = allCourses.find((item) => item.id === id);
+      const removeCourseRequired = course?.category === "courseRequired" && course.course !== nextCourse;
+      const removeSpecializedElective = course?.category === "specializedElective" && !course.qualificationEligible;
+      if (removeCourseRequired || removeSpecializedElective) state.planned.delete(id);
+    });
+  }
+  if (nextCourse !== NO_COURSE) {
+    allCourses
+      .filter((course) => course.category === "courseRequired" && course.course === nextCourse)
+      .forEach((course) => state.planned.set(course.id, openingTermForCourse(course)));
+  }
+  state.courseMenuOpen = false;
+  queuePlanTransition(beforePlan, snapshotPlanned(), { baseDelay: 0, step: 20, cellStep: 50 });
+  triggerArcadeFeedback("switch", source);
+  syncArcadeAudio(true);
+  render();
+}
+
 function renderAlerts(stats) {
   const alerts = [];
   const prereqProblems = validatePrereqs();
@@ -3198,37 +3236,27 @@ function render() {
   renderRequirements(stats);
   renderAlerts(stats);
   renderTree();
+  renderCourseMenu();
   renderViewMode();
   requestAnimationFrame(scheduleQueuedNodeFeedback);
 }
 
 function init() {
-  const courseSelect = document.querySelector("#courseSelect");
-  courseSelect.innerHTML = buildCourseSelectOptions();
-  courseSelect.value = state.course;
-  courseSelect.addEventListener("change", (event) => {
-    cancelPendingPlanClear();
-    const beforePlan = snapshotPlanned();
-    const selectedValue = event.target.value;
-    const isResetAction = selectedValue.startsWith("reset:");
-    const nextCourse = selectedValue.replace(/^(?:add:|reset:)/, "");
-    state.course = nextCourse;
-    if (isResetAction) {
-      [...state.planned.keys()].forEach((id) => {
-        const course = allCourses.find((item) => item.id === id);
-        const removeCourseRequired = course?.category === "courseRequired" && course.course !== nextCourse;
-        const removeSpecializedElective = course?.category === "specializedElective" && !course.qualificationEligible;
-        if (removeCourseRequired || removeSpecializedElective) state.planned.delete(id);
-      });
-    }
-    if (nextCourse !== NO_COURSE) {
-      allCourses
-        .filter((course) => course.category === "courseRequired" && course.course === nextCourse)
-        .forEach((course) => state.planned.set(course.id, openingTermForCourse(course)));
-    }
-    queuePlanTransition(beforePlan, snapshotPlanned(), { baseDelay: 0, step: 20, cellStep: 50 });
-    triggerArcadeFeedback("switch", courseSelect);
-    syncArcadeAudio(true);
+  document.querySelector("#courseMenuToggle").addEventListener("click", (event) => {
+    state.courseMenuOpen = !state.courseMenuOpen;
+    if (state.courseMenuOpen) state.effectsOpen = false;
+    triggerArcadeFeedback("switch", event.currentTarget);
+    render();
+  });
+  document.querySelector("#courseMenu").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-course-action]");
+    if (!button) return;
+    applyCourseSelection(button.dataset.course, button.dataset.courseAction, button);
+  });
+  document.querySelector("#effectsToggle").addEventListener("click", (event) => {
+    state.effectsOpen = !state.effectsOpen;
+    if (state.effectsOpen) state.courseMenuOpen = false;
+    triggerArcadeFeedback("switch", event.currentTarget);
     render();
   });
 

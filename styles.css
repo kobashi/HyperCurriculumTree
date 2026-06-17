@@ -151,9 +151,78 @@ h2 {
 
 .controls {
   display: grid;
-  grid-template-columns: minmax(160px, 220px) 92px 92px auto auto auto auto;
+  grid-template-columns: minmax(190px, 260px) 92px 92px auto auto;
   gap: 10px;
   align-items: end;
+}
+
+.menu-control {
+  position: relative;
+  display: grid;
+  align-content: end;
+  min-width: 0;
+}
+
+.menu-control > .tree-option {
+  justify-content: center;
+  width: 100%;
+  min-height: 36px;
+}
+
+.settings-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  display: grid;
+  gap: 8px;
+  min-width: 260px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: var(--shadow), 0 0 0 1px rgba(66, 215, 210, 0.08) inset;
+}
+
+.settings-menu[hidden] {
+  display: none !important;
+}
+
+.course-menu-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 7px;
+  background: #f7faf8;
+}
+
+.course-menu-row span {
+  min-width: 0;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.course-menu-row button,
+.course-menu-unselected {
+  min-height: 30px;
+  padding: 0 9px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.course-menu-unselected {
+  justify-self: stretch;
+}
+
+.effects-menu {
+  min-width: 180px;
+}
+
+.effects-menu .switch {
+  justify-content: flex-start;
 }
 
 .settings-actions {
@@ -1565,6 +1634,18 @@ input {
 
   .controls {
     gap: 8px;
+  }
+
+  .settings-menu {
+    position: static;
+    margin-top: 6px;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .course-menu-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
   }
 
   .bgm-roll-head {

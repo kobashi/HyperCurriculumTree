@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>情報メディア学科 履修計画チェッカー</title>
-    <link rel="stylesheet" href="styles.css?v=playful-ux-20260617u">
+    <link rel="stylesheet" href="styles.css?v=playful-ux-20260617ac">
   </head>
   <body>
     <div id="fxLayer" aria-hidden="true"></div>
@@ -47,7 +47,29 @@
             <input id="bgmToggle" type="checkbox" checked>
             <span>BGM</span>
           </label>
+          <label class="switch audio-switch">
+            <input id="bgmRollToggle" type="checkbox">
+            <span>ロール</span>
+          </label>
         </div>
+      </section>
+
+      <section id="bgmRollPanel" class="bgm-roll-panel" aria-label="BGMピアノロール" hidden>
+        <div class="bgm-roll-head">
+          <h2>BGM</h2>
+          <div class="bgm-roll-stats">
+            <span id="bgmRollCourse">なし</span>
+            <span id="bgmRollTempo">112 BPM</span>
+            <span id="bgmRollArrange">微調整 0</span>
+            <span id="bgmRollRadical">外れ値 0</span>
+          </div>
+        </div>
+        <div class="bgm-roll-legend" aria-hidden="true">
+          <span class="legend-base">通常</span>
+          <span class="legend-subtle">微調整</span>
+          <span class="legend-radical">外れ値</span>
+        </div>
+        <div id="bgmRollGrid" class="bgm-roll-grid"></div>
       </section>
 
       <section class="summary-grid" aria-label="卒業要件">
@@ -151,6 +173,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=playful-ux-20260617u"></script>
+    <script src="app.js?v=playful-ux-20260617ac"></script>
   </body>
 </html>

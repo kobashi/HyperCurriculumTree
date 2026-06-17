@@ -716,6 +716,7 @@ const state = {
   showTreeMeta: false,
   soundFx: true,
   soundBgm: true,
+  showBgmRoll: false,
   teacherNotice: "",
   openCourseId: null,
   openTreeNodeId: null,
@@ -726,8 +727,12 @@ const state = {
 const arcadeAudio = {
   context: null,
   master: null,
+  bgmBus: null,
+  sfxBus: null,
+  limiter: null,
   bgmTimer: null,
-  bgmStep: 0
+  bgmStep: 0,
+  bgmStateKey: ""
 };
 
 const fxSequence = {
@@ -757,18 +762,27 @@ const arcadeBgmProfiles = {
     key: "none",
     bpm: 112,
     root: 261.63,
+    progression: [0, 5, 9, 7],
     scale: [0, 2, 4, 7, 9, 12],
-    melody: [0, 2, 4, 5, 4, 2, 1, 2],
-    bass: [0, 0, -5, -5, 0, 0, -7, -7],
-    chord: [0, 4, 7, 9],
+    melody: [0, null, 1, 2, 4, 2, 1, null, 2, 4, 5, 4, 2, 1, 0, null],
+    bassLine: [0, null, 0, 7, -5, null, -5, 7, -3, null, -3, 4, -5, null, -5, 7],
+    chordVoicing: [0, 4, 7, 12],
+    chordHits: [0, 8],
+    kick: [0, 8],
+    snare: [4, 12],
+    hat: [0, 2, 4, 6, 8, 10, 12, 14],
+    dynamics: [1.12, 0.72, 0.84, 0.76, 1.02, 0.72, 0.88, 0.76, 1.08, 0.72, 0.84, 0.78, 1, 0.72, 0.9, 0.84],
     leadType: "square",
     bassType: "triangle",
     chordType: "triangle",
-    accentType: "square",
-    stepMs: 270,
-    leadGain: 0.024,
-    bassGain: 0.018,
-    chordGain: 0.014,
+    leadOctave: 12,
+    leadDuration: 0.1,
+    bassDuration: 0.14,
+    chordDuration: 0.22,
+    leadGain: 0.015,
+    bassGain: 0.014,
+    chordGain: 0.008,
+    drumGain: 0.018,
     detune: 0,
     filter: 3400
   },
@@ -776,18 +790,27 @@ const arcadeBgmProfiles = {
     key: "system",
     bpm: 138,
     root: 293.66,
+    progression: [0, -5, -2, -7],
     scale: [0, 2, 3, 5, 7, 9, 10, 12],
-    melody: [0, 3, 5, 7, 5, 3, 2, 3],
-    bass: [0, -5, -7, -5, 0, -5, -7, -9],
-    chord: [0, 3, 7, 10],
+    melody: [0, 2, 3, null, 5, 4, 3, 2, 7, null, 5, 4, 3, 2, 1, null],
+    bassLine: [0, 0, 7, 0, -5, -5, 2, -5, -2, -2, 5, -2, -7, -7, 0, -7],
+    chordVoicing: [0, 3, 7, 10],
+    chordHits: [0, 4, 8, 12],
+    kick: [0, 4, 8, 12],
+    snare: [4, 12],
+    hat: [0, 1, 2, 3, 4, 6, 8, 9, 10, 11, 12, 14],
+    dynamics: [1.18, 0.66, 0.78, 0.66, 1.06, 0.68, 0.82, 0.7, 1.14, 0.66, 0.8, 0.68, 1.08, 0.72, 0.86, 0.76],
     leadType: "sawtooth",
     bassType: "square",
-    chordType: "triangle",
-    accentType: "square",
-    stepMs: 218,
-    leadGain: 0.022,
-    bassGain: 0.018,
-    chordGain: 0.012,
+    chordType: "square",
+    leadOctave: 12,
+    leadDuration: 0.07,
+    bassDuration: 0.11,
+    chordDuration: 0.09,
+    leadGain: 0.012,
+    bassGain: 0.013,
+    chordGain: 0.006,
+    drumGain: 0.02,
     detune: 4,
     filter: 2600
   },
@@ -795,18 +818,27 @@ const arcadeBgmProfiles = {
     key: "movie",
     bpm: 94,
     root: 220,
-    scale: [0, 3, 5, 7, 10, 12],
-    melody: [0, 3, 5, 7, 5, 3, 2, 0],
-    bass: [0, -7, -5, -7, 0, -3, -5, -7],
-    chord: [0, 3, 7, 12],
+    progression: [0, -3, -7, -5],
+    scale: [0, 2, 3, 5, 7, 8, 11, 12],
+    melody: [0, null, null, 2, 4, null, 5, null, 6, null, 5, 4, 2, null, 1, null],
+    bassLine: [0, null, null, null, -3, null, -3, null, -7, null, -7, null, -5, null, -5, null],
+    chordVoicing: [0, 3, 7, 12],
+    chordHits: [0, 8],
+    kick: [0, 10],
+    snare: [12],
+    hat: [2, 6, 10, 14],
+    dynamics: [1.12, 0.58, 0.64, 0.7, 0.88, 0.58, 0.72, 0.62, 1.04, 0.58, 0.68, 0.74, 0.92, 0.6, 0.76, 0.66],
     leadType: "triangle",
     bassType: "sine",
     chordType: "triangle",
-    accentType: "triangle",
-    stepMs: 319,
-    leadGain: 0.023,
-    bassGain: 0.016,
-    chordGain: 0.011,
+    leadOctave: 12,
+    leadDuration: 0.16,
+    bassDuration: 0.34,
+    chordDuration: 0.5,
+    leadGain: 0.014,
+    bassGain: 0.012,
+    chordGain: 0.009,
+    drumGain: 0.014,
     detune: -3,
     filter: 1900
   },
@@ -814,18 +846,27 @@ const arcadeBgmProfiles = {
     key: "sound",
     bpm: 126,
     root: 196,
+    progression: [0, 5, 10, 7],
     scale: [0, 2, 4, 5, 7, 9, 10, 12],
-    melody: [0, 2, 4, 7, 9, 7, 4, 2, 0, 2],
-    bass: [0, 0, -3, -3, -5, -5, -7, -7],
-    chord: [0, 4, 7, 10],
+    melody: [null, 2, null, 4, 5, null, 4, 2, null, 5, 6, null, 5, 4, 2, null],
+    bassLine: [0, null, 0, 7, null, -5, -3, null, -2, null, -2, 5, null, -5, -7, null],
+    chordVoicing: [0, 4, 7, 10],
+    chordHits: [2, 6, 10, 14],
+    kick: [0, 3, 8, 11],
+    snare: [4, 12],
+    hat: [0, 2, 5, 6, 8, 10, 13, 14],
+    dynamics: [1.08, 0.64, 0.9, 1, 1.02, 0.72, 0.92, 0.68, 1.12, 0.64, 0.94, 1, 1.06, 0.7, 0.92, 0.74],
     leadType: "square",
     bassType: "triangle",
     chordType: "sine",
-    accentType: "square",
-    stepMs: 238,
-    leadGain: 0.024,
-    bassGain: 0.017,
-    chordGain: 0.013,
+    leadOctave: 12,
+    leadDuration: 0.08,
+    bassDuration: 0.13,
+    chordDuration: 0.12,
+    leadGain: 0.014,
+    bassGain: 0.014,
+    chordGain: 0.007,
+    drumGain: 0.022,
     detune: 2,
     filter: 3000
   },
@@ -833,18 +874,27 @@ const arcadeBgmProfiles = {
     key: "design",
     bpm: 108,
     root: 246.94,
+    progression: [0, 6, 2, 7],
     scale: [0, 2, 4, 6, 7, 9, 11, 12],
-    melody: [0, 2, 4, 6, 7, 6, 4, 2],
-    bass: [0, -5, -7, -5, 0, -5, -2, -5],
-    chord: [0, 4, 7, 11],
+    melody: [0, null, 2, 4, null, 6, 5, null, 4, null, 7, 6, null, 5, 3, null],
+    bassLine: [0, null, 7, null, 6, null, 13, null, 2, null, 9, null, 7, null, 14, null],
+    chordVoicing: [0, 4, 7, 11],
+    chordHits: [0, 6, 10],
+    kick: [0, 7, 12],
+    snare: [4, 11],
+    hat: [0, 3, 4, 6, 8, 9, 12, 15],
+    dynamics: [1.08, 0.62, 0.82, 0.74, 0.96, 0.7, 0.92, 0.78, 1.1, 0.62, 0.86, 0.76, 1, 0.68, 0.9, 0.82],
     leadType: "triangle",
     bassType: "square",
     chordType: "triangle",
-    accentType: "triangle",
-    stepMs: 278,
-    leadGain: 0.022,
-    bassGain: 0.016,
-    chordGain: 0.012,
+    leadOctave: 12,
+    leadDuration: 0.1,
+    bassDuration: 0.14,
+    chordDuration: 0.26,
+    leadGain: 0.013,
+    bassGain: 0.012,
+    chordGain: 0.008,
+    drumGain: 0.016,
     detune: -2,
     filter: 2800
   }
@@ -857,8 +907,21 @@ function ensureArcadeAudio() {
     if (!AudioContext) return null;
     arcadeAudio.context = new AudioContext();
     arcadeAudio.master = arcadeAudio.context.createGain();
-    arcadeAudio.master.gain.value = 0.34;
-    arcadeAudio.master.connect(arcadeAudio.context.destination);
+    arcadeAudio.bgmBus = arcadeAudio.context.createGain();
+    arcadeAudio.sfxBus = arcadeAudio.context.createGain();
+    arcadeAudio.limiter = arcadeAudio.context.createDynamicsCompressor();
+    arcadeAudio.master.gain.value = 0.78;
+    arcadeAudio.bgmBus.gain.value = 0.5;
+    arcadeAudio.sfxBus.gain.value = 0.42;
+    arcadeAudio.limiter.threshold.value = -10;
+    arcadeAudio.limiter.knee.value = 12;
+    arcadeAudio.limiter.ratio.value = 4;
+    arcadeAudio.limiter.attack.value = 0.004;
+    arcadeAudio.limiter.release.value = 0.14;
+    arcadeAudio.bgmBus.connect(arcadeAudio.master);
+    arcadeAudio.sfxBus.connect(arcadeAudio.master);
+    arcadeAudio.master.connect(arcadeAudio.limiter);
+    arcadeAudio.limiter.connect(arcadeAudio.context.destination);
   }
   return arcadeAudio.context;
 }
@@ -883,6 +946,23 @@ function midiToFreq(root, semitone) {
   return root * (2 ** (semitone / 12));
 }
 
+function hashString(value) {
+  let hash = 2166136261;
+  [...String(value)].forEach((char) => {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  });
+  return hash >>> 0;
+}
+
+function seededUnit(seed, index) {
+  let value = (seed + Math.imul(index + 1, 374761393)) >>> 0;
+  value ^= value >>> 13;
+  value = Math.imul(value, 1274126177) >>> 0;
+  value ^= value >>> 16;
+  return value / 4294967295;
+}
+
 function tone(ctx, {
   freq,
   duration = 0.09,
@@ -891,7 +971,8 @@ function tone(ctx, {
   detune = 0,
   slide = 0,
   delay = 0,
-  filter = 2200
+  filter = 2200,
+  bus = "sfx"
 }) {
   const osc = ctx.createOscillator();
   const amp = ctx.createGain();
@@ -909,9 +990,121 @@ function tone(ctx, {
   amp.gain.exponentialRampToValueAtTime(0.0001, end);
   osc.connect(lp);
   lp.connect(amp);
-  amp.connect(arcadeAudio.master);
+  amp.connect(bus === "bgm" ? arcadeAudio.bgmBus : arcadeAudio.sfxBus);
   osc.start(start);
   osc.stop(end + 0.05);
+}
+
+function noiseHit(ctx, {
+  duration = 0.045,
+  gain = 0.018,
+  delay = 0,
+  filter = 3600,
+  filterType = "highpass",
+  bus = "bgm",
+  seed = null
+}) {
+  const length = Math.max(1, Math.floor(ctx.sampleRate * duration));
+  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let index = 0; index < length; index += 1) {
+    const unit = seed === null ? Math.random() : seededUnit(seed, index);
+    data[index] = (unit * 2) - 1;
+  }
+  const source = ctx.createBufferSource();
+  const amp = ctx.createGain();
+  const filterNode = ctx.createBiquadFilter();
+  const start = ctx.currentTime + delay;
+  const end = start + duration;
+  source.buffer = buffer;
+  filterNode.type = filterType;
+  filterNode.frequency.value = filter;
+  amp.gain.setValueAtTime(0.0001, start);
+  amp.gain.exponentialRampToValueAtTime(Math.max(0.0001, gain), start + 0.006);
+  amp.gain.exponentialRampToValueAtTime(0.0001, end);
+  source.connect(filterNode);
+  filterNode.connect(amp);
+  amp.connect(bus === "bgm" ? arcadeAudio.bgmBus : arcadeAudio.sfxBus);
+  source.start(start);
+  source.stop(end + 0.02);
+}
+
+function patternHit(pattern = [], step) {
+  return pattern.includes(step % 16);
+}
+
+function scaledTone(profile, degree) {
+  if (degree === null || degree === undefined) return null;
+  const scale = profile.scale || [0, 2, 4, 7, 9, 12];
+  const length = scale.length;
+  const octave = Math.floor(degree / length);
+  const index = ((degree % length) + length) % length;
+  return scale[index] + (octave * 12);
+}
+
+function bgmStepMs(profile) {
+  return profile.stepMs || (60000 / ((profile.bpm || 120) * 4));
+}
+
+function bgmCompositionKey() {
+  const selectedIds = selectedCourses()
+    .map((course) => course.id)
+    .sort((a, b) => a.localeCompare(b))
+    .join(",");
+  return `${state.course}|${selectedIds}`;
+}
+
+function bgmNoiseSeed(profile, arrangement, step, voice) {
+  return hashString(`${profile.key}|${arrangement.key}|${step}|${voice}`);
+}
+
+function playBgmRhythm(ctx, profile, step, dynamics, arrangement) {
+  const drumGain = profile.drumGain || 0.016;
+  if (patternHit(profile.kick, step)) {
+    tone(ctx, {
+      freq: Math.max(48, profile.root / 4),
+      duration: 0.075,
+      type: "sine",
+      gain: drumGain * 1.8 * dynamics,
+      slide: -34,
+      filter: 900,
+      bus: "bgm"
+    });
+  }
+  if (patternHit(profile.snare, step)) {
+    noiseHit(ctx, {
+      duration: 0.055,
+      gain: drumGain * 1.35 * dynamics,
+      filter: 1800,
+      filterType: "bandpass",
+      bus: "bgm",
+      seed: bgmNoiseSeed(profile, arrangement, step, "snare")
+    });
+  }
+  if (patternHit(profile.hat, step)) {
+    noiseHit(ctx, {
+      duration: 0.025,
+      gain: drumGain * 0.75 * dynamics,
+      filter: 5400,
+      filterType: "highpass",
+      bus: "bgm",
+      seed: bgmNoiseSeed(profile, arrangement, step, "hat")
+    });
+  }
+}
+
+function playBgmChord(ctx, profile, chordRoot, dynamics, voicing = null) {
+  (voicing || profile.chordVoicing || [0, 4, 7]).forEach((offset, index) => {
+    tone(ctx, {
+      freq: midiToFreq(profile.root, chordRoot + offset),
+      duration: profile.chordDuration || 0.2,
+      type: profile.chordType || "triangle",
+      gain: (profile.chordGain || 0.008) * dynamics * (index === 0 ? 1 : 0.72),
+      delay: index * 0.008,
+      filter: Math.max(900, (profile.filter || 2600) * 0.72),
+      bus: "bgm"
+    });
+  });
 }
 
 function fxLayer() {
@@ -923,6 +1116,7 @@ function burstAtPoint(x, y, kind = "confirm", scale = 1) {
   if (!layer) return;
   const palette = {
     confirm: [164, 176, 182, 166, 154, 142],
+    cancel: [18, 10, 354, 348, 28, 22],
     remove: [8, 12, 356, 350, 22, 16],
     boost: [47, 39, 54, 63, 28, 34],
     switch: [184, 190, 196, 202, 176, 168],
@@ -971,6 +1165,11 @@ function playArcadeSfx(kind) {
         { freq: 523.25, duration: 0.08, type: "square", gain: 0.05, slide: 94, filter: 4200 },
         { freq: 659.25, duration: 0.10, type: "triangle", gain: 0.045, slide: 140, delay: 0.04, filter: 3600 }
       ],
+      cancel: [
+        { freq: 740, duration: 0.055, type: "square", gain: 0.055, slide: -110, filter: 4600 },
+        { freq: 415.3, duration: 0.085, type: "triangle", gain: 0.048, slide: -72, delay: 0.035, filter: 3600 },
+        { freq: 277.18, duration: 0.11, type: "square", gain: 0.032, slide: -38, delay: 0.075, filter: 2600 }
+      ],
       remove: [
         { freq: 196, duration: 0.12, type: "sawtooth", gain: 0.04, slide: -60, filter: 1800 },
         { freq: 155.56, duration: 0.16, type: "square", gain: 0.03, slide: -24, delay: 0.03, filter: 1200 }
@@ -997,6 +1196,120 @@ function currentArcadeBgmProfile() {
   return arcadeBgmProfiles[state.course] || arcadeBgmProfiles[NO_COURSE];
 }
 
+function isBgmRequiredCourse(course) {
+  if (course.category === "basicRequired" || course.category === "commonRequired") return true;
+  return course.category === "courseRequired";
+}
+
+function isBgmMissingRequiredCourse(course) {
+  if (course.category === "basicRequired" || course.category === "commonRequired") return true;
+  return course.category === "courseRequired" && state.course !== NO_COURSE && course.course === state.course;
+}
+
+function bgmArrangementState() {
+  const arrangedCourses = selectedCourses()
+    .filter((course) => !isBgmRequiredCourse(course))
+    .filter((course) => course.category !== "teacher")
+    .sort((a, b) => a.id.localeCompare(b.id));
+  const missingRequired = allCourses.filter((course) => isBgmMissingRequiredCourse(course) && !state.planned.has(course.id));
+  const seed = arrangedCourses.reduce((total, course, index) => {
+    const idValue = [...course.id].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+    return total + (idValue * (index + 3));
+  }, arrangedCourses.length * 17);
+  return {
+    count: arrangedCourses.length,
+    intensity: Math.min(1, arrangedCourses.length / 18),
+    seed,
+    key: bgmCompositionKey(),
+    missingRequired: missingRequired.length,
+    radical: Math.min(1, missingRequired.length / 4)
+  };
+}
+
+function arrangedMelodyOffset(profile, melodyOffset, step, arrangement) {
+  if (melodyOffset === null) return null;
+  const subtleSlot = (step + arrangement.seed) % 16;
+  let offset = melodyOffset;
+  if (arrangement.count > 0 && arrangement.intensity > 0 && [5, 10, 14].includes(subtleSlot)) {
+    offset += arrangement.seed % 2 === 0 ? 1 : -1;
+  }
+  if (arrangement.radical > 0 && [3, 7, 11, 15].includes(step % 16)) {
+    offset += (arrangement.missingRequired % 2 === 0 ? 6 : -5);
+  }
+  return offset;
+}
+
+function arrangedBassOffset(bassOffset, step, arrangement) {
+  if (bassOffset !== null && bassOffset !== undefined) return bassOffset;
+  if (arrangement.count > 3 && (step + arrangement.seed) % 16 === 6) return -5;
+  if (arrangement.radical > 0 && [5, 13].includes(step % 16)) return arrangement.missingRequired % 2 === 0 ? 1 : -1;
+  return null;
+}
+
+function harmonyForStep(profile, arrangement, step) {
+  const beatStep = step % 16;
+  const barIndex = Math.floor(step / 16);
+  let root = (profile.progression || [0])[barIndex % (profile.progression || [0]).length];
+  let voicing = profile.chordVoicing || [0, 4, 7];
+  let kind = "base";
+  let label = "通常";
+  const outsideTones = [];
+  if (arrangement.radical > 0) {
+    if ([0, 8].includes(beatStep)) {
+      root += 6;
+      voicing = [0, 4, 10, 13];
+      kind = "tritone";
+      label = "TT代理";
+    } else if ([4, 12].includes(beatStep)) {
+      root -= 1;
+      voicing = [0, 3, 6, 10];
+      kind = "diminished";
+      label = "減五度";
+    }
+    if ([3, 7, 11, 15].includes(beatStep)) {
+      outsideTones.push(root + 1, root + 6);
+      if (kind === "base") {
+        kind = "outside";
+        label = "外音";
+      }
+    }
+  }
+  return { root, voicing, kind, label, outsideTones };
+}
+
+function bgmStepAnalysis(profile, arrangement, step) {
+  const beatStep = step % 16;
+  const harmony = harmonyForStep(profile, arrangement, step);
+  const melodyDegree = (profile.melody || [0])[step % (profile.melody || [0]).length];
+  const baseMelodyOffset = scaledTone(profile, melodyDegree);
+  const melodyOffset = arrangedMelodyOffset(profile, baseMelodyOffset, step, arrangement);
+  const baseBassOffset = (profile.bassLine || [0])[step % (profile.bassLine || [0]).length];
+  const bassOffset = arrangedBassOffset(baseBassOffset, step, arrangement);
+  const baseDynamics = (profile.dynamics || [1])[beatStep] || 0.82;
+  const subtlePulse = arrangement.count > 0 && (step + arrangement.seed) % 8 === 0 ? arrangement.intensity * 0.12 : 0;
+  const dynamics = baseDynamics * (1 + subtlePulse + (arrangement.radical * (beatStep % 4 === 0 ? 0.24 : -0.08)));
+  const arrangeNoise = arrangement.count > 0 && (step + arrangement.seed) % Math.max(4, 12 - Math.floor(arrangement.intensity * 5)) === 2;
+  const radicalNoise = arrangement.radical > 0 && [1, 6, 9, 14].includes(beatStep);
+  return {
+    beatStep,
+    harmony,
+    melodyDegree,
+    baseMelodyOffset,
+    melodyOffset,
+    melodyChanged: baseMelodyOffset !== melodyOffset,
+    baseBassOffset,
+    bassOffset,
+    bassChanged: baseBassOffset !== bassOffset,
+    dynamics,
+    arrangeNoise,
+    radicalNoise,
+    chordHit: patternHit(profile.chordHits, step),
+    kick: patternHit(profile.kick, step),
+    snare: patternHit(profile.snare, step),
+    hat: patternHit(profile.hat, step)
+  };
+}
+
 function startArcadeBgm() {
   if (!state.soundBgm) return;
   withArcadeAudio((ctx) => {
@@ -1004,55 +1317,79 @@ function startArcadeBgm() {
     const tick = () => {
       if (!state.soundBgm) return;
       const profile = currentArcadeBgmProfile();
-      const step = arcadeAudio.bgmStep += 1;
-      const melodyIndex = step % profile.melody.length;
-      const bassIndex = Math.floor(step / 2) % profile.bass.length;
-      const chordIndex = Math.floor(step / 4) % profile.chord.length;
-      const melody = midiToFreq(profile.root, profile.melody[melodyIndex]);
-      const bass = midiToFreq(profile.root / 2, profile.bass[bassIndex]);
-      const chordRoot = midiToFreq(profile.root, profile.chord[chordIndex]);
-      const accent = midiToFreq(profile.root, profile.scale[(step + 2) % profile.scale.length]);
-      tone(ctx, {
-        freq: melody,
-        duration: 0.12,
-        type: profile.leadType,
-        gain: profile.leadGain,
-        slide: profile.detune,
-        filter: profile.filter
-      });
-      if (step % 2 === 0) {
+      const arrangement = bgmArrangementState();
+      const step = arcadeAudio.bgmStep;
+      const analysis = bgmStepAnalysis(profile, arrangement, step);
+
+      playBgmRhythm(ctx, profile, step, analysis.dynamics, arrangement);
+      if (analysis.arrangeNoise) {
+        noiseHit(ctx, {
+          duration: 0.018,
+          gain: (profile.drumGain || 0.016) * 0.42 * arrangement.intensity,
+          filter: 6800,
+          filterType: "highpass",
+          bus: "bgm",
+          seed: bgmNoiseSeed(profile, arrangement, step, "arrange-hat")
+        });
+      }
+      if (analysis.radicalNoise) {
+        noiseHit(ctx, {
+          duration: 0.045,
+          gain: (profile.drumGain || 0.016) * 1.2 * arrangement.radical,
+          filter: 2600,
+          filterType: "bandpass",
+          bus: "bgm",
+          seed: bgmNoiseSeed(profile, arrangement, step, "radical")
+        });
+      }
+
+      if (analysis.bassOffset !== null && analysis.bassOffset !== undefined) {
         tone(ctx, {
-          freq: bass,
-          duration: 0.2,
-          type: profile.bassType,
-          gain: profile.bassGain,
+          freq: midiToFreq(profile.root / 2, analysis.harmony.root + analysis.bassOffset),
+          duration: profile.bassDuration || 0.14,
+          type: profile.bassType || "triangle",
+          gain: (profile.bassGain || 0.012) * analysis.dynamics,
           slide: -profile.detune,
-          delay: 0.01,
-          filter: Math.max(800, profile.filter * 0.42)
+          delay: 0.006,
+          filter: Math.max(800, profile.filter * 0.42),
+          bus: "bgm"
         });
       }
-      if (step % 4 === 0) {
+
+      if (analysis.chordHit) {
+        playBgmChord(ctx, profile, analysis.harmony.root, analysis.dynamics, analysis.harmony.voicing);
+      }
+
+      analysis.harmony.outsideTones.forEach((outsideTone, index) => {
         tone(ctx, {
-          freq: chordRoot,
-          duration: 0.16,
-          type: profile.chordType,
-          gain: profile.chordGain,
-          delay: 0.03,
-          filter: Math.max(1000, profile.filter * 0.7)
+          freq: midiToFreq(profile.root, outsideTone + (profile.leadOctave || 12)),
+          duration: 0.045,
+          type: "sawtooth",
+          gain: (profile.leadGain || 0.012) * analysis.dynamics * 0.72,
+          delay: index * 0.018,
+          filter: Math.max(1100, profile.filter * 0.58),
+          bus: "bgm"
         });
-      }
-      if (step % 8 === 0) {
+      });
+
+      if (analysis.melodyOffset !== null) {
+        const radicalMelody = arrangement.radical > 0 && analysis.melodyChanged;
         tone(ctx, {
-          freq: accent,
-          duration: 0.08,
-          type: profile.accentType,
-          gain: profile.chordGain * 0.85,
-          delay: 0.01,
-          filter: profile.filter
+          freq: midiToFreq(profile.root, analysis.harmony.root + analysis.melodyOffset + (profile.leadOctave || 12)),
+          duration: radicalMelody ? 0.055 : profile.leadDuration || 0.09,
+          type: radicalMelody ? "sawtooth" : profile.leadType || "square",
+          gain: (profile.leadGain || 0.012) * analysis.dynamics,
+          slide: radicalMelody ? (analysis.melodyOffset > analysis.baseMelodyOffset ? 22 : -22) : profile.detune,
+          filter: radicalMelody ? Math.max(1200, profile.filter * 0.62) : profile.filter,
+          bus: "bgm"
         });
       }
+
+      arcadeAudio.bgmStep += 1;
       const swing = step % 2 === 0 ? 0.92 : 1.08;
-      arcadeAudio.bgmTimer = window.setTimeout(tick, profile.stepMs * swing);
+      const arrangeSwing = 1 + (arrangement.intensity * ([3, 11].includes(analysis.beatStep) ? 0.04 : 0));
+      const radicalSwing = arrangement.radical > 0 ? ([5, 13].includes(analysis.beatStep) ? 0.82 : 1.06) : 1;
+      arcadeAudio.bgmTimer = window.setTimeout(tick, bgmStepMs(profile) * swing * arrangeSwing * radicalSwing);
     };
     stopArcadeBgm();
     arcadeAudio.bgmStep = 0;
@@ -1061,7 +1398,11 @@ function startArcadeBgm() {
 }
 
 function syncArcadeAudio(forceRestart = false) {
-  if (forceRestart) stopArcadeBgm();
+  const stateKey = bgmCompositionKey();
+  if (forceRestart || (arcadeAudio.bgmStateKey && arcadeAudio.bgmStateKey !== stateKey)) {
+    stopArcadeBgm();
+  }
+  arcadeAudio.bgmStateKey = stateKey;
   if (state.soundBgm) {
     startArcadeBgm();
   } else {
@@ -1928,7 +2269,9 @@ function setPlanned(courseId, term, options = {}) {
   if (feedback === "error") {
     triggerArcadeFeedback(feedback, options.source);
   } else if (feedback) {
+    if (feedback === "remove") triggerArcadeFeedback("cancel", options.source);
     queuePlanTransition(beforePlan, snapshotPlanned(), { baseDelay: 0, step: 20, cellStep: 44 });
+    syncArcadeAudio(true);
   }
   render();
 }
@@ -2004,10 +2347,12 @@ function autoFill(options = {}) {
   }
   if (!options.silent) {
     queuePlanTransition(beforePlan, snapshotPlanned(), { baseDelay: 0, step: 22, cellStep: 56 });
+    syncArcadeAudio(true);
     render();
     triggerArcadeFeedback("boost");
     return;
   }
+  syncArcadeAudio(true);
   render();
 }
 
@@ -2036,6 +2381,7 @@ function clearPlan() {
     planFx.transitions.clear();
     planFx.queuedDelays.clear();
     planFx.prevSnapshot = snapshotPlanned();
+    syncArcadeAudio(true);
     render();
   }, wait + 40);
 }
@@ -2645,6 +2991,98 @@ function renderViewMode() {
   }
 }
 
+function signedOffset(value) {
+  if (value === null || value === undefined) return "";
+  return value > 0 ? `+${value}` : String(value);
+}
+
+function bgmCellClass(analysis, base = "") {
+  const classes = ["bgm-roll-cell"];
+  if (base) classes.push(base);
+  if (analysis.harmony.kind !== "base" || analysis.radicalNoise || analysis.harmony.outsideTones.length) {
+    classes.push("is-radical");
+  } else if (analysis.melodyChanged || analysis.bassChanged || analysis.arrangeNoise) {
+    classes.push("is-subtle");
+  } else {
+    classes.push("is-active");
+  }
+  return classes.join(" ");
+}
+
+function appendBgmRollCell(grid, text, className, title = "") {
+  const cell = document.createElement("div");
+  cell.className = className;
+  cell.textContent = text;
+  if (title) cell.title = title;
+  grid.appendChild(cell);
+}
+
+function appendBgmRollRow(grid, label, cells) {
+  appendBgmRollCell(grid, label, "bgm-roll-label");
+  cells.forEach((cell) => appendBgmRollCell(grid, cell.text, cell.className, cell.title));
+}
+
+function renderBgmRoll() {
+  const panel = document.querySelector("#bgmRollPanel");
+  const grid = document.querySelector("#bgmRollGrid");
+  const toggle = document.querySelector("#bgmRollToggle");
+  if (!panel || !grid) return;
+  panel.hidden = !state.showBgmRoll;
+  if (toggle) toggle.checked = state.showBgmRoll;
+  if (!state.showBgmRoll) {
+    grid.innerHTML = "";
+    return;
+  }
+  const profile = currentArcadeBgmProfile();
+  const arrangement = bgmArrangementState();
+  const analyses = Array.from({ length: 16 }, (_, step) => bgmStepAnalysis(profile, arrangement, step));
+  document.querySelector("#bgmRollCourse").textContent = state.course;
+  document.querySelector("#bgmRollTempo").textContent = `${profile.bpm || 120} BPM`;
+  document.querySelector("#bgmRollArrange").textContent = `微調整 ${arrangement.count}`;
+  document.querySelector("#bgmRollRadical").textContent = `外れ値 ${arrangement.missingRequired}`;
+  grid.innerHTML = "";
+  appendBgmRollCell(grid, "", "bgm-roll-label");
+  analyses.forEach((_, index) => appendBgmRollCell(grid, String(index + 1), "bgm-roll-step"));
+  appendBgmRollRow(grid, "旋律", analyses.map((analysis) => ({
+    text: signedOffset(analysis.melodyOffset),
+    className: analysis.melodyOffset === null
+      ? "bgm-roll-cell is-empty"
+      : bgmCellClass(analysis, "bgm-roll-melody"),
+    title: analysis.melodyChanged ? "旋律を調整" : "旋律"
+  })));
+  appendBgmRollRow(grid, "低音", analyses.map((analysis) => ({
+    text: signedOffset(analysis.bassOffset),
+    className: analysis.bassOffset === null || analysis.bassOffset === undefined
+      ? "bgm-roll-cell is-empty"
+      : bgmCellClass(analysis, "bgm-roll-bass"),
+    title: analysis.bassChanged ? "ベースを調整" : "ベース"
+  })));
+  appendBgmRollRow(grid, "和音", analyses.map((analysis) => ({
+    text: analysis.chordHit ? analysis.harmony.label : "",
+    className: analysis.chordHit ? bgmCellClass(analysis, "bgm-roll-chord") : "bgm-roll-cell is-empty",
+    title: analysis.harmony.kind === "base" ? "通常和音" : `専用ハーモニー: ${analysis.harmony.label}`
+  })));
+  appendBgmRollRow(grid, "律動", analyses.map((analysis) => {
+    const hits = [
+      analysis.kick ? "K" : "",
+      analysis.snare ? "S" : "",
+      analysis.hat ? "H" : "",
+      analysis.arrangeNoise ? "+" : "",
+      analysis.radicalNoise ? "!" : ""
+    ].filter(Boolean).join("");
+    return {
+      text: hits,
+      className: hits ? bgmCellClass(analysis, "bgm-roll-rhythm") : "bgm-roll-cell is-empty",
+      title: analysis.radicalNoise ? "外れ値リズム" : analysis.arrangeNoise ? "追加リズム" : "リズム"
+    };
+  }));
+  appendBgmRollRow(grid, "外音", analyses.map((analysis) => ({
+    text: analysis.harmony.outsideTones.length ? analysis.harmony.outsideTones.map(signedOffset).join("/") : "",
+    className: analysis.harmony.outsideTones.length ? "bgm-roll-cell is-radical" : "bgm-roll-cell is-empty",
+    title: analysis.harmony.outsideTones.length ? "スケール外アクセント" : ""
+  })));
+}
+
 function setMeter(id, value, target) {
   document.querySelector(`#${id}`).style.width = `${Math.min(100, Math.round((value / target) * 100))}%`;
 }
@@ -2741,6 +3179,7 @@ function render() {
   const stats = totals();
   renderCatalog();
   renderPlan();
+  renderBgmRoll();
   renderSummary(stats);
   renderRequirements(stats);
   renderAlerts(stats);
@@ -2787,6 +3226,7 @@ function init() {
     state.openTreeNodeId = null;
     resetCatalogFilters();
     triggerArcadeFeedback(state.teacher ? "boost" : "switch", event.currentTarget);
+    syncArcadeAudio(true);
     render();
   });
   document.querySelector("#gpaInput").addEventListener("change", (event) => {
@@ -2840,6 +3280,11 @@ function init() {
     state.soundBgm = event.target.checked;
     triggerArcadeFeedback(state.soundBgm ? "boost" : "remove", event.currentTarget);
     syncArcadeAudio(true);
+    render();
+  });
+  document.querySelector("#bgmRollToggle").addEventListener("change", (event) => {
+    state.showBgmRoll = event.target.checked;
+    triggerArcadeFeedback("switch", event.currentTarget);
     render();
   });
   window.hctAutoFillButton = handleAutoFillButton;

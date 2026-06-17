@@ -737,7 +737,9 @@ const arcadeAudio = {
   limiter: null,
   bgmTimer: null,
   bgmStep: 0,
-  bgmStateKey: ""
+  bgmStateKey: "",
+  arrangementCacheKey: "",
+  arrangementCache: null
 };
 
 const fxSequence = {
@@ -1038,6 +1040,8 @@ function seededUnit(seed, index) {
 }
 
 const waveShaperCurveCache = new Map();
+const noiseBufferCache = new Map();
+const noiseBufferCacheLimit = 128;
 
 function waveShaperCurve({ fuzz = 0, bitDepth = 0 }) {
   const key = `${fuzz}|${bitDepth}`;
@@ -1066,6 +1070,29 @@ function audioRampTimes(duration, bus) {
     attack: Math.max(0.004, attack),
     release: Math.max(0.008, release)
   };
+}
+
+function cachedNoiseBuffer(ctx, duration, seed) {
+  const length = Math.max(1, Math.floor(ctx.sampleRate * duration));
+  if (seed === null) return null;
+  const cacheKey = `${ctx.sampleRate}|${length}|${seed}`;
+  const cached = noiseBufferCache.get(cacheKey);
+  if (cached) return cached;
+
+  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  const fadeLength = Math.min(Math.floor(ctx.sampleRate * 0.004), Math.floor(length / 2));
+  for (let index = 0; index < length; index += 1) {
+    const unit = seededUnit(seed, index);
+    const fadeIn = fadeLength > 0 ? Math.min(1, index / fadeLength) : 1;
+    const fadeOut = fadeLength > 0 ? Math.min(1, (length - 1 - index) / fadeLength) : 1;
+    data[index] = ((unit * 2) - 1) * Math.min(fadeIn, fadeOut);
+  }
+  noiseBufferCache.set(cacheKey, buffer);
+  if (noiseBufferCache.size > noiseBufferCacheLimit) {
+    noiseBufferCache.delete(noiseBufferCache.keys().next().value);
+  }
+  return buffer;
 }
 
 function tone(ctx, {
@@ -1144,14 +1171,16 @@ function noiseHit(ctx, {
   seed = null
 }) {
   const length = Math.max(1, Math.floor(ctx.sampleRate * duration));
-  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
-  const data = buffer.getChannelData(0);
-  const fadeLength = Math.min(Math.floor(ctx.sampleRate * 0.004), Math.floor(length / 2));
-  for (let index = 0; index < length; index += 1) {
-    const unit = seed === null ? Math.random() : seededUnit(seed, index);
-    const fadeIn = fadeLength > 0 ? Math.min(1, index / fadeLength) : 1;
-    const fadeOut = fadeLength > 0 ? Math.min(1, (length - 1 - index) / fadeLength) : 1;
-    data[index] = ((unit * 2) - 1) * Math.min(fadeIn, fadeOut);
+  let buffer = cachedNoiseBuffer(ctx, duration, seed);
+  if (!buffer) {
+    buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    const fadeLength = Math.min(Math.floor(ctx.sampleRate * 0.004), Math.floor(length / 2));
+    for (let index = 0; index < length; index += 1) {
+      const fadeIn = fadeLength > 0 ? Math.min(1, index / fadeLength) : 1;
+      const fadeOut = fadeLength > 0 ? Math.min(1, (length - 1 - index) / fadeLength) : 1;
+      data[index] = ((Math.random() * 2) - 1) * Math.min(fadeIn, fadeOut);
+    }
   }
   const source = ctx.createBufferSource();
   const amp = ctx.createGain();
@@ -1198,6 +1227,18 @@ function bgmCompositionKey() {
     .sort((a, b) => a.localeCompare(b))
     .join(",");
   return `${state.course}|${selectedIds}`;
+}
+
+function bgmArrangementCacheKey() {
+  const planned = [...state.planned.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([id, term]) => `${id}:${term}`)
+    .join(",");
+  return `${state.course}|${planned}`;
+}
+
+function bgmPlaybackKey() {
+  return state.course;
 }
 
 function bgmNoiseSeed(profile, arrangement, step, voice) {
@@ -1360,6 +1401,10 @@ function isBgmMissingRequiredCourse(course) {
 }
 
 function bgmArrangementState() {
+  const cacheKey = bgmArrangementCacheKey();
+  if (arcadeAudio.arrangementCacheKey === cacheKey && arcadeAudio.arrangementCache) {
+    return arcadeAudio.arrangementCache;
+  }
   const arrangedCourses = selectedCourses()
     .filter((course) => !isBgmRequiredCourse(course))
     .filter((course) => course.category !== "teacher")
@@ -1380,7 +1425,7 @@ function bgmArrangementState() {
   const radicalLayers = Math.min(4, Math.max(0, Math.ceil(missingRequired.length / 5)));
   const mutationStep = seed % 16;
   const mutationSlots = bgmMutationSlots(arrangedCourses, missingRequired, missingPrereqs, seed);
-  return {
+  const arrangement = {
     count: arrangedCourses.length,
     intensity: Math.min(1, arrangedCourses.length / 18),
     seed,
@@ -1398,6 +1443,9 @@ function bgmArrangementState() {
     mutationDepth: Math.min(4, arrangedDepth + missingDepth + prereqDepth),
     radical: Math.min(1, missingRequired.length / 4)
   };
+  arcadeAudio.arrangementCacheKey = cacheKey;
+  arcadeAudio.arrangementCache = arrangement;
+  return arrangement;
 }
 
 function bgmMutationSlots(arrangedCourses, missingRequired, missingPrereqs, seed) {
@@ -1753,7 +1801,7 @@ function startArcadeBgm() {
 }
 
 function syncArcadeAudio(forceRestart = false) {
-  const stateKey = bgmCompositionKey();
+  const stateKey = bgmPlaybackKey();
   if (forceRestart || (arcadeAudio.bgmStateKey && arcadeAudio.bgmStateKey !== stateKey)) {
     stopArcadeBgm();
   }
@@ -2679,7 +2727,7 @@ function setPlanned(courseId, term, options = {}) {
   } else if (feedback) {
     if (feedback === "remove") triggerArcadeFeedback("cancel", options.source);
     queuePlanTransition(beforePlan, snapshotPlanned(), { baseDelay: 0, step: 20, cellStep: 44 });
-    syncArcadeAudio(true);
+    syncArcadeAudio();
   }
   render();
 }
@@ -2755,12 +2803,12 @@ function autoFill(options = {}) {
   }
   if (!options.silent) {
     queuePlanTransition(beforePlan, snapshotPlanned(), { baseDelay: 0, step: 22, cellStep: 56 });
-    syncArcadeAudio(true);
+    syncArcadeAudio();
     render();
     triggerArcadeFeedback("boost");
     return;
   }
-  syncArcadeAudio(true);
+  syncArcadeAudio();
   render();
 }
 
@@ -2789,7 +2837,7 @@ function clearPlan() {
     planFx.transitions.clear();
     planFx.queuedDelays.clear();
     planFx.prevSnapshot = snapshotPlanned();
-    syncArcadeAudio(true);
+    syncArcadeAudio();
     render();
   }, wait + 40);
 }
@@ -3684,6 +3732,7 @@ function applyCourseSelection(nextCourse, mode, source) {
   cancelPendingPlanClear();
   const beforePlan = snapshotPlanned();
   const isResetAction = mode === "reset";
+  const courseChanged = state.course !== nextCourse;
   state.course = nextCourse;
   if (isResetAction) {
     [...state.planned.keys()].forEach((id) => {
@@ -3701,7 +3750,7 @@ function applyCourseSelection(nextCourse, mode, source) {
   state.courseMenuOpen = false;
   queuePlanTransition(beforePlan, snapshotPlanned(), { baseDelay: 0, step: 20, cellStep: 50 });
   triggerArcadeFeedback("switch", source);
-  syncArcadeAudio(true);
+  syncArcadeAudio(courseChanged);
   render();
 }
 
@@ -3788,7 +3837,7 @@ function init() {
     state.openTreeNodeId = null;
     resetCatalogFilters();
     triggerArcadeFeedback(state.teacher ? "boost" : "switch", event.currentTarget);
-    syncArcadeAudio(true);
+    syncArcadeAudio();
     render();
   });
   document.querySelector("#gpaInput").addEventListener("change", (event) => {

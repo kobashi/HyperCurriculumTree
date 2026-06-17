@@ -2568,23 +2568,18 @@ function validatePrereqs() {
 
 function prerequisiteIssuesByCourse() {
   const selected = selectedCourses();
-  const issues = new Map();
+  const issues = new Set();
   selected.forEach((course) => {
     if (isQualificationPlanned(course)) return;
     const required = prereqs[course.name] || [];
-    const missing = [];
-    const order = [];
     required.forEach((requiredName) => {
-      const prereqCourse = selected.find((item) => item.key === normalizeName(requiredName));
-      if (!prereqCourse) {
-        missing.push(requiredName);
-        return;
-      }
-      if (termIndex(plannedTerm(prereqCourse)) >= termIndex(plannedTerm(course))) {
-        order.push(requiredName);
+      const prereqCourse = allCourses.find((item) => item.key === normalizeName(requiredName));
+      if (!prereqCourse) return;
+      if (state.planned.has(prereqCourse.id)) return;
+      if (prereqCourse.category === "basicElective" || prereqCourse.category === "specializedElective") {
+        issues.add(prereqCourse.id);
       }
     });
-    if (missing.length || order.length) issues.set(course.id, { missing, order });
   });
   return issues;
 }

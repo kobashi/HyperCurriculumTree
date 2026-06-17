@@ -16,6 +16,13 @@
         </div>
         <div class="controls">
           <label>
+            コース切替
+            <select id="courseSwitchMode">
+              <option value="add" selected>追加</option>
+              <option value="reset">リセット</option>
+            </select>
+          </label>
+          <label>
             コース
             <select id="courseSelect"></select>
           </label>
@@ -52,8 +59,8 @@
             <span>ロール</span>
           </label>
           <div class="settings-actions" aria-label="履修計画操作">
-            <button id="autoFillButton" type="button" onpointerdown="window.hctAutoFillButton && window.hctAutoFillButton(event)" onclick="window.hctAutoFillButton && window.hctAutoFillButton(event)">標準配置</button>
-            <button id="clearButton" type="button" onpointerdown="window.hctClearButton && window.hctClearButton(event)" onclick="window.hctClearButton && window.hctClearButton(event)">クリア</button>
+            <button id="autoFillButton" type="button" onpointerdown="window.hctAutoFillButton && window.hctAutoFillButton(event)" onclick="window.hctAutoFillButton && window.hctAutoFillButton(event)">必修</button>
+            <button id="clearButton" type="button" onpointerdown="window.hctClearButton && window.hctClearButton(event)" onclick="window.hctClearButton && window.hctClearButton(event)">全削除</button>
           </div>
         </div>
       </section>

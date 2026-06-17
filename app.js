@@ -706,6 +706,7 @@ const prereqs = {
 
 const state = {
   course: NO_COURSE,
+  courseSwitchMode: "add",
   teacher: false,
   gpa: 1,
   secondYearGpa: 1,
@@ -3195,15 +3196,30 @@ function init() {
   courseSelect.addEventListener("change", (event) => {
     cancelPendingPlanClear();
     const beforePlan = snapshotPlanned();
-    state.course = event.target.value;
-    if (state.course !== NO_COURSE) {
+    const nextCourse = event.target.value;
+    const resetMode = state.courseSwitchMode === "reset";
+    state.course = nextCourse;
+    if (resetMode) {
+      [...state.planned.keys()].forEach((id) => {
+        const course = allCourses.find((item) => item.id === id);
+        const removeCourseRequired = course?.category === "courseRequired" && course.course !== nextCourse;
+        const removeSpecializedElective = course?.category === "specializedElective" && !course.qualificationEligible;
+        if (removeCourseRequired || removeSpecializedElective) state.planned.delete(id);
+      });
+    }
+    if (nextCourse !== NO_COURSE) {
       allCourses
-        .filter((course) => course.category === "courseRequired" && course.course === state.course)
+        .filter((course) => course.category === "courseRequired" && course.course === nextCourse)
         .forEach((course) => state.planned.set(course.id, openingTermForCourse(course)));
     }
     queuePlanTransition(beforePlan, snapshotPlanned(), { baseDelay: 0, step: 20, cellStep: 50 });
     triggerArcadeFeedback("switch", courseSelect);
     syncArcadeAudio(true);
+    render();
+  });
+  document.querySelector("#courseSwitchMode").addEventListener("change", (event) => {
+    state.courseSwitchMode = event.target.value;
+    triggerArcadeFeedback("switch", event.currentTarget);
     render();
   });
 

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>情報メディア学科 履修計画チェッカー</title>
-    <link rel="stylesheet" href="styles.css?v=menu-controls-20260618">
+    <link rel="stylesheet" href="styles.css?v=menu-controls-gpa2-20260618">
   </head>
   <body>
     <div id="fxLayer" aria-hidden="true"></div>
@@ -18,23 +18,32 @@
           <div class="menu-control course-menu-control">
             <button id="courseMenuToggle" class="tree-option filter-toggle" type="button" aria-expanded="false" aria-controls="courseMenu">コース: 未選択</button>
             <div id="courseMenu" class="settings-menu course-menu" hidden></div>
+            <div class="course-actions">
+              <button id="autoFillButton" type="button" onpointerdown="window.hctAutoFillButton && window.hctAutoFillButton(event)" onclick="window.hctAutoFillButton && window.hctAutoFillButton(event)">必修</button>
+              <button id="clearButton" type="button" onpointerdown="window.hctClearButton && window.hctClearButton(event)" onclick="window.hctClearButton && window.hctClearButton(event)">全削除</button>
+            </div>
           </div>
-          <label>
-            通算GPA条件
-            <select id="gpaInput">
-              <option value="1" selected>1.0以上</option>
-              <option value="0.9">1.0未満</option>
-              <option value="3.7">3.7以上</option>
-            </select>
-          </label>
-          <label>
-            2年次GPA条件
-            <select id="secondYearGpaInput">
-              <option value="1" selected>1.0以上</option>
-              <option value="0.9">1.0未満</option>
-              <option value="3.7">3.7以上</option>
-            </select>
-          </label>
+          <div class="menu-control gpa-menu-control">
+            <button id="gpaMenuToggle" class="tree-option filter-toggle" type="button" aria-expanded="false" aria-controls="gpaMenu">GPA条件</button>
+            <div id="gpaMenu" class="settings-menu gpa-menu" hidden>
+              <label>
+                通算GPA条件
+                <select id="gpaInput">
+                  <option value="1" selected>1.0以上</option>
+                  <option value="0.9">1.0未満</option>
+                  <option value="3.7">3.7以上</option>
+                </select>
+              </label>
+              <label>
+                2年次GPA条件
+                <select id="secondYearGpaInput">
+                  <option value="1" selected>1.0以上</option>
+                  <option value="0.9">1.0未満</option>
+                  <option value="3.7">3.7以上</option>
+                </select>
+              </label>
+            </div>
+          </div>
           <label class="switch">
             <input id="teacherToggle" type="checkbox">
             <span>教職課程</span>
@@ -55,10 +64,6 @@
                 <span>ロール</span>
               </label>
             </div>
-          </div>
-          <div class="settings-actions" aria-label="履修計画操作">
-            <button id="autoFillButton" type="button" onpointerdown="window.hctAutoFillButton && window.hctAutoFillButton(event)" onclick="window.hctAutoFillButton && window.hctAutoFillButton(event)">必修</button>
-            <button id="clearButton" type="button" onpointerdown="window.hctClearButton && window.hctClearButton(event)" onclick="window.hctClearButton && window.hctClearButton(event)">全削除</button>
           </div>
         </div>
       </section>
@@ -178,6 +183,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=menu-controls-20260618"></script>
+    <script src="app.js?v=menu-controls-gpa2-20260618"></script>
   </body>
 </html>

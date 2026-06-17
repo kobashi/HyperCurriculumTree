@@ -713,6 +713,7 @@ const state = {
   viewMode: "list",
   filtersOpen: false,
   courseMenuOpen: false,
+  gpaMenuOpen: false,
   effectsOpen: false,
   showTreeCodes: false,
   showTreeMeta: false,
@@ -1200,7 +1201,7 @@ function currentArcadeBgmProfile() {
 
 function isBgmRequiredCourse(course) {
   if (course.category === "basicRequired" || course.category === "commonRequired") return true;
-  return course.category === "courseRequired";
+  return course.category === "courseRequired" && state.course !== NO_COURSE && course.course === state.course;
 }
 
 function isBgmMissingRequiredCourse(course) {
@@ -2966,6 +2967,8 @@ function renderViewMode() {
   const filterToggle = document.querySelector("#filterToggle");
   const courseMenu = document.querySelector("#courseMenu");
   const courseMenuToggle = document.querySelector("#courseMenuToggle");
+  const gpaMenu = document.querySelector("#gpaMenu");
+  const gpaMenuToggle = document.querySelector("#gpaMenuToggle");
   const effectsMenu = document.querySelector("#effectsMenu");
   const effectsToggle = document.querySelector("#effectsToggle");
   const treeCodeToggleWrap = document.querySelector("#treeCodeToggleWrap");
@@ -2988,6 +2991,9 @@ function renderViewMode() {
   courseMenu.hidden = !state.courseMenuOpen;
   courseMenuToggle.textContent = `コース: ${state.course}`;
   courseMenuToggle.setAttribute("aria-expanded", String(state.courseMenuOpen));
+  gpaMenu.hidden = !state.gpaMenuOpen;
+  gpaMenuToggle.textContent = "GPA条件";
+  gpaMenuToggle.setAttribute("aria-expanded", String(state.gpaMenuOpen));
   effectsMenu.hidden = !state.effectsOpen;
   effectsToggle.setAttribute("aria-expanded", String(state.effectsOpen));
   workspace.classList.toggle("catalog-tree-mode", isTree);
@@ -3244,7 +3250,10 @@ function render() {
 function init() {
   document.querySelector("#courseMenuToggle").addEventListener("click", (event) => {
     state.courseMenuOpen = !state.courseMenuOpen;
-    if (state.courseMenuOpen) state.effectsOpen = false;
+    if (state.courseMenuOpen) {
+      state.gpaMenuOpen = false;
+      state.effectsOpen = false;
+    }
     triggerArcadeFeedback("switch", event.currentTarget);
     render();
   });
@@ -3255,7 +3264,19 @@ function init() {
   });
   document.querySelector("#effectsToggle").addEventListener("click", (event) => {
     state.effectsOpen = !state.effectsOpen;
-    if (state.effectsOpen) state.courseMenuOpen = false;
+    if (state.effectsOpen) {
+      state.courseMenuOpen = false;
+      state.gpaMenuOpen = false;
+    }
+    triggerArcadeFeedback("switch", event.currentTarget);
+    render();
+  });
+  document.querySelector("#gpaMenuToggle").addEventListener("click", (event) => {
+    state.gpaMenuOpen = !state.gpaMenuOpen;
+    if (state.gpaMenuOpen) {
+      state.courseMenuOpen = false;
+      state.effectsOpen = false;
+    }
     triggerArcadeFeedback("switch", event.currentTarget);
     render();
   });

@@ -169,6 +169,21 @@ h2 {
   min-height: 36px;
 }
 
+.course-menu-control {
+  gap: 8px;
+}
+
+.course-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.course-actions button {
+  min-height: 32px;
+  padding: 0 12px;
+}
+
 .settings-menu {
   position: absolute;
   top: calc(100% + 6px);
@@ -221,21 +236,16 @@ h2 {
   min-width: 180px;
 }
 
+.gpa-menu {
+  min-width: 220px;
+}
+
+.gpa-menu label {
+  gap: 4px;
+}
+
 .effects-menu .switch {
   justify-content: flex-start;
-}
-
-.settings-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  grid-column: 1 / -1;
-  justify-content: flex-end;
-}
-
-.settings-actions button {
-  min-height: 34px;
-  padding: 0 14px;
 }
 
 label {
@@ -1646,6 +1656,10 @@ input {
   .course-menu-row {
     grid-template-columns: 1fr;
     align-items: stretch;
+  }
+
+  .course-actions {
+    flex-direction: column;
   }
 
   .bgm-roll-head {

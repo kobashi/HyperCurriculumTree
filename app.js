@@ -3416,12 +3416,13 @@ function renderCourseMenu() {
   const rows = COURSES.filter((course) => course !== NO_COURSE).map((course) => `
     <div class="course-menu-row">
       <span>${course}</span>
-      <button type="button" data-course-action="add" data-course="${course}" title="${course}に変更し、現在の履修を残してコース必修を追加">追加</button>
-      <button type="button" data-course-action="reset" data-course="${course}" title="${course}に変更し、他コース科目を解除">他コース解除</button>
+      <div class="course-menu-actions">
+        <button type="button" data-course-action="add" data-course="${course}" title="${course}に変更し、現在の履修を残してコース必修を追加">コース変更＋必修追加</button>
+        <button type="button" data-course-action="reset" data-course="${course}" title="${course}に変更し、他コース科目を解除">コース変更＋他コース解除</button>
+      </div>
     </div>
   `);
   menu.innerHTML = [
-    `<p class="course-menu-help">追加=コース変更して追加 / 他コース解除=コース変更して他コース科目を解除</p>`,
     `<button type="button" class="course-menu-unselected" data-course-action="add" data-course="${NO_COURSE}" title="コースを未選択に変更">${NO_COURSE}</button>`,
     ...rows
   ].join("");

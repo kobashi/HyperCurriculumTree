@@ -1224,12 +1224,15 @@ function bgmArrangementState() {
   const missingStack = Math.min(12, missingRequired.length);
   const radicalLayers = Math.min(6, Math.max(0, Math.ceil(missingRequired.length / 4)));
   const mutationStep = seed % 16;
+  const mutationSlots = bgmMutationSlots(arrangedCourses, missingRequired, seed);
   return {
     count: arrangedCourses.length,
     intensity: Math.min(1, arrangedCourses.length / 18),
     seed,
     key: bgmCompositionKey(),
     mutationStep,
+    mutationSlots,
+    mutationStepCount: mutationSlots.filter((slot) => slot.depth > 0).length,
     missingRequired: missingRequired.length,
     arrangedDepth,
     missingDepth,
@@ -1240,31 +1243,72 @@ function bgmArrangementState() {
   };
 }
 
+function bgmMutationSlots(arrangedCourses, missingRequired, seed) {
+  const slots = Array.from({ length: 16 }, (_, step) => ({
+    step,
+    arranged: 0,
+    missing: 0,
+    depth: 0,
+    seed: hashString(`${seed}|${step}`)
+  }));
+  const used = new Set();
+  const assign = (kind, course, index) => {
+    const preferred = hashString(`${kind}|${course.id}|${index}|${seed}`) % 16;
+    let step = preferred;
+    if (used.size < 16) {
+      for (let offset = 0; offset < 16; offset += 1) {
+        const candidate = (preferred + offset) % 16;
+        if (!used.has(candidate)) {
+          step = candidate;
+          used.add(candidate);
+          break;
+        }
+      }
+    }
+    const slot = slots[step];
+    slot[kind] += 1;
+    slot.depth += 1;
+    slot.seed = hashString(`${slot.seed}|${course.id}|${kind}`);
+  };
+  arrangedCourses.forEach((course, index) => assign("arranged", course, index));
+  missingRequired.forEach((course, index) => assign("missing", course, index));
+  return slots;
+}
+
+function bgmMutationSlot(arrangement, step) {
+  return arrangement.mutationSlots?.[step % 16] || { arranged: 0, missing: 0, depth: 0, seed: arrangement.seed };
+}
+
 function isBgmMutationStep(arrangement, step) {
-  return step % 16 === arrangement.mutationStep;
+  return bgmMutationSlot(arrangement, step).depth > 0;
+}
+
+function bgmMutationDirection(slot) {
+  return slot.seed % 2 === 0 ? 1 : -1;
 }
 
 function arrangedMelodyOffset(profile, melodyOffset, step, arrangement) {
   if (melodyOffset === null) return null;
   if (!isBgmMutationStep(arrangement, step) || arrangement.mutationDepth === 0) return melodyOffset;
   let offset = melodyOffset;
-  const direction = arrangement.seed % 2 === 0 ? 1 : -1;
-  if (arrangement.arrangedDepth >= 1) {
+  const slot = bgmMutationSlot(arrangement, step);
+  const direction = bgmMutationDirection(slot);
+  if (slot.arranged >= 1) {
     offset += direction;
   }
-  if (arrangement.arrangedDepth >= 2) {
+  if (slot.arranged >= 2) {
     offset += direction;
   }
-  if (arrangement.arrangedDepth >= 3) {
+  if (slot.arranged >= 3) {
     offset += direction * 2;
   }
-  if (arrangement.missingDepth >= 1) {
-    offset += arrangement.missingRequired % 2 === 0 ? 6 : -5;
+  if (slot.missing >= 1) {
+    offset += slot.seed % 2 === 0 ? 6 : -5;
   }
-  if (arrangement.missingDepth >= 2) {
+  if (slot.missing >= 2) {
     offset += direction * 2;
   }
-  if (arrangement.missingStack >= 6) {
+  if (slot.missing >= 3) {
     offset += direction * 3;
   }
   return offset;
@@ -1272,12 +1316,13 @@ function arrangedMelodyOffset(profile, melodyOffset, step, arrangement) {
 
 function arrangedBassOffset(bassOffset, step, arrangement) {
   if (!isBgmMutationStep(arrangement, step) || arrangement.mutationDepth === 0) return bassOffset ?? null;
-  const direction = arrangement.seed % 2 === 0 ? 1 : -1;
+  const slot = bgmMutationSlot(arrangement, step);
+  const direction = bgmMutationDirection(slot);
   if (bassOffset !== null && bassOffset !== undefined) {
-    return bassOffset + direction * Math.max(1, Math.min(3, arrangement.mutationDepth));
+    return bassOffset + direction * Math.max(1, Math.min(3, slot.depth));
   }
-  if (arrangement.arrangedDepth >= 2) return direction * -5;
-  if (arrangement.missingDepth >= 1) return arrangement.missingRequired % 2 === 0 ? 1 : -1;
+  if (slot.arranged >= 2) return direction * -5;
+  if (slot.missing >= 1) return slot.seed % 2 === 0 ? 1 : -1;
   return null;
 }
 
@@ -1290,47 +1335,49 @@ function harmonyForStep(profile, arrangement, step) {
   let label = "通常";
   const outsideTones = [];
   if (arrangement.mutationDepth > 0 && isBgmMutationStep(arrangement, step)) {
-    const direction = arrangement.seed % 2 === 0 ? 1 : -1;
-    if (arrangement.arrangedDepth >= 1) {
+    const slot = bgmMutationSlot(arrangement, step);
+    const direction = bgmMutationDirection(slot);
+    if (slot.arranged >= 1) {
       root += direction;
       kind = "arrange";
       label = "履修差";
     }
-    if (arrangement.arrangedDepth >= 2) {
+    if (slot.arranged >= 2) {
       voicing = [0, 3, 7, 10];
       kind = "arrange";
       label = "履修差";
     }
-    if (arrangement.arrangedDepth >= 3) {
+    if (slot.arranged >= 3) {
       voicing = [0, 3, 6, 10];
       outsideTones.push(root + direction * 4);
       kind = "arrange";
       label = "履修差";
     }
-    if (arrangement.missingDepth >= 1) {
+    if (slot.missing >= 1) {
       root += direction * 2;
       outsideTones.push(root + direction * 6);
       kind = "arrange";
       label = "履修差";
     }
-    if (arrangement.missingDepth >= 2) {
+    if (slot.missing >= 2) {
       voicing = [0, 1, 6, 10];
       outsideTones.push(root - direction * 3);
       kind = "arrange";
       label = "履修差";
     }
-    if (arrangement.missingStack >= 6) {
+    if (slot.missing >= 3) {
       outsideTones.push(root + direction * 9);
       kind = "arrange";
       label = "履修差";
     }
-    if (arrangement.missingStack >= 10) {
+    if (slot.missing >= 4) {
       outsideTones.push(root - direction * 8);
       kind = "arrange";
       label = "履修差";
     }
   }
-  if (arrangement.radical > 0 && isBgmMutationStep(arrangement, step)) {
+  const slot = bgmMutationSlot(arrangement, step);
+  if (slot.missing > 0 && isBgmMutationStep(arrangement, step)) {
     if ([0, 8].includes(beatStep)) {
       root += 6;
       voicing = [0, 4, 10, 13];
@@ -1363,15 +1410,16 @@ function bgmStepAnalysis(profile, arrangement, step) {
   const bassOffset = arrangedBassOffset(baseBassOffset, step, arrangement);
   const baseDynamics = (profile.dynamics || [1])[beatStep] || 0.82;
   const mutationHit = isBgmMutationStep(arrangement, step);
-  const stackedIntensity = Math.max(arrangement.arrangedDepth, arrangement.missingDepth);
-  const subtlePulse = arrangement.mutationDepth > 0 && mutationHit ? Math.min(0.24, stackedIntensity * 0.07) : 0;
-  const radicalPulse = arrangement.missingStack > 0 && mutationHit ? Math.min(0.48, arrangement.missingStack * 0.04) : 0;
-  const dynamics = baseDynamics * (1 + subtlePulse + radicalPulse + (arrangement.missingDepth > 0 && mutationHit ? (beatStep % 4 === 0 ? 0.24 : -0.08) : 0));
-  const arrangeNoise = arrangement.mutationDepth > 0 && mutationHit && arrangement.arrangedDepth > 0;
-  const radicalNoise = arrangement.missingDepth > 0 && mutationHit;
+  const slot = bgmMutationSlot(arrangement, step);
+  const subtlePulse = mutationHit ? Math.min(0.24, slot.arranged * 0.07) : 0;
+  const radicalPulse = mutationHit ? Math.min(0.48, slot.missing * 0.12) : 0;
+  const dynamics = baseDynamics * (1 + subtlePulse + radicalPulse + (slot.missing > 0 ? (beatStep % 4 === 0 ? 0.24 : -0.08) : 0));
+  const arrangeNoise = mutationHit && slot.arranged > 0;
+  const radicalNoise = mutationHit && slot.missing > 0;
   return {
     beatStep,
     mutationHit,
+    mutationSlot: slot,
     harmony,
     melodyDegree,
     baseMelodyOffset,
@@ -1383,7 +1431,7 @@ function bgmStepAnalysis(profile, arrangement, step) {
     dynamics,
     arrangeNoise,
     radicalNoise,
-    radicalLayers: radicalNoise ? arrangement.radicalLayers : 0,
+    radicalLayers: radicalNoise ? Math.min(6, slot.missing) : 0,
     chordHit: patternHit(profile.chordHits, step),
     kick: patternHit(profile.kick, step),
     snare: patternHit(profile.snare, step),
@@ -1457,7 +1505,7 @@ function startArcadeBgm() {
       });
 
       if (analysis.melodyOffset !== null) {
-        const radicalMelody = arrangement.radical > 0 && analysis.melodyChanged;
+        const radicalMelody = analysis.radicalNoise && analysis.melodyChanged;
         tone(ctx, {
           freq: midiToFreq(profile.root, analysis.harmony.root + analysis.melodyOffset + (profile.leadOctave || 12)),
           duration: radicalMelody ? 0.055 : profile.leadDuration || 0.09,
@@ -1471,7 +1519,7 @@ function startArcadeBgm() {
 
       arcadeAudio.bgmStep += 1;
       const swing = step % 2 === 0 ? 0.92 : 1.08;
-      const mutationSwing = analysis.mutationHit ? 1 + (Math.max(arrangement.arrangedDepth, arrangement.missingDepth) * 0.03) + (arrangement.missingDepth > 0 ? 0.04 : 0) : 1;
+      const mutationSwing = analysis.mutationHit ? 1 + (analysis.mutationSlot.depth * 0.03) + (analysis.mutationSlot.missing > 0 ? 0.04 : 0) : 1;
       arcadeAudio.bgmTimer = window.setTimeout(tick, bgmStepMs(profile) * swing * mutationSwing);
     };
     stopArcadeBgm();
@@ -3184,7 +3232,7 @@ function renderBgmRoll() {
   const analyses = Array.from({ length: 16 }, (_, step) => bgmStepAnalysis(profile, arrangement, step));
   document.querySelector("#bgmRollCourse").textContent = state.course;
   document.querySelector("#bgmRollTempo").textContent = `${profile.bpm || 120} BPM`;
-  document.querySelector("#bgmRollArrange").textContent = `積層 ${arrangement.arrangedDepth} / 欠損 ${arrangement.missingDepth} / 変化点 ${arrangement.mutationStep + 1}`;
+  document.querySelector("#bgmRollArrange").textContent = `履修 ${arrangement.count} / 欠損 ${arrangement.missingRequired} / 変化 ${arrangement.mutationStepCount}箇所`;
   document.querySelector("#bgmRollRadical").textContent = `外れ値 ${arrangement.missingRequired}`;
   grid.innerHTML = "";
   appendBgmRollCell(grid, "", "bgm-roll-label");

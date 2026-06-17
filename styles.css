@@ -174,14 +174,23 @@ h2 {
 }
 
 .course-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: auto 1fr 1fr;
+  align-items: center;
   gap: 8px;
+}
+
+.course-actions-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .course-actions button {
   min-height: 32px;
   padding: 0 12px;
+  white-space: nowrap;
 }
 
 .settings-menu {
@@ -201,6 +210,20 @@ h2 {
 
 .settings-menu[hidden] {
   display: none !important;
+}
+
+.course-selection-menu {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 520px;
+}
+
+.course-menu-help {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.35;
 }
 
 .course-menu-row {
@@ -229,6 +252,7 @@ h2 {
 }
 
 .course-menu-unselected {
+  grid-column: 1 / -1;
   justify-self: stretch;
 }
 
@@ -1743,8 +1767,13 @@ input {
     align-items: stretch;
   }
 
+  .course-selection-menu {
+    grid-template-columns: 1fr;
+    min-width: 0;
+  }
+
   .course-actions {
-    flex-direction: column;
+    grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
   }
 
   .bgm-roll-head {

@@ -1306,14 +1306,14 @@ function arrangedMelodyOffset(profile, melodyOffset, step, arrangement) {
   let offset = melodyOffset;
   const slot = bgmMutationSlot(arrangement, step);
   const direction = bgmMutationDirection(slot);
-  if (slot.arranged >= 1) {
-    offset += direction;
+  if (slot.arranged >= 1 && slot.prereq === 0 && slot.missing === 0) {
+    offset += direction > 0 ? 2 : -2;
   }
-  if (slot.arranged >= 2) {
-    offset += direction;
+  if (slot.arranged >= 2 && slot.prereq === 0 && slot.missing === 0) {
+    offset += direction > 0 ? 3 : -3;
   }
-  if (slot.arranged >= 3) {
-    offset += direction * 2;
+  if (slot.arranged >= 3 && slot.prereq === 0 && slot.missing === 0) {
+    offset += direction > 0 ? 2 : -2;
   }
   if (slot.prereq >= 1) {
     offset += direction * 3;
@@ -1338,9 +1338,12 @@ function arrangedBassOffset(bassOffset, step, arrangement) {
   const slot = bgmMutationSlot(arrangement, step);
   const direction = bgmMutationDirection(slot);
   if (bassOffset !== null && bassOffset !== undefined) {
+    if (slot.prereq === 0 && slot.missing === 0) {
+      return bassOffset + (direction > 0 ? 2 : -2);
+    }
     return bassOffset + direction * Math.max(1, Math.min(3, slot.depth));
   }
-  if (slot.arranged >= 2) return direction * -5;
+  if (slot.arranged >= 2 && slot.prereq === 0 && slot.missing === 0) return 0;
   if (slot.prereq >= 1) return direction * -3;
   if (slot.missing >= 1) return slot.seed % 2 === 0 ? 1 : -1;
   return null;
@@ -1357,19 +1360,18 @@ function harmonyForStep(profile, arrangement, step) {
   if (arrangement.mutationDepth > 0 && isBgmMutationStep(arrangement, step)) {
     const slot = bgmMutationSlot(arrangement, step);
     const direction = bgmMutationDirection(slot);
-    if (slot.arranged >= 1) {
-      root += direction;
+    if (slot.arranged >= 1 && slot.prereq === 0 && slot.missing === 0) {
+      voicing = [0, 4, 7, 9];
       kind = "arrange";
       label = "履修差";
     }
-    if (slot.arranged >= 2) {
-      voicing = [0, 3, 7, 10];
+    if (slot.arranged >= 2 && slot.prereq === 0 && slot.missing === 0) {
+      voicing = [0, 2, 7, 9];
       kind = "arrange";
       label = "履修差";
     }
-    if (slot.arranged >= 3) {
-      voicing = [0, 3, 6, 10];
-      outsideTones.push(root + direction * 4);
+    if (slot.arranged >= 3 && slot.prereq === 0 && slot.missing === 0) {
+      voicing = [0, 4, 7, 12];
       kind = "arrange";
       label = "履修差";
     }
@@ -1446,7 +1448,7 @@ function bgmStepAnalysis(profile, arrangement, step) {
   const prereqPulse = mutationHit ? Math.min(0.32, slot.prereq * 0.1) : 0;
   const radicalPulse = mutationHit ? Math.min(0.48, slot.missing * 0.12) : 0;
   const dynamics = baseDynamics * (1 + subtlePulse + prereqPulse + radicalPulse + (slot.missing > 0 ? (beatStep % 4 === 0 ? 0.24 : -0.08) : 0));
-  const arrangeNoise = mutationHit && (slot.arranged > 0 || slot.prereq > 0);
+  const arrangeNoise = mutationHit && slot.prereq > 0;
   const radicalNoise = mutationHit && slot.missing > 0;
   return {
     beatStep,
@@ -3225,7 +3227,7 @@ function signedOffset(value) {
 function bgmCellClass(analysis, base = "") {
   const classes = ["bgm-roll-cell"];
   if (base) classes.push(base);
-  if (analysis.harmony.kind !== "base" || analysis.radicalNoise || analysis.harmony.outsideTones.length) {
+  if (analysis.radicalNoise || analysis.harmony.kind === "tritone" || analysis.harmony.kind === "diminished" || analysis.harmony.kind === "outside" || analysis.harmony.kind === "prereq" || analysis.harmony.outsideTones.length) {
     classes.push("is-radical");
   } else if (analysis.melodyChanged || analysis.bassChanged || analysis.arrangeNoise) {
     classes.push("is-subtle");

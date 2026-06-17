@@ -1221,6 +1221,8 @@ function bgmArrangementState() {
   }, arrangedCourses.length * 17);
   const arrangedDepth = Math.min(4, arrangedCourses.length);
   const missingDepth = Math.min(4, missingRequired.length);
+  const missingStack = Math.min(12, missingRequired.length);
+  const radicalLayers = Math.min(6, Math.max(0, Math.ceil(missingRequired.length / 4)));
   const mutationStep = seed % 16;
   return {
     count: arrangedCourses.length,
@@ -1231,6 +1233,8 @@ function bgmArrangementState() {
     missingRequired: missingRequired.length,
     arrangedDepth,
     missingDepth,
+    missingStack,
+    radicalLayers,
     mutationDepth: Math.min(4, arrangedDepth + missingDepth),
     radical: Math.min(1, missingRequired.length / 4)
   };
@@ -1259,6 +1263,9 @@ function arrangedMelodyOffset(profile, melodyOffset, step, arrangement) {
   }
   if (arrangement.missingDepth >= 2) {
     offset += direction * 2;
+  }
+  if (arrangement.missingStack >= 6) {
+    offset += direction * 3;
   }
   return offset;
 }
@@ -1312,6 +1319,16 @@ function harmonyForStep(profile, arrangement, step) {
       kind = "arrange";
       label = "履修差";
     }
+    if (arrangement.missingStack >= 6) {
+      outsideTones.push(root + direction * 9);
+      kind = "arrange";
+      label = "履修差";
+    }
+    if (arrangement.missingStack >= 10) {
+      outsideTones.push(root - direction * 8);
+      kind = "arrange";
+      label = "履修差";
+    }
   }
   if (arrangement.radical > 0 && isBgmMutationStep(arrangement, step)) {
     if ([0, 8].includes(beatStep)) {
@@ -1348,7 +1365,8 @@ function bgmStepAnalysis(profile, arrangement, step) {
   const mutationHit = isBgmMutationStep(arrangement, step);
   const stackedIntensity = Math.max(arrangement.arrangedDepth, arrangement.missingDepth);
   const subtlePulse = arrangement.mutationDepth > 0 && mutationHit ? Math.min(0.24, stackedIntensity * 0.07) : 0;
-  const dynamics = baseDynamics * (1 + subtlePulse + (arrangement.missingDepth > 0 && mutationHit ? (beatStep % 4 === 0 ? 0.24 : -0.08) : 0));
+  const radicalPulse = arrangement.missingStack > 0 && mutationHit ? Math.min(0.48, arrangement.missingStack * 0.04) : 0;
+  const dynamics = baseDynamics * (1 + subtlePulse + radicalPulse + (arrangement.missingDepth > 0 && mutationHit ? (beatStep % 4 === 0 ? 0.24 : -0.08) : 0));
   const arrangeNoise = arrangement.mutationDepth > 0 && mutationHit && arrangement.arrangedDepth > 0;
   const radicalNoise = arrangement.missingDepth > 0 && mutationHit;
   return {
@@ -1365,6 +1383,7 @@ function bgmStepAnalysis(profile, arrangement, step) {
     dynamics,
     arrangeNoise,
     radicalNoise,
+    radicalLayers: radicalNoise ? arrangement.radicalLayers : 0,
     chordHit: patternHit(profile.chordHits, step),
     kick: patternHit(profile.kick, step),
     snare: patternHit(profile.snare, step),
@@ -1395,13 +1414,16 @@ function startArcadeBgm() {
         });
       }
       if (analysis.radicalNoise) {
-        noiseHit(ctx, {
-          duration: 0.045,
-          gain: (profile.drumGain || 0.016) * 1.2 * arrangement.radical,
-          filter: 2600,
-          filterType: "bandpass",
-          bus: "bgm",
-          seed: bgmNoiseSeed(profile, arrangement, step, "radical")
+        Array.from({ length: analysis.radicalLayers }).forEach((_, index) => {
+          noiseHit(ctx, {
+            duration: 0.035 + (index * 0.006),
+            gain: (profile.drumGain || 0.016) * (0.55 + (index * 0.18)) * arrangement.radical,
+            filter: Math.max(900, 3000 - (index * 280)),
+            filterType: index % 2 === 0 ? "bandpass" : "highpass",
+            delay: index * 0.018,
+            bus: "bgm",
+            seed: bgmNoiseSeed(profile, arrangement, step, `radical-${index}`)
+          });
         });
       }
 
@@ -2573,12 +2595,12 @@ function prerequisiteIssuesByCourse() {
     if (isQualificationPlanned(course)) return;
     const required = prereqs[course.name] || [];
     required.forEach((requiredName) => {
-      const prereqCourse = allCourses.find((item) => item.key === normalizeName(requiredName));
-      if (!prereqCourse) return;
-      if (state.planned.has(prereqCourse.id)) return;
-      if (prereqCourse.category === "basicElective" || prereqCourse.category === "specializedElective") {
+      const prereqCourses = allCourses.filter((item) => item.key === normalizeName(requiredName));
+      if (prereqCourses.some((item) => state.planned.has(item.id))) return;
+      prereqCourses.forEach((prereqCourse) => {
+        if (prereqCourse.category !== "basicElective" && prereqCourse.category !== "specializedElective") return;
         issues.add(prereqCourse.id);
-      }
+      });
     });
   });
   return issues;

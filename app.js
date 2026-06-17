@@ -1642,20 +1642,16 @@ function dedupeCourses(courses) {
 }
 
 function buildCourseSelectOptions() {
-  const plainCourseOptions = COURSES.filter((course) => course !== NO_COURSE)
-    .map((course) => `<option value="${course}">${course}</option>`)
-    .join("");
   const addOptions = COURSES.filter((course) => course !== NO_COURSE)
-    .map((course) => `<option value="add:${course}">${course}を追加</option>`)
+    .map((course) => `<option value="add:${course}">${course}を追加して選択</option>`)
     .join("");
   const resetOptions = COURSES.filter((course) => course !== NO_COURSE)
-    .map((course) => `<option value="reset:${course}">${course}にリセット</option>`)
+    .map((course) => `<option value="reset:${course}">${course}にリセットして選択</option>`)
     .join("");
   return [
     `<option value="${NO_COURSE}">${NO_COURSE}</option>`,
-    plainCourseOptions,
-    `<optgroup label="コース操作 - 追加">${addOptions}</optgroup>`,
-    `<optgroup label="コース操作 - リセット">${resetOptions}</optgroup>`
+    `<optgroup label="追加して選択">${addOptions}</optgroup>`,
+    `<optgroup label="リセットして選択">${resetOptions}</optgroup>`
   ].join("");
 }
 
@@ -3234,7 +3230,6 @@ function init() {
     triggerArcadeFeedback("switch", courseSelect);
     syncArcadeAudio(true);
     render();
-    courseSelect.value = state.course;
   });
 
   document.querySelector("#teacherToggle").addEventListener("change", (event) => {

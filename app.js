@@ -732,6 +732,8 @@ const arcadeAudio = {
   master: null,
   bgmBus: null,
   sfxBus: null,
+  bgmFilter: null,
+  sfxFilter: null,
   limiter: null,
   bgmTimer: null,
   bgmStep: 0,
@@ -971,17 +973,27 @@ function ensureArcadeAudio() {
     arcadeAudio.master = arcadeAudio.context.createGain();
     arcadeAudio.bgmBus = arcadeAudio.context.createGain();
     arcadeAudio.sfxBus = arcadeAudio.context.createGain();
+    arcadeAudio.bgmFilter = arcadeAudio.context.createBiquadFilter();
+    arcadeAudio.sfxFilter = arcadeAudio.context.createBiquadFilter();
     arcadeAudio.limiter = arcadeAudio.context.createDynamicsCompressor();
-    arcadeAudio.master.gain.value = 1.18;
-    arcadeAudio.bgmBus.gain.value = 1.18;
-    arcadeAudio.sfxBus.gain.value = 0.68;
-    arcadeAudio.limiter.threshold.value = -6;
-    arcadeAudio.limiter.knee.value = 10;
-    arcadeAudio.limiter.ratio.value = 5;
-    arcadeAudio.limiter.attack.value = 0.004;
-    arcadeAudio.limiter.release.value = 0.14;
-    arcadeAudio.bgmBus.connect(arcadeAudio.master);
-    arcadeAudio.sfxBus.connect(arcadeAudio.master);
+    arcadeAudio.master.gain.value = 1.08;
+    arcadeAudio.bgmBus.gain.value = 1.08;
+    arcadeAudio.sfxBus.gain.value = 0.62;
+    arcadeAudio.bgmFilter.type = "lowpass";
+    arcadeAudio.bgmFilter.frequency.value = 9200;
+    arcadeAudio.bgmFilter.Q.value = 0.35;
+    arcadeAudio.sfxFilter.type = "lowpass";
+    arcadeAudio.sfxFilter.frequency.value = 9800;
+    arcadeAudio.sfxFilter.Q.value = 0.3;
+    arcadeAudio.limiter.threshold.value = -8;
+    arcadeAudio.limiter.knee.value = 14;
+    arcadeAudio.limiter.ratio.value = 8;
+    arcadeAudio.limiter.attack.value = 0.006;
+    arcadeAudio.limiter.release.value = 0.18;
+    arcadeAudio.bgmBus.connect(arcadeAudio.bgmFilter);
+    arcadeAudio.sfxBus.connect(arcadeAudio.sfxFilter);
+    arcadeAudio.bgmFilter.connect(arcadeAudio.master);
+    arcadeAudio.sfxFilter.connect(arcadeAudio.master);
     arcadeAudio.master.connect(arcadeAudio.limiter);
     arcadeAudio.limiter.connect(arcadeAudio.context.destination);
   }
@@ -1046,6 +1058,16 @@ function waveShaperCurve({ fuzz = 0, bitDepth = 0 }) {
   return curve;
 }
 
+function audioRampTimes(duration, bus) {
+  const isBgm = bus === "bgm";
+  const attack = Math.min(duration * 0.32, isBgm ? 0.018 : 0.012);
+  const release = Math.min(duration * 0.42, isBgm ? 0.036 : 0.024);
+  return {
+    attack: Math.max(0.004, attack),
+    release: Math.max(0.008, release)
+  };
+}
+
 function tone(ctx, {
   freq,
   duration = 0.09,
@@ -1071,6 +1093,9 @@ function tone(ctx, {
   const destination = bus === "bgm" ? arcadeAudio.bgmBus : arcadeAudio.sfxBus;
   const start = ctx.currentTime + delay;
   const end = start + duration;
+  const ramps = audioRampTimes(duration, bus);
+  const peakAt = Math.min(end - 0.006, start + ramps.attack);
+  const releaseAt = Math.max(peakAt + 0.004, end - ramps.release);
   osc.type = type;
   osc.frequency.setValueAtTime(freq, start);
   if (slide) osc.frequency.exponentialRampToValueAtTime(Math.max(42, freq + slide), end);
@@ -1079,11 +1104,12 @@ function tone(ctx, {
   lp.frequency.value = filter;
   lp.Q.value = q;
   amp.gain.setValueAtTime(0.0001, start);
-  amp.gain.exponentialRampToValueAtTime(Math.max(0.0001, gain), start + 0.012);
+  amp.gain.exponentialRampToValueAtTime(Math.max(0.0001, gain), peakAt);
+  amp.gain.setValueAtTime(Math.max(0.0001, gain), releaseAt);
   amp.gain.exponentialRampToValueAtTime(0.0001, end);
   if (shaper) {
     shaper.curve = waveShaperCurve({ fuzz, bitDepth });
-    shaper.oversample = "2x";
+    shaper.oversample = "4x";
     osc.connect(shaper);
     shaper.connect(lp);
   } else {
@@ -1096,8 +1122,8 @@ function tone(ctx, {
     const feedback = ctx.createGain();
     const wet = ctx.createGain();
     delayNode.delayTime.setValueAtTime(delayTime, start);
-    feedback.gain.setValueAtTime(Math.min(0.72, delayFeedback), start);
-    wet.gain.setValueAtTime(Math.min(0.45, delayMix), start);
+    feedback.gain.setValueAtTime(Math.min(0.56, delayFeedback), start);
+    wet.gain.setValueAtTime(Math.min(0.32, delayMix), start);
     amp.connect(delayNode);
     delayNode.connect(feedback);
     feedback.connect(delayNode);
@@ -1120,20 +1146,27 @@ function noiseHit(ctx, {
   const length = Math.max(1, Math.floor(ctx.sampleRate * duration));
   const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
   const data = buffer.getChannelData(0);
+  const fadeLength = Math.min(Math.floor(ctx.sampleRate * 0.004), Math.floor(length / 2));
   for (let index = 0; index < length; index += 1) {
     const unit = seed === null ? Math.random() : seededUnit(seed, index);
-    data[index] = (unit * 2) - 1;
+    const fadeIn = fadeLength > 0 ? Math.min(1, index / fadeLength) : 1;
+    const fadeOut = fadeLength > 0 ? Math.min(1, (length - 1 - index) / fadeLength) : 1;
+    data[index] = ((unit * 2) - 1) * Math.min(fadeIn, fadeOut);
   }
   const source = ctx.createBufferSource();
   const amp = ctx.createGain();
   const filterNode = ctx.createBiquadFilter();
   const start = ctx.currentTime + delay;
   const end = start + duration;
+  const ramps = audioRampTimes(duration, bus);
+  const peakAt = Math.min(end - 0.004, start + ramps.attack);
+  const releaseAt = Math.max(peakAt + 0.003, end - ramps.release);
   source.buffer = buffer;
   filterNode.type = filterType;
   filterNode.frequency.value = filter;
   amp.gain.setValueAtTime(0.0001, start);
-  amp.gain.exponentialRampToValueAtTime(Math.max(0.0001, gain), start + 0.006);
+  amp.gain.exponentialRampToValueAtTime(Math.max(0.0001, gain), peakAt);
+  amp.gain.setValueAtTime(Math.max(0.0001, gain), releaseAt);
   amp.gain.exponentialRampToValueAtTime(0.0001, end);
   source.connect(filterNode);
   filterNode.connect(amp);
@@ -1344,7 +1377,7 @@ function bgmArrangementState() {
   const missingDepth = Math.min(4, missingRequired.length);
   const prereqDepth = Math.min(4, missingPrereqs.length);
   const missingStack = Math.min(12, missingRequired.length);
-  const radicalLayers = Math.min(6, Math.max(0, Math.ceil(missingRequired.length / 4)));
+  const radicalLayers = Math.min(4, Math.max(0, Math.ceil(missingRequired.length / 5)));
   const mutationStep = seed % 16;
   const mutationSlots = bgmMutationSlots(arrangedCourses, missingRequired, missingPrereqs, seed);
   return {
@@ -1582,7 +1615,7 @@ function bgmStepAnalysis(profile, arrangement, step) {
     dynamics,
     arrangeNoise,
     radicalNoise,
-    radicalLayers: radicalNoise ? Math.min(6, slot.missing) : 0,
+    radicalLayers: radicalNoise ? Math.min(4, slot.missing) : 0,
     chordHit: patternHit(profile.chordHits, step),
     kick: patternHit(profile.kick, step),
     snare: patternHit(profile.snare, step),
@@ -1616,7 +1649,7 @@ function startArcadeBgm() {
         Array.from({ length: analysis.radicalLayers }).forEach((_, index) => {
           noiseHit(ctx, {
             duration: 0.035 + (index * 0.006),
-            gain: (profile.drumGain || 0.016) * (0.55 + (index * 0.18)) * arrangement.radical,
+            gain: (profile.drumGain || 0.016) * (0.42 + (index * 0.12)) * arrangement.radical,
             filter: Math.max(900, 3000 - (index * 280)),
             filterType: index % 2 === 0 ? "bandpass" : "highpass",
             delay: index * 0.018,

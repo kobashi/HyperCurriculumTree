@@ -1219,33 +1219,51 @@ function bgmArrangementState() {
     const idValue = [...course.id].reduce((sum, char) => sum + char.charCodeAt(0), 0);
     return total + (idValue * (index + 3));
   }, arrangedCourses.length * 17);
+  const mutationStep = seed % 16;
   return {
     count: arrangedCourses.length,
     intensity: Math.min(1, arrangedCourses.length / 18),
     seed,
     key: bgmCompositionKey(),
+    mutationStep,
     missingRequired: missingRequired.length,
+    mutationDepth: Math.min(4, arrangedCourses.length),
     radical: Math.min(1, missingRequired.length / 4)
   };
 }
 
+function isBgmMutationStep(arrangement, step) {
+  return step % 16 === arrangement.mutationStep;
+}
+
 function arrangedMelodyOffset(profile, melodyOffset, step, arrangement) {
   if (melodyOffset === null) return null;
-  const subtleSlot = (step + arrangement.seed) % 16;
+  if (!isBgmMutationStep(arrangement, step) || arrangement.count === 0) return melodyOffset;
   let offset = melodyOffset;
-  if (arrangement.count > 0 && arrangement.intensity > 0 && [5, 10, 14].includes(subtleSlot)) {
-    offset += arrangement.seed % 2 === 0 ? 1 : -1;
+  const direction = arrangement.seed % 2 === 0 ? 1 : -1;
+  if (arrangement.mutationDepth >= 1) {
+    offset += direction;
   }
-  if (arrangement.radical > 0 && [3, 7, 11, 15].includes(step % 16)) {
-    offset += (arrangement.missingRequired % 2 === 0 ? 6 : -5);
+  if (arrangement.mutationDepth >= 2) {
+    offset += direction;
+  }
+  if (arrangement.mutationDepth >= 3) {
+    offset += direction * 2;
+  }
+  if (arrangement.radical > 0) {
+    offset += arrangement.missingRequired % 2 === 0 ? 6 : -5;
   }
   return offset;
 }
 
 function arrangedBassOffset(bassOffset, step, arrangement) {
-  if (bassOffset !== null && bassOffset !== undefined) return bassOffset;
-  if (arrangement.count > 3 && (step + arrangement.seed) % 16 === 6) return -5;
-  if (arrangement.radical > 0 && [5, 13].includes(step % 16)) return arrangement.missingRequired % 2 === 0 ? 1 : -1;
+  if (!isBgmMutationStep(arrangement, step) || arrangement.count === 0) return bassOffset ?? null;
+  const direction = arrangement.seed % 2 === 0 ? 1 : -1;
+  if (bassOffset !== null && bassOffset !== undefined) {
+    return bassOffset + direction * Math.max(1, Math.min(3, arrangement.mutationDepth));
+  }
+  if (arrangement.mutationDepth >= 2) return direction * -5;
+  if (arrangement.radical > 0) return arrangement.missingRequired % 2 === 0 ? 1 : -1;
   return null;
 }
 
@@ -1257,18 +1275,32 @@ function harmonyForStep(profile, arrangement, step) {
   let kind = "base";
   let label = "通常";
   const outsideTones = [];
-  if (arrangement.count > 0) {
-    if ((barIndex + arrangement.seed) % 3 === 1) {
-      root += arrangement.seed % 2 === 0 ? 1 : -1;
+  if (arrangement.count > 0 && isBgmMutationStep(arrangement, step)) {
+    const direction = arrangement.seed % 2 === 0 ? 1 : -1;
+    if (arrangement.mutationDepth >= 1) {
+      root += direction;
       kind = "arrange";
       label = "履修差";
-    } else if ((barIndex + arrangement.seed) % 3 === 2) {
+    }
+    if (arrangement.mutationDepth >= 2) {
       voicing = [0, 3, 7, 10];
       kind = "arrange";
       label = "履修差";
     }
+    if (arrangement.mutationDepth >= 3) {
+      voicing = [0, 3, 6, 10];
+      outsideTones.push(root + direction * 4);
+      kind = "arrange";
+      label = "履修差";
+    }
+    if (arrangement.mutationDepth >= 4) {
+      root += direction * 2;
+      outsideTones.push(root + direction * 6);
+      kind = "arrange";
+      label = "履修差";
+    }
   }
-  if (arrangement.radical > 0) {
+  if (arrangement.radical > 0 && isBgmMutationStep(arrangement, step)) {
     if ([0, 8].includes(beatStep)) {
       root += 6;
       voicing = [0, 4, 10, 13];
@@ -1300,12 +1332,14 @@ function bgmStepAnalysis(profile, arrangement, step) {
   const baseBassOffset = (profile.bassLine || [0])[step % (profile.bassLine || [0]).length];
   const bassOffset = arrangedBassOffset(baseBassOffset, step, arrangement);
   const baseDynamics = (profile.dynamics || [1])[beatStep] || 0.82;
-  const subtlePulse = arrangement.count > 0 && (step + arrangement.seed) % 8 === 0 ? arrangement.intensity * 0.12 : 0;
-  const dynamics = baseDynamics * (1 + subtlePulse + (arrangement.radical * (beatStep % 4 === 0 ? 0.24 : -0.08)));
-  const arrangeNoise = arrangement.count > 0 && (step + arrangement.seed) % Math.max(4, 12 - Math.floor(arrangement.intensity * 5)) === 2;
-  const radicalNoise = arrangement.radical > 0 && [1, 6, 9, 14].includes(beatStep);
+  const mutationHit = isBgmMutationStep(arrangement, step);
+  const subtlePulse = arrangement.count > 0 && mutationHit ? arrangement.intensity * 0.12 : 0;
+  const dynamics = baseDynamics * (1 + subtlePulse + (arrangement.radical > 0 && mutationHit ? (beatStep % 4 === 0 ? 0.24 : -0.08) : 0));
+  const arrangeNoise = arrangement.count > 0 && mutationHit;
+  const radicalNoise = arrangement.radical > 0 && mutationHit;
   return {
     beatStep,
+    mutationHit,
     harmony,
     melodyDegree,
     baseMelodyOffset,
@@ -1401,9 +1435,8 @@ function startArcadeBgm() {
 
       arcadeAudio.bgmStep += 1;
       const swing = step % 2 === 0 ? 0.92 : 1.08;
-      const arrangeSwing = 1 + (arrangement.intensity * ([3, 11].includes(analysis.beatStep) ? 0.04 : 0));
-      const radicalSwing = arrangement.radical > 0 ? ([5, 13].includes(analysis.beatStep) ? 0.82 : 1.06) : 1;
-      arcadeAudio.bgmTimer = window.setTimeout(tick, bgmStepMs(profile) * swing * arrangeSwing * radicalSwing);
+      const mutationSwing = analysis.mutationHit ? 1 + (arrangement.intensity * 0.08) + (arrangement.radical > 0 ? 0.04 : 0) : 1;
+      arcadeAudio.bgmTimer = window.setTimeout(tick, bgmStepMs(profile) * swing * mutationSwing);
     };
     stopArcadeBgm();
     arcadeAudio.bgmStep = 0;
@@ -3082,7 +3115,7 @@ function renderBgmRoll() {
   const analyses = Array.from({ length: 16 }, (_, step) => bgmStepAnalysis(profile, arrangement, step));
   document.querySelector("#bgmRollCourse").textContent = state.course;
   document.querySelector("#bgmRollTempo").textContent = `${profile.bpm || 120} BPM`;
-  document.querySelector("#bgmRollArrange").textContent = `微調整 ${arrangement.count}`;
+  document.querySelector("#bgmRollArrange").textContent = `積層 ${arrangement.count} / 変化点 ${arrangement.mutationStep + 1}`;
   document.querySelector("#bgmRollRadical").textContent = `外れ値 ${arrangement.missingRequired}`;
   grid.innerHTML = "";
   appendBgmRollCell(grid, "", "bgm-roll-label");

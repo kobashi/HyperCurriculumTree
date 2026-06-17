@@ -2761,6 +2761,11 @@ function totals() {
   const basic = basicRequiredCredits + basicElectiveCredits;
   const common = sum((course) => course.category === "commonRequired");
   const courseSpecific = sum((course) => course.category === "courseRequired");
+  const courseSpecificByCourse = Object.fromEntries(
+    COURSES
+      .filter((course) => course !== NO_COURSE)
+      .map((courseName) => [courseName, sum((course) => course.category === "courseRequired" && course.course === courseName)])
+  );
   const qualification = sum((course) => isQualificationPlanned(course));
   const specialized = sum((course) => course.category === "specializedElective" && !isQualificationPlanned(course));
   const otherDeptRaw = sum((course) => course.category === "otherDept");
@@ -2783,6 +2788,7 @@ function totals() {
     basicElectiveOutside,
     common,
     courseSpecific,
+    courseSpecificByCourse,
     specialized,
     professional,
     otherDeptRaw,
@@ -3469,7 +3475,30 @@ function renderBgmRoll() {
 }
 
 function setMeter(id, value, target) {
-  document.querySelector(`#${id}`).style.width = `${Math.min(100, Math.round((value / target) * 100))}%`;
+  setMeterSegments(id, [{ label: "進捗", value, className: "meter-segment-default" }], target);
+}
+
+function setMeterSegments(id, segments, target) {
+  const meter = document.querySelector(`#${id}`);
+  if (!meter) return;
+  meter.className = "meter-fill";
+  meter.innerHTML = "";
+  const cappedTotal = Math.max(0, Math.min(target, segments.reduce((total, segment) => total + Math.max(0, segment.value), 0)));
+  const visibleSegments = [];
+  let remaining = cappedTotal;
+  segments.forEach((segment) => {
+    const value = Math.max(0, Math.min(segment.value, remaining));
+    remaining -= value;
+    if (value <= 0) return;
+    visibleSegments.push({ ...segment, value });
+  });
+  visibleSegments.forEach((segment) => {
+    const part = document.createElement("span");
+    part.className = `meter-segment ${segment.className || "meter-segment-default"}`;
+    part.style.width = `${(segment.value / target) * 100}%`;
+    part.title = `${segment.label} ${segment.value}単位`;
+    meter.appendChild(part);
+  });
 }
 
 function renderSummary(stats) {
@@ -3478,9 +3507,22 @@ function renderSummary(stats) {
   document.querySelector("#basicCredits").textContent = `${stats.basic} / 36`;
   document.querySelector("#professionalCredits").textContent = `${stats.professional} / 36`;
   document.querySelector("#otherCredits").textContent = `${stats.other} / 52`;
-  setMeter("totalMeter", stats.total, 124);
-  setMeter("basicMeter", stats.basic, 36);
-  setMeter("professionalMeter", stats.professional, 36);
+  setMeterSegments("totalMeter", [
+    { label: "基礎教育", value: stats.basic, className: "meter-segment-basic" },
+    { label: "専門教育", value: stats.professional, className: "meter-segment-professional" },
+    { label: "その他", value: stats.other, className: "meter-segment-other" }
+  ], 124);
+  setMeterSegments("basicMeter", [
+    { label: "基礎教育必修", value: stats.basicRequiredCredits, className: "meter-segment-basic-required" },
+    { label: "基礎教育選択", value: stats.basicElectiveCredits, className: "meter-segment-basic-elective" }
+  ], 36);
+  setMeterSegments("professionalMeter", [
+    { label: "コース共通必修", value: stats.common, className: "meter-segment-common" },
+    { label: "情報システム", value: stats.courseSpecificByCourse.情報システム, className: "meter-segment-system" },
+    { label: "映像メディア", value: stats.courseSpecificByCourse.映像メディア, className: "meter-segment-movie" },
+    { label: "サウンド制作", value: stats.courseSpecificByCourse.サウンド制作, className: "meter-segment-sound" },
+    { label: "メディアデザイン", value: stats.courseSpecificByCourse.メディアデザイン, className: "meter-segment-design" }
+  ], 36);
   setMeter("otherMeter", stats.other, 52);
 }
 

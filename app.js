@@ -787,7 +787,14 @@ const arcadeBgmProfiles = {
     chordGain: 0.008,
     drumGain: 0.018,
     detune: 0,
-    filter: 3400
+    filter: 3400,
+    leadFilterType: "lowpass",
+    bassFilterType: "lowpass",
+    chordFilterType: "lowpass",
+    leadQ: 0.8,
+    bassQ: 0.7,
+    chordQ: 0.8,
+    leadLayer: 0.18
   },
   情報システム: {
     key: "system",
@@ -815,7 +822,14 @@ const arcadeBgmProfiles = {
     chordGain: 0.006,
     drumGain: 0.02,
     detune: 4,
-    filter: 2600
+    filter: 3000,
+    leadFilterType: "bandpass",
+    bassFilterType: "lowpass",
+    chordFilterType: "highpass",
+    leadQ: 5.5,
+    bassQ: 1.2,
+    chordQ: 2.8,
+    leadLayer: 0.26
   },
   映像メディア: {
     key: "movie",
@@ -843,7 +857,14 @@ const arcadeBgmProfiles = {
     chordGain: 0.009,
     drumGain: 0.014,
     detune: -3,
-    filter: 1900
+    filter: 1750,
+    leadFilterType: "lowpass",
+    bassFilterType: "lowpass",
+    chordFilterType: "lowpass",
+    leadQ: 0.45,
+    bassQ: 0.5,
+    chordQ: 0.65,
+    leadLayer: 0.12
   },
   サウンド制作: {
     key: "sound",
@@ -871,7 +892,14 @@ const arcadeBgmProfiles = {
     chordGain: 0.007,
     drumGain: 0.022,
     detune: 2,
-    filter: 3000
+    filter: 3800,
+    leadFilterType: "highpass",
+    bassFilterType: "bandpass",
+    chordFilterType: "bandpass",
+    leadQ: 2.5,
+    bassQ: 3.4,
+    chordQ: 2.2,
+    leadLayer: 0.34
   },
   メディアデザイン: {
     key: "design",
@@ -899,7 +927,14 @@ const arcadeBgmProfiles = {
     chordGain: 0.008,
     drumGain: 0.016,
     detune: -2,
-    filter: 2800
+    filter: 4200,
+    leadFilterType: "bandpass",
+    bassFilterType: "lowpass",
+    chordFilterType: "highpass",
+    leadQ: 1.4,
+    bassQ: 0.8,
+    chordQ: 1.6,
+    leadLayer: 0.22
   }
 };
 
@@ -975,6 +1010,8 @@ function tone(ctx, {
   slide = 0,
   delay = 0,
   filter = 2200,
+  filterType = "lowpass",
+  q = 0.8,
   bus = "sfx"
 }) {
   const osc = ctx.createOscillator();
@@ -986,8 +1023,9 @@ function tone(ctx, {
   osc.frequency.setValueAtTime(freq, start);
   if (slide) osc.frequency.exponentialRampToValueAtTime(Math.max(42, freq + slide), end);
   osc.detune.setValueAtTime(detune, start);
-  lp.type = "lowpass";
+  lp.type = filterType;
   lp.frequency.value = filter;
+  lp.Q.value = q;
   amp.gain.setValueAtTime(0.0001, start);
   amp.gain.exponentialRampToValueAtTime(Math.max(0.0001, gain), start + 0.012);
   amp.gain.exponentialRampToValueAtTime(0.0001, end);
@@ -1105,6 +1143,8 @@ function playBgmChord(ctx, profile, chordRoot, dynamics, voicing = null) {
       gain: (profile.chordGain || 0.008) * dynamics * (index === 0 ? 1 : 0.72),
       delay: index * 0.008,
       filter: Math.max(900, (profile.filter || 2600) * 0.72),
+      filterType: profile.chordFilterType || "lowpass",
+      q: profile.chordQ || 0.8,
       bus: "bgm"
     });
   });
@@ -1518,6 +1558,8 @@ function startArcadeBgm() {
           slide: -profile.detune,
           delay: 0.006,
           filter: Math.max(800, profile.filter * 0.42),
+          filterType: profile.bassFilterType || "lowpass",
+          q: profile.bassQ || 0.8,
           bus: "bgm"
         });
       }
@@ -1534,6 +1576,8 @@ function startArcadeBgm() {
           gain: (profile.leadGain || 0.012) * analysis.dynamics * 0.72,
           delay: index * 0.018,
           filter: Math.max(1100, profile.filter * 0.58),
+          filterType: profile.leadFilterType || "lowpass",
+          q: profile.leadQ || 0.8,
           bus: "bgm"
         });
       });
@@ -1547,8 +1591,24 @@ function startArcadeBgm() {
           gain: (profile.leadGain || 0.012) * analysis.dynamics,
           slide: radicalMelody ? (analysis.melodyOffset > analysis.baseMelodyOffset ? 22 : -22) : profile.detune,
           filter: radicalMelody ? Math.max(1200, profile.filter * 0.62) : profile.filter,
+          filterType: radicalMelody ? "bandpass" : profile.leadFilterType || "lowpass",
+          q: radicalMelody ? 3.5 : profile.leadQ || 0.8,
           bus: "bgm"
         });
+        if (!radicalMelody && profile.leadLayer > 0) {
+          tone(ctx, {
+            freq: midiToFreq(profile.root, analysis.harmony.root + analysis.melodyOffset + (profile.leadOctave || 12) + 12),
+            duration: (profile.leadDuration || 0.09) * 0.72,
+            type: profile.chordType || "triangle",
+            gain: (profile.leadGain || 0.012) * analysis.dynamics * profile.leadLayer,
+            slide: profile.detune * -0.5,
+            delay: 0.012,
+            filter: Math.max(1200, profile.filter * 1.08),
+            filterType: profile.leadFilterType || "lowpass",
+            q: profile.leadQ || 0.8,
+            bus: "bgm"
+          });
+        }
       }
 
       arcadeAudio.bgmStep += 1;

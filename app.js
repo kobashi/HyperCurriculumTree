@@ -775,8 +775,8 @@ const arcadeBgmProfiles = {
     snare: [4, 12],
     hat: [0, 2, 4, 6, 8, 10, 12, 14],
     dynamics: [1.12, 0.72, 0.84, 0.76, 1.02, 0.72, 0.88, 0.76, 1.08, 0.72, 0.84, 0.78, 1, 0.72, 0.9, 0.84],
-    leadType: "square",
-    bassType: "triangle",
+    leadType: "triangle",
+    bassType: "sine",
     chordType: "triangle",
     leadOctave: 12,
     leadDuration: 0.1,
@@ -794,7 +794,10 @@ const arcadeBgmProfiles = {
     leadQ: 0.8,
     bassQ: 0.7,
     chordQ: 0.8,
-    leadLayer: 0.18
+    leadLayer: 0.18,
+    leadDelayMix: 0.08,
+    leadDelayTime: 0.18,
+    leadDelayFeedback: 0.18
   },
   情報システム: {
     key: "system",
@@ -810,8 +813,8 @@ const arcadeBgmProfiles = {
     snare: [4, 12],
     hat: [0, 1, 2, 3, 4, 6, 8, 9, 10, 11, 12, 14],
     dynamics: [1.18, 0.66, 0.78, 0.66, 1.06, 0.68, 0.82, 0.7, 1.14, 0.66, 0.8, 0.68, 1.08, 0.72, 0.86, 0.76],
-    leadType: "sawtooth",
-    bassType: "square",
+    leadType: "square",
+    bassType: "sawtooth",
     chordType: "square",
     leadOctave: 12,
     leadDuration: 0.07,
@@ -829,7 +832,13 @@ const arcadeBgmProfiles = {
     leadQ: 5.5,
     bassQ: 1.2,
     chordQ: 2.8,
-    leadLayer: 0.26
+    leadLayer: 0.2,
+    leadBitDepth: 5,
+    bassBitDepth: 6,
+    chordBitDepth: 7,
+    leadDelayMix: 0.04,
+    leadDelayTime: 0.08,
+    leadDelayFeedback: 0.12
   },
   映像メディア: {
     key: "movie",
@@ -864,7 +873,13 @@ const arcadeBgmProfiles = {
     leadQ: 0.45,
     bassQ: 0.5,
     chordQ: 0.65,
-    leadLayer: 0.12
+    leadLayer: 0.14,
+    leadDelayMix: 0.28,
+    leadDelayTime: 0.34,
+    leadDelayFeedback: 0.38,
+    chordDelayMix: 0.18,
+    chordDelayTime: 0.42,
+    chordDelayFeedback: 0.3
   },
   サウンド制作: {
     key: "sound",
@@ -880,9 +895,9 @@ const arcadeBgmProfiles = {
     snare: [4, 12],
     hat: [0, 2, 5, 6, 8, 10, 13, 14],
     dynamics: [1.08, 0.64, 0.9, 1, 1.02, 0.72, 0.92, 0.68, 1.12, 0.64, 0.94, 1, 1.06, 0.7, 0.92, 0.74],
-    leadType: "square",
-    bassType: "triangle",
-    chordType: "sine",
+    leadType: "sawtooth",
+    bassType: "square",
+    chordType: "triangle",
     leadOctave: 12,
     leadDuration: 0.08,
     bassDuration: 0.13,
@@ -899,7 +914,12 @@ const arcadeBgmProfiles = {
     leadQ: 2.5,
     bassQ: 3.4,
     chordQ: 2.2,
-    leadLayer: 0.34
+    leadLayer: 0.34,
+    leadFuzz: 0.62,
+    bassFuzz: 0.38,
+    leadDelayMix: 0.14,
+    leadDelayTime: 0.16,
+    leadDelayFeedback: 0.24
   },
   メディアデザイン: {
     key: "design",
@@ -915,9 +935,9 @@ const arcadeBgmProfiles = {
     snare: [4, 11],
     hat: [0, 3, 4, 6, 8, 9, 12, 15],
     dynamics: [1.08, 0.62, 0.82, 0.74, 0.96, 0.7, 0.92, 0.78, 1.1, 0.62, 0.86, 0.76, 1, 0.68, 0.9, 0.82],
-    leadType: "triangle",
-    bassType: "square",
-    chordType: "triangle",
+    leadType: "sine",
+    bassType: "triangle",
+    chordType: "sawtooth",
     leadOctave: 12,
     leadDuration: 0.1,
     bassDuration: 0.14,
@@ -934,7 +954,11 @@ const arcadeBgmProfiles = {
     leadQ: 1.4,
     bassQ: 0.8,
     chordQ: 1.6,
-    leadLayer: 0.22
+    leadLayer: 0.24,
+    leadDelayMix: 0.2,
+    leadDelayTime: 0.25,
+    leadDelayFeedback: 0.32,
+    chordBitDepth: 9
   }
 };
 
@@ -1001,6 +1025,27 @@ function seededUnit(seed, index) {
   return value / 4294967295;
 }
 
+const waveShaperCurveCache = new Map();
+
+function waveShaperCurve({ fuzz = 0, bitDepth = 0 }) {
+  const key = `${fuzz}|${bitDepth}`;
+  if (waveShaperCurveCache.has(key)) return waveShaperCurveCache.get(key);
+  const length = 1024;
+  const curve = new Float32Array(length);
+  const drive = 1 + (fuzz * 24);
+  const steps = bitDepth ? Math.max(2, 2 ** bitDepth) : 0;
+  for (let index = 0; index < length; index += 1) {
+    const input = ((index / (length - 1)) * 2) - 1;
+    let output = fuzz > 0 ? Math.tanh(input * drive) / Math.tanh(drive) : input;
+    if (steps) {
+      output = Math.round(output * steps) / steps;
+    }
+    curve[index] = output;
+  }
+  waveShaperCurveCache.set(key, curve);
+  return curve;
+}
+
 function tone(ctx, {
   freq,
   duration = 0.09,
@@ -1012,11 +1057,18 @@ function tone(ctx, {
   filter = 2200,
   filterType = "lowpass",
   q = 0.8,
+  fuzz = 0,
+  bitDepth = 0,
+  delayMix = 0,
+  delayTime = 0.18,
+  delayFeedback = 0.22,
   bus = "sfx"
 }) {
   const osc = ctx.createOscillator();
   const amp = ctx.createGain();
   const lp = ctx.createBiquadFilter();
+  const shaper = fuzz > 0 || bitDepth ? ctx.createWaveShaper() : null;
+  const destination = bus === "bgm" ? arcadeAudio.bgmBus : arcadeAudio.sfxBus;
   const start = ctx.currentTime + delay;
   const end = start + duration;
   osc.type = type;
@@ -1029,11 +1081,31 @@ function tone(ctx, {
   amp.gain.setValueAtTime(0.0001, start);
   amp.gain.exponentialRampToValueAtTime(Math.max(0.0001, gain), start + 0.012);
   amp.gain.exponentialRampToValueAtTime(0.0001, end);
-  osc.connect(lp);
+  if (shaper) {
+    shaper.curve = waveShaperCurve({ fuzz, bitDepth });
+    shaper.oversample = "2x";
+    osc.connect(shaper);
+    shaper.connect(lp);
+  } else {
+    osc.connect(lp);
+  }
   lp.connect(amp);
-  amp.connect(bus === "bgm" ? arcadeAudio.bgmBus : arcadeAudio.sfxBus);
+  amp.connect(destination);
+  if (delayMix > 0) {
+    const delayNode = ctx.createDelay(0.8);
+    const feedback = ctx.createGain();
+    const wet = ctx.createGain();
+    delayNode.delayTime.setValueAtTime(delayTime, start);
+    feedback.gain.setValueAtTime(Math.min(0.72, delayFeedback), start);
+    wet.gain.setValueAtTime(Math.min(0.45, delayMix), start);
+    amp.connect(delayNode);
+    delayNode.connect(feedback);
+    feedback.connect(delayNode);
+    delayNode.connect(wet);
+    wet.connect(destination);
+  }
   osc.start(start);
-  osc.stop(end + 0.05);
+  osc.stop(end + Math.max(0.05, delayMix > 0 ? delayTime * 2.4 : 0.05));
 }
 
 function noiseHit(ctx, {
@@ -1145,6 +1217,11 @@ function playBgmChord(ctx, profile, chordRoot, dynamics, voicing = null) {
       filter: Math.max(900, (profile.filter || 2600) * 0.72),
       filterType: profile.chordFilterType || "lowpass",
       q: profile.chordQ || 0.8,
+      fuzz: profile.chordFuzz || 0,
+      bitDepth: profile.chordBitDepth || 0,
+      delayMix: profile.chordDelayMix || 0,
+      delayTime: profile.chordDelayTime || 0.18,
+      delayFeedback: profile.chordDelayFeedback || 0.22,
       bus: "bgm"
     });
   });
@@ -1560,6 +1637,11 @@ function startArcadeBgm() {
           filter: Math.max(800, profile.filter * 0.42),
           filterType: profile.bassFilterType || "lowpass",
           q: profile.bassQ || 0.8,
+          fuzz: profile.bassFuzz || 0,
+          bitDepth: profile.bassBitDepth || 0,
+          delayMix: profile.bassDelayMix || 0,
+          delayTime: profile.bassDelayTime || 0.16,
+          delayFeedback: profile.bassDelayFeedback || 0.18,
           bus: "bgm"
         });
       }
@@ -1578,6 +1660,11 @@ function startArcadeBgm() {
           filter: Math.max(1100, profile.filter * 0.58),
           filterType: profile.leadFilterType || "lowpass",
           q: profile.leadQ || 0.8,
+          fuzz: profile.leadFuzz || 0,
+          bitDepth: profile.leadBitDepth || 0,
+          delayMix: profile.leadDelayMix || 0,
+          delayTime: profile.leadDelayTime || 0.18,
+          delayFeedback: profile.leadDelayFeedback || 0.22,
           bus: "bgm"
         });
       });
@@ -1593,6 +1680,11 @@ function startArcadeBgm() {
           filter: radicalMelody ? Math.max(1200, profile.filter * 0.62) : profile.filter,
           filterType: radicalMelody ? "bandpass" : profile.leadFilterType || "lowpass",
           q: radicalMelody ? 3.5 : profile.leadQ || 0.8,
+          fuzz: radicalMelody ? 0.3 : profile.leadFuzz || 0,
+          bitDepth: radicalMelody ? 0 : profile.leadBitDepth || 0,
+          delayMix: radicalMelody ? 0.04 : profile.leadDelayMix || 0,
+          delayTime: profile.leadDelayTime || 0.18,
+          delayFeedback: profile.leadDelayFeedback || 0.22,
           bus: "bgm"
         });
         if (!radicalMelody && profile.leadLayer > 0) {
@@ -1606,6 +1698,11 @@ function startArcadeBgm() {
             filter: Math.max(1200, profile.filter * 1.08),
             filterType: profile.leadFilterType || "lowpass",
             q: profile.leadQ || 0.8,
+            fuzz: (profile.leadFuzz || 0) * 0.5,
+            bitDepth: profile.leadBitDepth || 0,
+            delayMix: (profile.leadDelayMix || 0) * 0.55,
+            delayTime: profile.leadDelayTime || 0.18,
+            delayFeedback: profile.leadDelayFeedback || 0.22,
             bus: "bgm"
           });
         }

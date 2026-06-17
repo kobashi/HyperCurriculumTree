@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>情報メディア学科 履修計画チェッカー</title>
-    <link rel="stylesheet" href="styles.css?v=catalog-tree-20260615r">
+    <link rel="stylesheet" href="styles.css?v=playful-ux-20260617u">
   </head>
   <body>
     <div id="fxLayer" aria-hidden="true"></div>
@@ -132,8 +132,8 @@
           <div class="plan-head">
             <h2>4年間の履修計画</h2>
             <div class="quick-actions">
-              <button id="autoFillButton" type="button">標準配置</button>
-              <button id="clearButton" type="button">クリア</button>
+              <button id="autoFillButton" type="button" onpointerdown="window.hctAutoFillButton && window.hctAutoFillButton(event)" onclick="window.hctAutoFillButton && window.hctAutoFillButton(event)">標準配置</button>
+              <button id="clearButton" type="button" onpointerdown="window.hctClearButton && window.hctClearButton(event)" onclick="window.hctClearButton && window.hctClearButton(event)">クリア</button>
             </div>
           </div>
           <div id="planGrid" class="plan-grid"></div>
@@ -151,6 +151,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=playful-ux-20260616a"></script>
+    <script src="app.js?v=playful-ux-20260617u"></script>
   </body>
 </html>

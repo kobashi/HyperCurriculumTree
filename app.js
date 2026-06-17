@@ -8,6 +8,7 @@ const TERMS = [
   { id: "4前", year: 4, label: "4年前期" },
   { id: "4後", year: 4, label: "4年後期" }
 ];
+const TERM_IDS = TERMS.map((term) => term.id);
 const TREE_UNASSIGNED_TERM = "none";
 
 const NO_COURSE = "なし";
@@ -718,7 +719,8 @@ const state = {
   teacherNotice: "",
   openCourseId: null,
   openTreeNodeId: null,
-  planned: new Map()
+  planned: new Map(),
+  teacherAdded: new Set()
 };
 
 const arcadeAudio = {
@@ -728,9 +730,124 @@ const arcadeAudio = {
   bgmStep: 0
 };
 
-const arcadeMusic = {
-  melody: [523.25, 659.25, 783.99, 659.25, 587.33, 659.25, 698.46, 659.25],
-  bass: [130.81, 130.81, 98, 98, 130.81, 130.81, 87.31, 87.31]
+const fxSequence = {
+  items: new Map(),
+  feedbackTimers: [],
+  treeTimers: [],
+  scheduled: false,
+  treeReveal: false
+};
+
+const filterFx = {
+  items: new Map(),
+  cleanupTimer: null,
+  exitTimer: null
+};
+
+const planFx = {
+  transitions: new Map(),
+  prevSnapshot: new Map(),
+  cleanupTimer: null,
+  clearTimer: null,
+  queuedDelays: new Map()
+};
+
+const arcadeBgmProfiles = {
+  "なし": {
+    key: "none",
+    bpm: 112,
+    root: 261.63,
+    scale: [0, 2, 4, 7, 9, 12],
+    melody: [0, 2, 4, 5, 4, 2, 1, 2],
+    bass: [0, 0, -5, -5, 0, 0, -7, -7],
+    chord: [0, 4, 7, 9],
+    leadType: "square",
+    bassType: "triangle",
+    chordType: "triangle",
+    accentType: "square",
+    stepMs: 270,
+    leadGain: 0.024,
+    bassGain: 0.018,
+    chordGain: 0.014,
+    detune: 0,
+    filter: 3400
+  },
+  情報システム: {
+    key: "system",
+    bpm: 138,
+    root: 293.66,
+    scale: [0, 2, 3, 5, 7, 9, 10, 12],
+    melody: [0, 3, 5, 7, 5, 3, 2, 3],
+    bass: [0, -5, -7, -5, 0, -5, -7, -9],
+    chord: [0, 3, 7, 10],
+    leadType: "sawtooth",
+    bassType: "square",
+    chordType: "triangle",
+    accentType: "square",
+    stepMs: 218,
+    leadGain: 0.022,
+    bassGain: 0.018,
+    chordGain: 0.012,
+    detune: 4,
+    filter: 2600
+  },
+  映像メディア: {
+    key: "movie",
+    bpm: 94,
+    root: 220,
+    scale: [0, 3, 5, 7, 10, 12],
+    melody: [0, 3, 5, 7, 5, 3, 2, 0],
+    bass: [0, -7, -5, -7, 0, -3, -5, -7],
+    chord: [0, 3, 7, 12],
+    leadType: "triangle",
+    bassType: "sine",
+    chordType: "triangle",
+    accentType: "triangle",
+    stepMs: 319,
+    leadGain: 0.023,
+    bassGain: 0.016,
+    chordGain: 0.011,
+    detune: -3,
+    filter: 1900
+  },
+  サウンド制作: {
+    key: "sound",
+    bpm: 126,
+    root: 196,
+    scale: [0, 2, 4, 5, 7, 9, 10, 12],
+    melody: [0, 2, 4, 7, 9, 7, 4, 2, 0, 2],
+    bass: [0, 0, -3, -3, -5, -5, -7, -7],
+    chord: [0, 4, 7, 10],
+    leadType: "square",
+    bassType: "triangle",
+    chordType: "sine",
+    accentType: "square",
+    stepMs: 238,
+    leadGain: 0.024,
+    bassGain: 0.017,
+    chordGain: 0.013,
+    detune: 2,
+    filter: 3000
+  },
+  メディアデザイン: {
+    key: "design",
+    bpm: 108,
+    root: 246.94,
+    scale: [0, 2, 4, 6, 7, 9, 11, 12],
+    melody: [0, 2, 4, 6, 7, 6, 4, 2],
+    bass: [0, -5, -7, -5, 0, -5, -2, -5],
+    chord: [0, 4, 7, 11],
+    leadType: "triangle",
+    bassType: "square",
+    chordType: "triangle",
+    accentType: "triangle",
+    stepMs: 278,
+    leadGain: 0.022,
+    bassGain: 0.016,
+    chordGain: 0.012,
+    detune: -2,
+    filter: 2800
+  }
 };
 
 function ensureArcadeAudio() {
@@ -758,8 +875,12 @@ function withArcadeAudio(run) {
 }
 
 function stopArcadeBgm() {
-  if (arcadeAudio.bgmTimer) clearInterval(arcadeAudio.bgmTimer);
+  if (arcadeAudio.bgmTimer) clearTimeout(arcadeAudio.bgmTimer);
   arcadeAudio.bgmTimer = null;
+}
+
+function midiToFreq(root, semitone) {
+  return root * (2 ** (semitone / 12));
 }
 
 function tone(ctx, {
@@ -872,27 +993,75 @@ function playArcadeSfx(kind) {
   });
 }
 
+function currentArcadeBgmProfile() {
+  return arcadeBgmProfiles[state.course] || arcadeBgmProfiles[NO_COURSE];
+}
+
 function startArcadeBgm() {
   if (!state.soundBgm) return;
   withArcadeAudio((ctx) => {
     if (arcadeAudio.bgmTimer) return;
     const tick = () => {
       if (!state.soundBgm) return;
+      const profile = currentArcadeBgmProfile();
       const step = arcadeAudio.bgmStep += 1;
-      const index = step % arcadeMusic.melody.length;
-      const melody = arcadeMusic.melody[index];
-      const bass = arcadeMusic.bass[Math.floor(index / 2) % arcadeMusic.bass.length];
-      tone(ctx, { freq: melody, duration: 0.12, type: "square", gain: 0.022, slide: 18, filter: 3000 });
-      if (index % 2 === 0) {
-        tone(ctx, { freq: bass, duration: 0.18, type: "triangle", gain: 0.018, slide: -6, delay: 0.01, filter: 1000 });
+      const melodyIndex = step % profile.melody.length;
+      const bassIndex = Math.floor(step / 2) % profile.bass.length;
+      const chordIndex = Math.floor(step / 4) % profile.chord.length;
+      const melody = midiToFreq(profile.root, profile.melody[melodyIndex]);
+      const bass = midiToFreq(profile.root / 2, profile.bass[bassIndex]);
+      const chordRoot = midiToFreq(profile.root, profile.chord[chordIndex]);
+      const accent = midiToFreq(profile.root, profile.scale[(step + 2) % profile.scale.length]);
+      tone(ctx, {
+        freq: melody,
+        duration: 0.12,
+        type: profile.leadType,
+        gain: profile.leadGain,
+        slide: profile.detune,
+        filter: profile.filter
+      });
+      if (step % 2 === 0) {
+        tone(ctx, {
+          freq: bass,
+          duration: 0.2,
+          type: profile.bassType,
+          gain: profile.bassGain,
+          slide: -profile.detune,
+          delay: 0.01,
+          filter: Math.max(800, profile.filter * 0.42)
+        });
       }
+      if (step % 4 === 0) {
+        tone(ctx, {
+          freq: chordRoot,
+          duration: 0.16,
+          type: profile.chordType,
+          gain: profile.chordGain,
+          delay: 0.03,
+          filter: Math.max(1000, profile.filter * 0.7)
+        });
+      }
+      if (step % 8 === 0) {
+        tone(ctx, {
+          freq: accent,
+          duration: 0.08,
+          type: profile.accentType,
+          gain: profile.chordGain * 0.85,
+          delay: 0.01,
+          filter: profile.filter
+        });
+      }
+      const swing = step % 2 === 0 ? 0.92 : 1.08;
+      arcadeAudio.bgmTimer = window.setTimeout(tick, profile.stepMs * swing);
     };
+    stopArcadeBgm();
+    arcadeAudio.bgmStep = 0;
     tick();
-    arcadeAudio.bgmTimer = window.setInterval(tick, 210);
   });
 }
 
-function syncArcadeAudio() {
+function syncArcadeAudio(forceRestart = false) {
+  if (forceRestart) stopArcadeBgm();
   if (state.soundBgm) {
     startArcadeBgm();
   } else {
@@ -1195,7 +1364,7 @@ function treeNodeTooltip(course, node, treeName) {
   if (course.category === "basicRequired") lines.push("基礎教育必修");
   if (course.category === "commonRequired") lines.push("コース共通必修");
   if (matchedCourseRequired) lines.push(`${course.course}コース必修`);
-  if (!mismatchedCourseRequired && (course.teacherRequired || node.teacherRequired)) lines.push("教職必修");
+  if (course.category !== "teacher" && !mismatchedCourseRequired && (course.teacherRequired || node.teacherRequired)) lines.push("教職必修");
   return lines.join("\n");
 }
 
@@ -1387,6 +1556,7 @@ function validatePlannedCourse(course) {
   const currentValue = state.planned.get(course.id);
   if (currentValue && !isValidPlannedValue(course, currentValue)) {
     state.planned.delete(course.id);
+    state.teacherAdded.delete(course.id);
   }
 }
 
@@ -1395,9 +1565,7 @@ function visibleCourses() {
   const terms = new Set([...document.querySelectorAll(".term-filter:checked")].map((input) => input.value));
   const categories = new Set([...document.querySelectorAll(".category-filter:checked")].map((input) => input.value));
   return allCourses.filter((course) => {
-    const retainedTeacherCourse = course.category === "teacher" && !state.teacher && state.planned.has(course.id);
-    if (retainedTeacherCourse) return true;
-    if (course.category === "teacher" && !state.teacher && !state.planned.has(course.id)) return false;
+    if (course.category === "teacher" && !state.teacher) return false;
     if (!categories.has(course.category)) return false;
     if (course.qualificationEligible) return years.size > 0 && terms.size > 0;
     if (!course.year && !course.term) return years.size > 0 && terms.size > 0;
@@ -1419,6 +1587,306 @@ function plannedMethod(course) {
   return parseRecognitionValue(state.planned.get(course.id))?.method || null;
 }
 
+function snapshotPlanned() {
+  return new Map(state.planned.entries());
+}
+
+function snapshotTermValue(value) {
+  return parseRecognitionValue(value)?.term || value;
+}
+
+function queuePlanTransition(beforePlan, afterPlan, options = {}) {
+  const beforeIds = new Set(beforePlan.keys());
+  const afterIds = new Set(afterPlan.keys());
+  const changes = [];
+  const removed = [...beforeIds].filter((id) => !afterIds.has(id));
+  const added = [...afterIds].filter((id) => !beforeIds.has(id));
+  added.forEach((courseId) => {
+    changes.push({
+      courseId,
+      kind: "confirm",
+      term: snapshotTermValue(afterPlan.get(courseId))
+    });
+  });
+  if (!changes.length || options.silent) {
+    if (removed.length) {
+      fxSequence.feedbackTimers.forEach((timer) => window.clearTimeout(timer));
+      fxSequence.feedbackTimers = [];
+      fxSequence.items.clear();
+      fxSequence.scheduled = false;
+      planFx.transitions.clear();
+      planFx.queuedDelays.clear();
+    }
+    return;
+  }
+
+  const itemStep = options.step || 24;
+  const cellStep = options.cellStep || Math.max(54, itemStep * 2);
+  const groupedCourses = new Map(TERM_IDS.map((term) => [term, []]));
+  changes.forEach((change) => {
+    const course = allCourses.find((item) => item.id === change.courseId);
+    if (!course || !groupedCourses.has(change.term)) return;
+    groupedCourses.get(change.term).push({
+      courseId: change.courseId,
+      name: course.name
+    });
+  });
+  groupedCourses.forEach((group) => {
+    group.sort((a, b) => a.name.localeCompare(b.name, "ja"));
+  });
+  const changeOrder = new Map();
+  TERM_IDS.forEach((term, termIdx) => {
+    const courseEntries = groupedCourses.get(term) || [];
+    courseEntries.forEach(({ courseId }, index) => {
+      changeOrder.set(courseId, (options.baseDelay || 0) + (termIdx * cellStep) + (index * itemStep));
+    });
+  });
+
+  planFx.queuedDelays.clear();
+  changes.forEach((change) => {
+    planFx.queuedDelays.set(change.courseId, changeOrder.get(change.courseId) ?? (options.baseDelay || 0));
+  });
+  fxSequence.feedbackTimers.forEach((timer) => window.clearTimeout(timer));
+  fxSequence.feedbackTimers = [];
+  fxSequence.items.clear();
+  fxSequence.scheduled = false;
+  changes
+    .slice()
+    .sort((a, b) => (changeOrder.get(a.courseId) || 0) - (changeOrder.get(b.courseId) || 0))
+    .slice(0, 48)
+    .forEach((change) => {
+    fxSequence.items.set(change.courseId, {
+      kind: change.kind,
+      delay: changeOrder.get(change.courseId) ?? (options.baseDelay || 0)
+    });
+  });
+}
+
+function animatedCourseClass(courseId) {
+  const item = fxSequence.items.get(courseId);
+  if (!item) return "";
+  return ` fx-sequence fx-${item.kind === "remove" ? "release" : "activate"}`;
+}
+
+function animatedCourseStyle(courseId) {
+  const item = fxSequence.items.get(courseId);
+  return item ? `--fx-delay:${item.delay}ms;` : "";
+}
+
+function currentVisibleCourseIdSet() {
+  return new Set([...document.querySelectorAll("#catalogList [data-course-id], #treeView [data-course-id]")]
+    .map((element) => element.dataset.courseId));
+}
+
+function queueFilterReveal(beforeIds, afterCourses, options = {}) {
+  const added = afterCourses
+    .filter((course) => !beforeIds.has(course.id))
+    .slice(0, 80);
+  if (!added.length) return;
+  if (filterFx.cleanupTimer) window.clearTimeout(filterFx.cleanupTimer);
+  filterFx.items.clear();
+  added.forEach((course, index) => {
+    filterFx.items.set(course.id, (options.baseDelay || 0) + (index * 24));
+  });
+  const maxDelay = (options.baseDelay || 0) + ((added.length - 1) * 24);
+  filterFx.cleanupTimer = window.setTimeout(() => {
+    filterFx.cleanupTimer = null;
+    filterFx.items.clear();
+    render();
+  }, maxDelay + 620);
+}
+
+function filterRevealClass(courseId) {
+  return filterFx.items.has(courseId) && !fxSequence.items.has(courseId) ? " fx-filter-reveal" : "";
+}
+
+function filterRevealStyle(courseId) {
+  const delay = filterFx.items.get(courseId);
+  return Number.isFinite(delay) ? `--filter-reveal-delay:${delay}ms;` : "";
+}
+
+function courseElementsForAnimation(courseId) {
+  const escaped = cssAttributeValue(courseId);
+  return [...document.querySelectorAll(`#catalogList [data-course-id="${escaped}"], #treeView [data-course-id="${escaped}"]`)];
+}
+
+function animateExistingCourseElements(courseIds, className, options = {}) {
+  const ids = [...courseIds].slice(0, options.limit || 120);
+  const step = options.step || 18;
+  ids.forEach((courseId, index) => {
+    courseElementsForAnimation(courseId).forEach((element) => {
+      element.classList.remove("fx-filter-hide", "fx-clear-release");
+      element.classList.add(className);
+      element.style.setProperty("--fx-exit-delay", `${index * step}ms`);
+    });
+  });
+  return ids.length ? ((ids.length - 1) * step) + (options.duration || 360) : 0;
+}
+
+function animateExistingPlanRows(courseIds, className, options = {}) {
+  const ids = [...courseIds].slice(0, options.limit || 120);
+  const step = options.step || 18;
+  ids.forEach((courseId, index) => {
+    const escaped = cssAttributeValue(courseId);
+    document.querySelectorAll(`#planGrid .planned-course[data-course-id="${escaped}"]`).forEach((element) => {
+      element.classList.remove("fx-clear-release");
+      element.classList.add(className);
+      element.style.setProperty("--fx-exit-delay", `${index * step}ms`);
+    });
+  });
+  return ids.length ? ((ids.length - 1) * step) + (options.duration || 360) : 0;
+}
+
+function cancelPendingPlanClear() {
+  if (!planFx.clearTimer) return;
+  window.clearTimeout(planFx.clearTimer);
+  planFx.clearTimer = null;
+  document.querySelectorAll(".fx-clear-release").forEach((element) => {
+    element.classList.remove("fx-clear-release");
+    element.style.removeProperty("--fx-exit-delay");
+  });
+}
+
+function handleFilterChange() {
+  const beforeIds = currentVisibleCourseIdSet();
+  const afterCourses = visibleCourses();
+  const afterIds = new Set(afterCourses.map((course) => course.id));
+  const hidden = [...beforeIds].filter((id) => !afterIds.has(id));
+  if (filterFx.exitTimer) window.clearTimeout(filterFx.exitTimer);
+  if (!hidden.length) {
+    queueFilterReveal(beforeIds, afterCourses);
+    render();
+    return;
+  }
+  const wait = animateExistingCourseElements(hidden, "fx-filter-hide", { step: 16, duration: 340 });
+  filterFx.exitTimer = window.setTimeout(() => {
+    filterFx.exitTimer = null;
+    queueFilterReveal(beforeIds, afterCourses);
+    render();
+  }, wait);
+}
+
+function planTransitionClass(courseId) {
+  const transition = planFx.transitions.get(courseId);
+  if (!transition) return "";
+  return ` fx-sequence fx-${transition.kind === "remove" ? "release" : "activate"}`;
+}
+
+function planAnimationDelay(courseId, fallbackDelay) {
+  const transition = planFx.transitions.get(courseId);
+  return transition ? transition.delay : fallbackDelay;
+}
+
+function planCellDelay(courseIds = []) {
+  const delays = courseIds
+    .map((courseId) => planFx.transitions.get(courseId)?.delay)
+    .filter((delay) => Number.isFinite(delay));
+  if (!delays.length) return null;
+  return Math.min(...delays);
+}
+
+function updatePlanTransitions(currentPlan = snapshotPlanned()) {
+  const now = Date.now();
+  const previous = planFx.prevSnapshot;
+  const nextTransitions = new Map();
+  const animationDuration = 520;
+  currentPlan.forEach((term, courseId) => {
+    if (previous.get(courseId) === term) return;
+    const old = planFx.transitions.get(courseId);
+    const delay = planFx.queuedDelays.get(courseId) ?? (old && old.kind === "remove" ? old.delay : 0);
+    nextTransitions.set(courseId, { kind: "activate", term, delay, expiresAt: now + delay + animationDuration });
+  });
+  planFx.transitions.forEach((transition, courseId) => {
+    if (transition.expiresAt > now && !nextTransitions.has(courseId)) {
+      nextTransitions.set(courseId, transition);
+    }
+  });
+  planFx.transitions = nextTransitions;
+  planFx.prevSnapshot = currentPlan;
+  planFx.queuedDelays.clear();
+  if (planFx.cleanupTimer) window.clearTimeout(planFx.cleanupTimer);
+  if (nextTransitions.size) {
+    const latestExpiry = Math.max(...[...nextTransitions.values()].map((transition) => transition.expiresAt));
+    planFx.cleanupTimer = window.setTimeout(() => {
+      planFx.cleanupTimer = null;
+      if (purgeExpiredPlanTransitions()) renderPlan();
+    }, Math.max(0, latestExpiry - now + 80));
+  } else {
+    planFx.cleanupTimer = null;
+  }
+  return nextTransitions;
+}
+
+function purgeExpiredPlanTransitions() {
+  const now = Date.now();
+  let changed = false;
+  planFx.transitions.forEach((transition, courseId) => {
+    if (transition.expiresAt <= now) {
+      planFx.transitions.delete(courseId);
+      changed = true;
+    }
+  });
+  return changed;
+}
+
+function cssAttributeValue(value) {
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") return CSS.escape(value);
+  return String(value).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
+function firstVisibleCourseElement(courseId) {
+  const selector = `[data-course-id="${cssAttributeValue(courseId)}"]`;
+  const preferred = state.viewMode === "tree"
+    ? document.querySelector(`#treeView ${selector} .tree-node-button`)
+    : document.querySelector(`#catalogList ${selector}`);
+  return preferred || document.querySelector(`${selector} .tree-node-button`) || document.querySelector(selector);
+}
+
+function scheduleQueuedNodeFeedback() {
+  if (fxSequence.scheduled || !fxSequence.items.size) return;
+  fxSequence.scheduled = true;
+  let maxDelay = 0;
+  fxSequence.items.forEach((item, courseId) => {
+    maxDelay = Math.max(maxDelay, item.delay);
+    const timer = window.setTimeout(() => {
+      const element = firstVisibleCourseElement(courseId);
+      if (element) burstAtElement(element, item.kind, item.kind === "remove" ? 0.78 : 0.92);
+      playArcadeSfx(item.kind);
+    }, item.delay + 80);
+    fxSequence.feedbackTimers.push(timer);
+  });
+  const cleanup = window.setTimeout(() => {
+    fxSequence.items.clear();
+    fxSequence.feedbackTimers = [];
+    fxSequence.scheduled = false;
+    render();
+  }, maxDelay + 980);
+  fxSequence.feedbackTimers.push(cleanup);
+}
+
+function startTreeReveal() {
+  fxSequence.treeTimers.forEach((timer) => window.clearTimeout(timer));
+  fxSequence.treeTimers = [];
+  fxSequence.treeReveal = true;
+  const pulses = Math.min(14, Math.max(6, Math.ceil(visibleTreeNodes().length / 18)));
+  for (let index = 0; index < pulses; index += 1) {
+    const pulse = window.setTimeout(() => {
+      playArcadeSfx(index === pulses - 1 ? "boost" : "switch");
+    }, 120 + (index * 110));
+    fxSequence.treeTimers.push(pulse);
+  }
+  const timer = window.setTimeout(() => {
+    fxSequence.treeReveal = false;
+  }, 1900);
+  fxSequence.treeTimers.push(timer);
+}
+
+function treeRevealDelay(node, sectionIndex, laneIndex, displayTerms) {
+  const termIndex = Math.max(0, displayTerms.findIndex((term) => term.id === node.term));
+  const rowIndex = Math.max(0, (node.row || 1) - 1);
+  return (termIndex * 90) + (sectionIndex * 38) + (laneIndex * 18) + (rowIndex * 42);
+}
+
 function isValidPlannedValue(course, value) {
   const recognition = parseRecognitionValue(value);
   if (recognition) {
@@ -1428,11 +1896,16 @@ function isValidPlannedValue(course, value) {
 }
 
 function setPlanned(courseId, term, options = {}) {
+  cancelPendingPlanClear();
   const course = allCourses.find((item) => item.id === courseId);
+  const beforePlan = snapshotPlanned();
   const before = state.planned.get(courseId);
   let feedback = null;
   if (term === "none") {
-    if (state.planned.delete(courseId)) feedback = "remove";
+    if (state.planned.delete(courseId)) {
+      state.teacherAdded.delete(courseId);
+      feedback = "remove";
+    }
   } else if (parseRecognitionValue(term)) {
     const recognition = parseRecognitionValue(term);
     const valid = course?.qualificationEligible && recognitionTermsForMethod(course, recognition.method).some((item) => item.id === recognition.term);
@@ -1452,7 +1925,11 @@ function setPlanned(courseId, term, options = {}) {
   }
   state.openCourseId = null;
   state.openTreeNodeId = null;
-  if (feedback) triggerArcadeFeedback(feedback, options.source);
+  if (feedback === "error") {
+    triggerArcadeFeedback(feedback, options.source);
+  } else if (feedback) {
+    queuePlanTransition(beforePlan, snapshotPlanned(), { baseDelay: 0, step: 20, cellStep: 44 });
+  }
   render();
 }
 
@@ -1480,18 +1957,38 @@ function teacherPlanCourses() {
   return [...preferred.values()];
 }
 
-function addTeacherPlanCourses() {
+function addTeacherPlanCourses(options = {}) {
+  const beforePlan = snapshotPlanned();
   let added = 0;
   teacherPlanCourses().forEach((course) => {
     if (state.planned.has(course.id)) return;
     state.planned.set(course.id, openingTermForCourse(course));
+    state.teacherAdded.add(course.id);
     added += 1;
   });
+  if (!options.silent) queuePlanTransition(beforePlan, snapshotPlanned(), { baseDelay: 0, step: 20, cellStep: 48 });
   return added;
 }
 
+function removeTeacherPlanCourses() {
+  const beforePlan = snapshotPlanned();
+  let removed = 0;
+  allCourses.forEach((course) => {
+    const shouldRemove = course.category === "teacher" || state.teacherAdded.has(course.id);
+    if (!shouldRemove || !state.planned.has(course.id)) return;
+    state.planned.delete(course.id);
+    removed += 1;
+  });
+  state.teacherAdded.clear();
+  queuePlanTransition(beforePlan, snapshotPlanned(), { baseDelay: 0, step: 22, cellStep: 56 });
+  return removed;
+}
+
 function autoFill(options = {}) {
+  cancelPendingPlanClear();
+  const beforePlan = snapshotPlanned();
   state.planned.clear();
+  state.teacherAdded.clear();
   state.openCourseId = null;
   state.openTreeNodeId = null;
   resetCatalogFilters();
@@ -1503,12 +2000,73 @@ function autoFill(options = {}) {
     }
   });
   if (state.teacher) {
-    addTeacherPlanCourses();
+    addTeacherPlanCourses({ silent: true });
   }
   if (!options.silent) {
+    queuePlanTransition(beforePlan, snapshotPlanned(), { baseDelay: 0, step: 22, cellStep: 56 });
+    render();
     triggerArcadeFeedback("boost");
+    return;
   }
   render();
+}
+
+function clearPlan() {
+  const beforePlan = snapshotPlanned();
+  if (planFx.clearTimer || !beforePlan.size) {
+    triggerArcadeFeedback("remove", document.querySelector("#clearButton"));
+    return;
+  }
+  const courseIds = [...beforePlan.keys()];
+  const wait = Math.max(
+    animateExistingCourseElements(courseIds, "fx-clear-release", { step: 14, duration: 380 }),
+    animateExistingPlanRows(courseIds, "fx-clear-release", { step: 22, duration: 380 })
+  );
+  triggerArcadeFeedback("remove", document.querySelector("#clearButton"));
+  planFx.clearTimer = window.setTimeout(() => {
+    planFx.clearTimer = null;
+    state.planned.clear();
+    state.teacherAdded.clear();
+    state.openCourseId = null;
+    state.openTreeNodeId = null;
+    if (planFx.cleanupTimer) {
+      window.clearTimeout(planFx.cleanupTimer);
+      planFx.cleanupTimer = null;
+    }
+    planFx.transitions.clear();
+    planFx.queuedDelays.clear();
+    planFx.prevSnapshot = snapshotPlanned();
+    render();
+  }, wait + 40);
+}
+
+const immediateButtonRuns = new Map();
+
+function runImmediateAction(key, event, action) {
+  const now = Date.now();
+  const lastRun = immediateButtonRuns.get(key) || 0;
+  if (now - lastRun < 240) {
+    event?.preventDefault?.();
+    return;
+  }
+  immediateButtonRuns.set(key, now);
+  event?.preventDefault?.();
+  action();
+}
+
+function handleAutoFillButton(event) {
+  runImmediateAction("autoFillButton", event, () => autoFill());
+}
+
+function handleClearButton(event) {
+  runImmediateAction("clearButton", event, clearPlan);
+}
+
+function bindImmediateButton(selector, key, action) {
+  const button = document.querySelector(selector);
+  const run = (event) => runImmediateAction(key, event, action);
+  button.addEventListener("pointerdown", run);
+  button.addEventListener("click", run);
 }
 
 function totals() {
@@ -1630,7 +2188,10 @@ function renderCatalog() {
   catalog.innerHTML = "";
   visibleCourses().forEach((course) => {
     const card = document.createElement("article");
-    card.className = `course-card${state.planned.has(course.id) ? " is-planned" : ""}`;
+    card.className = `course-card${state.planned.has(course.id) ? " is-planned" : ""}${animatedCourseClass(course.id)}${filterRevealClass(course.id)}`;
+    card.dataset.courseId = course.id;
+    const fxStyle = `${animatedCourseStyle(course.id)}${filterRevealStyle(course.id)}`;
+    if (fxStyle) card.setAttribute("style", fxStyle);
 
     const main = document.createElement("div");
     main.className = "course-main";
@@ -1718,6 +2279,9 @@ function renderCatalog() {
 function renderPlan() {
   const grid = document.querySelector("#planGrid");
   grid.innerHTML = "";
+  const currentPlan = snapshotPlanned();
+  updatePlanTransitions(currentPlan);
+  purgeExpiredPlanTransitions();
   const termLimit = state.gpa >= 3.7 ? 26 : 24;
   for (let year = 1; year <= 4; year += 1) {
     const column = document.createElement("div");
@@ -1725,10 +2289,16 @@ function renderPlan() {
     column.innerHTML = `<div class="year-title">${year}年</div>`;
     ["前", "後"].forEach((term) => {
       const id = termId(year, term);
-      const courses = selectedCourses().filter((course) => plannedTerm(course) === id);
+      const courses = selectedCourses()
+        .filter((course) => plannedTerm(course) === id)
+        .sort((a, b) => a.name.localeCompare(b.name, "ja"));
       const credits = termCredits(id);
+      const cellIndex = ((year - 1) * 2) + (term === "前" ? 0 : 1);
+      const startDelay = cellIndex * 56;
+      const cellDelay = planCellDelay(courses.map((course) => course.id));
       const box = document.createElement("section");
-      box.className = `term-box${credits.capCounted > termLimit ? " limit-exceeded" : ""}`;
+      box.className = `term-box${credits.capCounted > termLimit ? " limit-exceeded" : ""}${cellDelay !== null ? " fx-batch" : ""}`;
+      if (cellDelay !== null) box.setAttribute("style", `--plan-cell-delay:${cellDelay}ms;`);
       box.innerHTML = `
         <div class="term-head">
           <span>${term}期</span>
@@ -1739,12 +2309,15 @@ function renderPlan() {
           <span><b>${credits.capExcluded}</b><small>上限外</small></span>
         </div>
         <div class="planned-list">
-          ${courses.map((course) => `
-            <div class="planned-course${isCapExcludedInPlan(course) ? " cap-excluded" : ""}">
+          ${courses.map((course, index) => {
+            const delay = planAnimationDelay(course.id, startDelay + (index * 24));
+            return `
+            <div class="planned-course${isCapExcludedInPlan(course) ? " cap-excluded" : ""}${planTransitionClass(course.id)}" data-course-id="${course.id}" style="--fx-delay:${delay}ms;">
               <span>${course.name}</span>
               <small title="${categoryTitle(course.category)}">${categoryLabels[course.category]} / ${course.credits}単位${isRecognitionPlanned(course) ? ` / ${recognitionMethodLabel(course)}` : ""}${course.category === "teacher" ? " / 要件外" : ""}${isCapExcludedInPlan(course) ? " / 上限外" : ""}</small>
             </div>
-          `).join("")}
+          `;
+          }).join("")}
         </div>`;
       column.appendChild(box);
     });
@@ -1834,8 +2407,7 @@ function renderTree() {
   tree.innerHTML = "";
   const nodes = visibleTreeNodes();
   const displayTerms = treeTerms(nodes);
-  tree.style.setProperty("--tree-grid-template", `136px repeat(${displayTerms.length}, minmax(152px, 1fr))`);
-  tree.style.setProperty("--tree-grid-min-width", `${136 + (displayTerms.length * 152) + (displayTerms.length * 12)}px`);
+  tree.style.setProperty("--tree-grid-template", `136px repeat(${displayTerms.length}, minmax(0, 1fr))`);
   const termLabels = displayTerms.map((term) => `<div class="tree-term">${term.label}</div>`).join("");
   const connectionCounts = treeConnectionCounts(nodes);
   const sections = [...new Set(nodes.map((node) => node.section))]
@@ -1853,7 +2425,9 @@ function renderTree() {
   header.innerHTML = `<div></div>${termLabels}`;
   tree.appendChild(header);
 
-  sections.forEach((section) => {
+  tree.classList.toggle("is-revealing", fxSequence.treeReveal);
+
+  sections.forEach((section, sectionIndex) => {
     const sectionNodes = nodes.filter((node) => node.section === section);
     const lanes = sortTreeLanes(section, [...new Set(sectionNodes.map((node) => node.lane))]);
     const block = document.createElement("section");
@@ -1861,7 +2435,7 @@ function renderTree() {
     const sectionTitle = treeSectionTitle(section);
     block.innerHTML = `<div class="tree-section-title"${sectionTitle ? ` title="${sectionTitle}"` : ""}>${section}</div>`;
 
-    lanes.forEach((lane) => {
+    lanes.forEach((lane, laneIndex) => {
       const laneNodes = sectionNodes.filter((node) => node.lane === lane);
       const laneRows = laneRowSequence(section, lane, laneNodes);
       const row = document.createElement("div");
@@ -1885,16 +2459,19 @@ function renderTree() {
               const disabled = course.category === "teacher" && !state.teacher;
               const counts = connectionCounts.get(node.id) || { incoming: 0, outgoing: 0 };
               const item = document.createElement("article");
-              item.className = `tree-node level-${node.level || "none"}${treeRequiredClass(course, node)}${tooltip ? " has-tooltip" : ""}${state.planned.has(course.id) ? " is-planned" : ""}${disabled ? " is-disabled" : ""}${state.openTreeNodeId === node.id ? " is-open" : ""}${state.showTreeMeta ? " has-meta" : ""}${state.showTreeCodes ? " has-code" : ""}`;
+              item.className = `tree-node level-${node.level || "none"}${treeRequiredClass(course, node)}${tooltip ? " has-tooltip" : ""}${state.planned.has(course.id) ? " is-planned" : ""}${disabled ? " is-disabled" : ""}${state.openTreeNodeId === node.id ? " is-open" : ""}${state.showTreeMeta ? " has-meta" : ""}${state.showTreeCodes ? " has-code" : ""}${fxSequence.treeReveal ? " is-tree-reveal" : ""}${animatedCourseClass(course.id)}${filterRevealClass(course.id)}`;
               item.dataset.nodeId = node.id;
               item.dataset.courseId = course.id;
               item.dataset.incoming = counts.incoming;
               item.dataset.outgoing = counts.outgoing;
+              const fxStyle = `${animatedCourseStyle(course.id)}${filterRevealStyle(course.id)}`;
+              const revealStyle = fxSequence.treeReveal ? `--tree-reveal-delay:${treeRevealDelay(node, sectionIndex, laneIndex, displayTerms)}ms;` : "";
+              if (fxStyle || revealStyle) item.setAttribute("style", `${fxStyle}${revealStyle}`);
               item.innerHTML = `
                 <button type="button" class="tree-node-button" ${disabled ? "disabled" : ""} aria-expanded="${state.openTreeNodeId === node.id ? "true" : "false"}"${tooltip ? ` title="${tooltip}"` : ""}>
                   ${state.showTreeCodes ? `<span class="tree-node-code">${node.courseNumber}</span>` : ""}
                   <span class="tree-node-name" style="--tree-name-size:${treeNameFontSize(treeName)}px">${treeName}</span>
-                  ${state.showTreeMeta ? `<span class="tree-node-meta">${node.level || categoryLabels[course.category]}${state.planned.has(course.id) ? ` / ${plannedButtonLabel(course)}` : ""}</span>` : ""}
+                  ${state.showTreeMeta ? `<span class="tree-node-meta">${node.level || categoryLabels[course.category]}${state.planned.has(course.id) ? ` / ${plannedButtonLabel(course)}` : ""}${course.category !== "teacher" && (course.teacherRequired || node.teacherRequired) ? " / 教職必修" : ""}</span>` : ""}
                 </button>
               `;
               const button = item.querySelector(".tree-node-button");
@@ -2164,11 +2741,12 @@ function render() {
   const stats = totals();
   renderCatalog();
   renderPlan();
-  renderTree();
-  renderViewMode();
   renderSummary(stats);
   renderRequirements(stats);
   renderAlerts(stats);
+  renderTree();
+  renderViewMode();
+  requestAnimationFrame(scheduleQueuedNodeFeedback);
 }
 
 function init() {
@@ -2176,6 +2754,8 @@ function init() {
   courseSelect.innerHTML = COURSES.map((course) => `<option value="${course}">${course}</option>`).join("");
   courseSelect.value = state.course;
   courseSelect.addEventListener("change", (event) => {
+    cancelPendingPlanClear();
+    const beforePlan = snapshotPlanned();
     const hadCoursePlan = selectedCourses().some((course) => course.category === "courseRequired");
     state.course = event.target.value;
     [...state.planned.keys()].forEach((id) => {
@@ -2187,17 +2767,21 @@ function init() {
         .filter((course) => course.category === "courseRequired" && course.course === state.course)
         .forEach((course) => state.planned.set(course.id, openingTermForCourse(course)));
     }
+    queuePlanTransition(beforePlan, snapshotPlanned(), { baseDelay: 0, step: 20, cellStep: 50 });
     triggerArcadeFeedback("switch", courseSelect);
+    syncArcadeAudio(true);
     render();
   });
 
   document.querySelector("#teacherToggle").addEventListener("change", (event) => {
+    cancelPendingPlanClear();
     state.teacher = event.target.checked;
     if (state.teacher) {
       const added = addTeacherPlanCourses();
       state.teacherNotice = `教職課程をONにしました。教職課程科目と教職必修指定科目を履修状態にしました（新規追加 ${added}科目）。`;
     } else {
-      state.teacherNotice = "教職課程をOFFにしました。すでに履修状態にした教職課程科目・教職必修指定科目は外していません。不要な科目は個別に×で外してください。";
+      const removed = removeTeacherPlanCourses();
+      state.teacherNotice = `教職課程をOFFにしました。教職課程科目と自動追加した教職必修指定科目を履修計画から外しました（削除 ${removed}科目）。`;
     }
     state.openCourseId = null;
     state.openTreeNodeId = null;
@@ -2218,7 +2802,7 @@ function init() {
     render();
   });
   document.querySelectorAll(".year-filter, .term-filter, .category-filter").forEach((input) => {
-    input.addEventListener("change", render);
+    input.addEventListener("change", handleFilterChange);
   });
   document.querySelector("#filterToggle").addEventListener("click", () => {
     state.filtersOpen = !state.filtersOpen;
@@ -2229,6 +2813,7 @@ function init() {
     if (event.target.checked) {
       state.viewMode = "tree";
       state.openCourseId = null;
+      startTreeReveal();
     } else {
       state.viewMode = "list";
       state.openTreeNodeId = null;
@@ -2254,17 +2839,13 @@ function init() {
   document.querySelector("#bgmToggle").addEventListener("change", (event) => {
     state.soundBgm = event.target.checked;
     triggerArcadeFeedback(state.soundBgm ? "boost" : "remove", event.currentTarget);
-    syncArcadeAudio();
+    syncArcadeAudio(true);
     render();
   });
-  document.querySelector("#autoFillButton").addEventListener("click", autoFill);
-  document.querySelector("#clearButton").addEventListener("click", () => {
-    state.planned.clear();
-    state.openCourseId = null;
-    state.openTreeNodeId = null;
-    triggerArcadeFeedback("remove", document.querySelector("#clearButton"));
-    render();
-  });
+  window.hctAutoFillButton = handleAutoFillButton;
+  window.hctClearButton = handleClearButton;
+  bindImmediateButton("#autoFillButton", "autoFillButton", () => autoFill());
+  bindImmediateButton("#clearButton", "clearButton", clearPlan);
   document.addEventListener("pointerdown", syncArcadeAudio, { once: true, capture: true });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
@@ -2272,6 +2853,11 @@ function init() {
     } else {
       syncArcadeAudio();
     }
+  });
+  window.addEventListener("resize", () => {
+    if (state.viewMode !== "tree") return;
+    requestAnimationFrame(drawTreeEdges);
+    requestAnimationFrame(updateTreeMenuPlacement);
   });
   syncArcadeToggleLabels();
   autoFill({ silent: true });

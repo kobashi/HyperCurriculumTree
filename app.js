@@ -1257,6 +1257,17 @@ function harmonyForStep(profile, arrangement, step) {
   let kind = "base";
   let label = "通常";
   const outsideTones = [];
+  if (arrangement.count > 0) {
+    if ((barIndex + arrangement.seed) % 3 === 1) {
+      root += arrangement.seed % 2 === 0 ? 1 : -1;
+      kind = "arrange";
+      label = "履修差";
+    } else if ((barIndex + arrangement.seed) % 3 === 2) {
+      voicing = [0, 3, 7, 10];
+      kind = "arrange";
+      label = "履修差";
+    }
+  }
   if (arrangement.radical > 0) {
     if ([0, 8].includes(beatStep)) {
       root += 6;

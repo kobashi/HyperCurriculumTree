@@ -1994,6 +1994,46 @@ function treeSectionForCourse(course) {
   return categoryLabels[course.category] || "その他";
 }
 
+function emptyProfessionalSubjectBreakdown() {
+  return {
+    common: 0,
+    情報システム: 0,
+    映像メディア: 0,
+    サウンド制作: 0,
+    メディアデザイン: 0
+  };
+}
+
+function professionalSubjectAffiliations(course) {
+  if (course.category === "commonRequired") return ["common"];
+  if (course.category === "courseRequired") return [course.course];
+  if (course.category !== "specializedElective") return [];
+
+  const sections = officialTreeNodes
+    .filter((node) => normalizeName(node.courseName) === course.key && node.page === "professional")
+    .map((node) => node.section);
+  const affiliations = [...new Set(sections.map((section) => {
+    if (section === "コース共通") return "common";
+    const courseName = section.replace(/コース$/, "");
+    return COURSES.includes(courseName) && courseName !== NO_COURSE ? courseName : null;
+  }).filter(Boolean))];
+
+  return affiliations.length ? affiliations : ["common"];
+}
+
+function professionalSubjectBreakdown(selected) {
+  const breakdown = emptyProfessionalSubjectBreakdown();
+  selected.forEach((course) => {
+    const affiliations = professionalSubjectAffiliations(course);
+    if (!affiliations.length) return;
+    const creditShare = course.credits / affiliations.length;
+    affiliations.forEach((affiliation) => {
+      breakdown[affiliation] = (breakdown[affiliation] || 0) + creditShare;
+    });
+  });
+  return breakdown;
+}
+
 function treeLaneForCourse(course) {
   const meta = treeMetaByName.get(course.name);
   if (meta?.lane) return meta.lane;
@@ -2773,6 +2813,8 @@ function totals() {
   const otherDeptOutside = Math.max(0, otherDeptRaw - otherDeptCounted);
   const teacher = sum((course) => course.category === "teacher");
   const professional = common + courseSpecific;
+  const professionalSubjectByCourse = professionalSubjectBreakdown(selected);
+  const professionalSubjectTotal = Object.values(professionalSubjectByCourse).reduce((total, credits) => total + credits, 0);
   const manualOther = Number(state.manualOther);
   const other = manualOther + basicElectiveTransfer + otherDeptCounted + specialized + qualification;
   const requirementOutside = teacher + otherDeptOutside + basicElectiveOutside;
@@ -2789,6 +2831,8 @@ function totals() {
     common,
     courseSpecific,
     courseSpecificByCourse,
+    professionalSubjectByCourse,
+    professionalSubjectTotal,
     specialized,
     professional,
     otherDeptRaw,
@@ -3496,9 +3540,28 @@ function setMeterSegments(id, segments, target) {
     const part = document.createElement("span");
     part.className = `meter-segment ${segment.className || "meter-segment-default"}`;
     part.style.width = `${(segment.value / target) * 100}%`;
-    part.title = `${segment.label} ${segment.value}単位`;
+    part.title = `${segment.label} ${formatCredits(segment.value)}単位`;
     meter.appendChild(part);
   });
+}
+
+function formatCredits(value) {
+  return Number.isInteger(value) ? `${value}` : value.toFixed(1);
+}
+
+function professionalBreakdownDetail(stats) {
+  const breakdown = stats.professionalSubjectByCourse;
+  const parts = [
+    ["共通", breakdown.common],
+    ["情報", breakdown.情報システム],
+    ["映像", breakdown.映像メディア],
+    ["音響", breakdown.サウンド制作],
+    ["デザイン", breakdown.メディアデザイン]
+  ]
+    .filter(([, value]) => value > 0)
+    .map(([label, value]) => `${label} ${formatCredits(value)}`);
+  const detail = parts.length ? parts.join(" / ") : "未登録";
+  return `専門科目計 ${formatCredits(stats.professionalSubjectTotal)}単位: ${detail}`;
 }
 
 function renderSummary(stats) {
@@ -3506,6 +3569,7 @@ function renderSummary(stats) {
   document.querySelector("#totalDetail").textContent = `要件外 ${stats.requirementOutside}単位 / 履修計 ${stats.attemptedTotal}単位`;
   document.querySelector("#basicCredits").textContent = `${stats.basic} / 36`;
   document.querySelector("#professionalCredits").textContent = `${stats.professional} / 36`;
+  document.querySelector("#professionalDetail").textContent = professionalBreakdownDetail(stats);
   document.querySelector("#otherCredits").textContent = `${stats.other} / 52`;
   setMeterSegments("totalMeter", [
     { label: "基礎教育", value: stats.basic, className: "meter-segment-basic" },
@@ -3517,12 +3581,12 @@ function renderSummary(stats) {
     { label: "基礎教育選択", value: stats.basicElectiveCredits, className: "meter-segment-basic-elective" }
   ], 36);
   setMeterSegments("professionalMeter", [
-    { label: "コース共通必修", value: stats.common, className: "meter-segment-common" },
-    { label: "情報システム", value: stats.courseSpecificByCourse.情報システム, className: "meter-segment-system" },
-    { label: "映像メディア", value: stats.courseSpecificByCourse.映像メディア, className: "meter-segment-movie" },
-    { label: "サウンド制作", value: stats.courseSpecificByCourse.サウンド制作, className: "meter-segment-sound" },
-    { label: "メディアデザイン", value: stats.courseSpecificByCourse.メディアデザイン, className: "meter-segment-design" }
-  ], 36);
+    { label: "コース共通", value: stats.professionalSubjectByCourse.common, className: "meter-segment-common" },
+    { label: "情報システム", value: stats.professionalSubjectByCourse.情報システム, className: "meter-segment-system" },
+    { label: "映像メディア", value: stats.professionalSubjectByCourse.映像メディア, className: "meter-segment-movie" },
+    { label: "サウンド制作", value: stats.professionalSubjectByCourse.サウンド制作, className: "meter-segment-sound" },
+    { label: "メディアデザイン", value: stats.professionalSubjectByCourse.メディアデザイン, className: "meter-segment-design" }
+  ], Math.max(36, stats.professionalSubjectTotal));
   setMeter("otherMeter", stats.other, 52);
 }
 

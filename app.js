@@ -972,10 +972,10 @@ function ensureArcadeAudio() {
     arcadeAudio.bgmBus = arcadeAudio.context.createGain();
     arcadeAudio.sfxBus = arcadeAudio.context.createGain();
     arcadeAudio.limiter = arcadeAudio.context.createDynamicsCompressor();
-    arcadeAudio.master.gain.value = 0.78;
-    arcadeAudio.bgmBus.gain.value = 0.5;
-    arcadeAudio.sfxBus.gain.value = 0.42;
-    arcadeAudio.limiter.threshold.value = -10;
+    arcadeAudio.master.gain.value = 0.92;
+    arcadeAudio.bgmBus.gain.value = 0.74;
+    arcadeAudio.sfxBus.gain.value = 0.48;
+    arcadeAudio.limiter.threshold.value = -8;
     arcadeAudio.limiter.knee.value = 12;
     arcadeAudio.limiter.ratio.value = 4;
     arcadeAudio.limiter.attack.value = 0.004;

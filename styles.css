@@ -151,7 +151,7 @@ h2 {
 
 .controls {
   display: grid;
-  grid-template-columns: minmax(120px, 160px) minmax(160px, 220px) 92px 92px auto auto auto auto;
+  grid-template-columns: minmax(160px, 220px) 92px 92px auto auto auto auto;
   gap: 10px;
   align-items: end;
 }
@@ -1236,7 +1236,6 @@ input {
 }
 
 .tree-view.is-revealing .tree-edge {
-  stroke-dasharray: 10 7;
   animation: treeEdgeReveal 980ms ease-out both;
 }
 

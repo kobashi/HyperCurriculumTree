@@ -11,7 +11,7 @@ const TERMS = [
 const TERM_IDS = TERMS.map((term) => term.id);
 const TREE_UNASSIGNED_TERM = "none";
 
-const NO_COURSE = "なし";
+const NO_COURSE = "未選択";
 const COURSES = [NO_COURSE, "情報システム", "映像メディア", "サウンド制作", "メディアデザイン"];
 
 const aliases = new Map([
@@ -706,7 +706,6 @@ const prereqs = {
 
 const state = {
   course: NO_COURSE,
-  courseSwitchMode: "add",
   teacher: false,
   gpa: 1,
   secondYearGpa: 1,
@@ -759,7 +758,7 @@ const planFx = {
 };
 
 const arcadeBgmProfiles = {
-  "なし": {
+  "未選択": {
     key: "none",
     bpm: 112,
     root: 261.63,
@@ -1640,6 +1639,24 @@ function dedupeCourses(courses) {
     existing.capExcluded = existing.capExcluded || course.capExcluded;
   });
   return [...seen.values()];
+}
+
+function buildCourseSelectOptions() {
+  const plainCourseOptions = COURSES.filter((course) => course !== NO_COURSE)
+    .map((course) => `<option value="${course}">${course}</option>`)
+    .join("");
+  const addOptions = COURSES.filter((course) => course !== NO_COURSE)
+    .map((course) => `<option value="add:${course}">${course}を追加</option>`)
+    .join("");
+  const resetOptions = COURSES.filter((course) => course !== NO_COURSE)
+    .map((course) => `<option value="reset:${course}">${course}にリセット</option>`)
+    .join("");
+  return [
+    `<option value="${NO_COURSE}">${NO_COURSE}</option>`,
+    plainCourseOptions,
+    `<optgroup label="コース操作 - 追加">${addOptions}</optgroup>`,
+    `<optgroup label="コース操作 - リセット">${resetOptions}</optgroup>`
+  ].join("");
 }
 
 const allCourses = buildCourses();
@@ -3191,15 +3208,16 @@ function render() {
 
 function init() {
   const courseSelect = document.querySelector("#courseSelect");
-  courseSelect.innerHTML = COURSES.map((course) => `<option value="${course}">${course}</option>`).join("");
+  courseSelect.innerHTML = buildCourseSelectOptions();
   courseSelect.value = state.course;
   courseSelect.addEventListener("change", (event) => {
     cancelPendingPlanClear();
     const beforePlan = snapshotPlanned();
-    const nextCourse = event.target.value;
-    const resetMode = state.courseSwitchMode === "reset";
+    const selectedValue = event.target.value;
+    const isResetAction = selectedValue.startsWith("reset:");
+    const nextCourse = selectedValue.replace(/^(?:add:|reset:)/, "");
     state.course = nextCourse;
-    if (resetMode) {
+    if (isResetAction) {
       [...state.planned.keys()].forEach((id) => {
         const course = allCourses.find((item) => item.id === id);
         const removeCourseRequired = course?.category === "courseRequired" && course.course !== nextCourse;
@@ -3216,11 +3234,7 @@ function init() {
     triggerArcadeFeedback("switch", courseSelect);
     syncArcadeAudio(true);
     render();
-  });
-  document.querySelector("#courseSwitchMode").addEventListener("change", (event) => {
-    state.courseSwitchMode = event.target.value;
-    triggerArcadeFeedback("switch", event.currentTarget);
-    render();
+    courseSelect.value = state.course;
   });
 
   document.querySelector("#teacherToggle").addEventListener("change", (event) => {

@@ -8,6 +8,7 @@ const TERMS = [
   { id: "4前", year: 4, label: "4年前期" },
   { id: "4後", year: 4, label: "4年後期" }
 ];
+const TERM_IDS = TERMS.map((term) => term.id);
 const TREE_UNASSIGNED_TERM = "none";
 
 const NO_COURSE = "なし";
@@ -713,11 +714,719 @@ const state = {
   filtersOpen: false,
   showTreeCodes: false,
   showTreeMeta: false,
+  soundFx: true,
+  soundBgm: true,
+  showBgmRoll: false,
   teacherNotice: "",
   openCourseId: null,
   openTreeNodeId: null,
-  planned: new Map()
+  planned: new Map(),
+  teacherAdded: new Set()
 };
+
+const arcadeAudio = {
+  context: null,
+  master: null,
+  bgmBus: null,
+  sfxBus: null,
+  limiter: null,
+  bgmTimer: null,
+  bgmStep: 0,
+  bgmStateKey: ""
+};
+
+const fxSequence = {
+  items: new Map(),
+  feedbackTimers: [],
+  treeTimers: [],
+  scheduled: false,
+  treeReveal: false
+};
+
+const filterFx = {
+  items: new Map(),
+  cleanupTimer: null,
+  exitTimer: null
+};
+
+const planFx = {
+  transitions: new Map(),
+  prevSnapshot: new Map(),
+  cleanupTimer: null,
+  clearTimer: null,
+  queuedDelays: new Map()
+};
+
+const arcadeBgmProfiles = {
+  "なし": {
+    key: "none",
+    bpm: 112,
+    root: 261.63,
+    progression: [0, 5, 9, 7],
+    scale: [0, 2, 4, 7, 9, 12],
+    melody: [0, null, 1, 2, 4, 2, 1, null, 2, 4, 5, 4, 2, 1, 0, null],
+    bassLine: [0, null, 0, 7, -5, null, -5, 7, -3, null, -3, 4, -5, null, -5, 7],
+    chordVoicing: [0, 4, 7, 12],
+    chordHits: [0, 8],
+    kick: [0, 8],
+    snare: [4, 12],
+    hat: [0, 2, 4, 6, 8, 10, 12, 14],
+    dynamics: [1.12, 0.72, 0.84, 0.76, 1.02, 0.72, 0.88, 0.76, 1.08, 0.72, 0.84, 0.78, 1, 0.72, 0.9, 0.84],
+    leadType: "square",
+    bassType: "triangle",
+    chordType: "triangle",
+    leadOctave: 12,
+    leadDuration: 0.1,
+    bassDuration: 0.14,
+    chordDuration: 0.22,
+    leadGain: 0.015,
+    bassGain: 0.014,
+    chordGain: 0.008,
+    drumGain: 0.018,
+    detune: 0,
+    filter: 3400
+  },
+  情報システム: {
+    key: "system",
+    bpm: 138,
+    root: 293.66,
+    progression: [0, -5, -2, -7],
+    scale: [0, 2, 3, 5, 7, 9, 10, 12],
+    melody: [0, 2, 3, null, 5, 4, 3, 2, 7, null, 5, 4, 3, 2, 1, null],
+    bassLine: [0, 0, 7, 0, -5, -5, 2, -5, -2, -2, 5, -2, -7, -7, 0, -7],
+    chordVoicing: [0, 3, 7, 10],
+    chordHits: [0, 4, 8, 12],
+    kick: [0, 4, 8, 12],
+    snare: [4, 12],
+    hat: [0, 1, 2, 3, 4, 6, 8, 9, 10, 11, 12, 14],
+    dynamics: [1.18, 0.66, 0.78, 0.66, 1.06, 0.68, 0.82, 0.7, 1.14, 0.66, 0.8, 0.68, 1.08, 0.72, 0.86, 0.76],
+    leadType: "sawtooth",
+    bassType: "square",
+    chordType: "square",
+    leadOctave: 12,
+    leadDuration: 0.07,
+    bassDuration: 0.11,
+    chordDuration: 0.09,
+    leadGain: 0.012,
+    bassGain: 0.013,
+    chordGain: 0.006,
+    drumGain: 0.02,
+    detune: 4,
+    filter: 2600
+  },
+  映像メディア: {
+    key: "movie",
+    bpm: 94,
+    root: 220,
+    progression: [0, -3, -7, -5],
+    scale: [0, 2, 3, 5, 7, 8, 11, 12],
+    melody: [0, null, null, 2, 4, null, 5, null, 6, null, 5, 4, 2, null, 1, null],
+    bassLine: [0, null, null, null, -3, null, -3, null, -7, null, -7, null, -5, null, -5, null],
+    chordVoicing: [0, 3, 7, 12],
+    chordHits: [0, 8],
+    kick: [0, 10],
+    snare: [12],
+    hat: [2, 6, 10, 14],
+    dynamics: [1.12, 0.58, 0.64, 0.7, 0.88, 0.58, 0.72, 0.62, 1.04, 0.58, 0.68, 0.74, 0.92, 0.6, 0.76, 0.66],
+    leadType: "triangle",
+    bassType: "sine",
+    chordType: "triangle",
+    leadOctave: 12,
+    leadDuration: 0.16,
+    bassDuration: 0.34,
+    chordDuration: 0.5,
+    leadGain: 0.014,
+    bassGain: 0.012,
+    chordGain: 0.009,
+    drumGain: 0.014,
+    detune: -3,
+    filter: 1900
+  },
+  サウンド制作: {
+    key: "sound",
+    bpm: 126,
+    root: 196,
+    progression: [0, 5, 10, 7],
+    scale: [0, 2, 4, 5, 7, 9, 10, 12],
+    melody: [null, 2, null, 4, 5, null, 4, 2, null, 5, 6, null, 5, 4, 2, null],
+    bassLine: [0, null, 0, 7, null, -5, -3, null, -2, null, -2, 5, null, -5, -7, null],
+    chordVoicing: [0, 4, 7, 10],
+    chordHits: [2, 6, 10, 14],
+    kick: [0, 3, 8, 11],
+    snare: [4, 12],
+    hat: [0, 2, 5, 6, 8, 10, 13, 14],
+    dynamics: [1.08, 0.64, 0.9, 1, 1.02, 0.72, 0.92, 0.68, 1.12, 0.64, 0.94, 1, 1.06, 0.7, 0.92, 0.74],
+    leadType: "square",
+    bassType: "triangle",
+    chordType: "sine",
+    leadOctave: 12,
+    leadDuration: 0.08,
+    bassDuration: 0.13,
+    chordDuration: 0.12,
+    leadGain: 0.014,
+    bassGain: 0.014,
+    chordGain: 0.007,
+    drumGain: 0.022,
+    detune: 2,
+    filter: 3000
+  },
+  メディアデザイン: {
+    key: "design",
+    bpm: 108,
+    root: 246.94,
+    progression: [0, 6, 2, 7],
+    scale: [0, 2, 4, 6, 7, 9, 11, 12],
+    melody: [0, null, 2, 4, null, 6, 5, null, 4, null, 7, 6, null, 5, 3, null],
+    bassLine: [0, null, 7, null, 6, null, 13, null, 2, null, 9, null, 7, null, 14, null],
+    chordVoicing: [0, 4, 7, 11],
+    chordHits: [0, 6, 10],
+    kick: [0, 7, 12],
+    snare: [4, 11],
+    hat: [0, 3, 4, 6, 8, 9, 12, 15],
+    dynamics: [1.08, 0.62, 0.82, 0.74, 0.96, 0.7, 0.92, 0.78, 1.1, 0.62, 0.86, 0.76, 1, 0.68, 0.9, 0.82],
+    leadType: "triangle",
+    bassType: "square",
+    chordType: "triangle",
+    leadOctave: 12,
+    leadDuration: 0.1,
+    bassDuration: 0.14,
+    chordDuration: 0.26,
+    leadGain: 0.013,
+    bassGain: 0.012,
+    chordGain: 0.008,
+    drumGain: 0.016,
+    detune: -2,
+    filter: 2800
+  }
+};
+
+function ensureArcadeAudio() {
+  if (typeof window === "undefined") return null;
+  if (!arcadeAudio.context) {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return null;
+    arcadeAudio.context = new AudioContext();
+    arcadeAudio.master = arcadeAudio.context.createGain();
+    arcadeAudio.bgmBus = arcadeAudio.context.createGain();
+    arcadeAudio.sfxBus = arcadeAudio.context.createGain();
+    arcadeAudio.limiter = arcadeAudio.context.createDynamicsCompressor();
+    arcadeAudio.master.gain.value = 0.78;
+    arcadeAudio.bgmBus.gain.value = 0.5;
+    arcadeAudio.sfxBus.gain.value = 0.42;
+    arcadeAudio.limiter.threshold.value = -10;
+    arcadeAudio.limiter.knee.value = 12;
+    arcadeAudio.limiter.ratio.value = 4;
+    arcadeAudio.limiter.attack.value = 0.004;
+    arcadeAudio.limiter.release.value = 0.14;
+    arcadeAudio.bgmBus.connect(arcadeAudio.master);
+    arcadeAudio.sfxBus.connect(arcadeAudio.master);
+    arcadeAudio.master.connect(arcadeAudio.limiter);
+    arcadeAudio.limiter.connect(arcadeAudio.context.destination);
+  }
+  return arcadeAudio.context;
+}
+
+function withArcadeAudio(run) {
+  const ctx = ensureArcadeAudio();
+  if (!ctx) return;
+  const execute = () => run(ctx);
+  if (ctx.state === "suspended") {
+    void ctx.resume().then(execute).catch(execute);
+  } else {
+    execute();
+  }
+}
+
+function stopArcadeBgm() {
+  if (arcadeAudio.bgmTimer) clearTimeout(arcadeAudio.bgmTimer);
+  arcadeAudio.bgmTimer = null;
+}
+
+function midiToFreq(root, semitone) {
+  return root * (2 ** (semitone / 12));
+}
+
+function hashString(value) {
+  let hash = 2166136261;
+  [...String(value)].forEach((char) => {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  });
+  return hash >>> 0;
+}
+
+function seededUnit(seed, index) {
+  let value = (seed + Math.imul(index + 1, 374761393)) >>> 0;
+  value ^= value >>> 13;
+  value = Math.imul(value, 1274126177) >>> 0;
+  value ^= value >>> 16;
+  return value / 4294967295;
+}
+
+function tone(ctx, {
+  freq,
+  duration = 0.09,
+  type = "square",
+  gain = 0.06,
+  detune = 0,
+  slide = 0,
+  delay = 0,
+  filter = 2200,
+  bus = "sfx"
+}) {
+  const osc = ctx.createOscillator();
+  const amp = ctx.createGain();
+  const lp = ctx.createBiquadFilter();
+  const start = ctx.currentTime + delay;
+  const end = start + duration;
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, start);
+  if (slide) osc.frequency.exponentialRampToValueAtTime(Math.max(42, freq + slide), end);
+  osc.detune.setValueAtTime(detune, start);
+  lp.type = "lowpass";
+  lp.frequency.value = filter;
+  amp.gain.setValueAtTime(0.0001, start);
+  amp.gain.exponentialRampToValueAtTime(Math.max(0.0001, gain), start + 0.012);
+  amp.gain.exponentialRampToValueAtTime(0.0001, end);
+  osc.connect(lp);
+  lp.connect(amp);
+  amp.connect(bus === "bgm" ? arcadeAudio.bgmBus : arcadeAudio.sfxBus);
+  osc.start(start);
+  osc.stop(end + 0.05);
+}
+
+function noiseHit(ctx, {
+  duration = 0.045,
+  gain = 0.018,
+  delay = 0,
+  filter = 3600,
+  filterType = "highpass",
+  bus = "bgm",
+  seed = null
+}) {
+  const length = Math.max(1, Math.floor(ctx.sampleRate * duration));
+  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let index = 0; index < length; index += 1) {
+    const unit = seed === null ? Math.random() : seededUnit(seed, index);
+    data[index] = (unit * 2) - 1;
+  }
+  const source = ctx.createBufferSource();
+  const amp = ctx.createGain();
+  const filterNode = ctx.createBiquadFilter();
+  const start = ctx.currentTime + delay;
+  const end = start + duration;
+  source.buffer = buffer;
+  filterNode.type = filterType;
+  filterNode.frequency.value = filter;
+  amp.gain.setValueAtTime(0.0001, start);
+  amp.gain.exponentialRampToValueAtTime(Math.max(0.0001, gain), start + 0.006);
+  amp.gain.exponentialRampToValueAtTime(0.0001, end);
+  source.connect(filterNode);
+  filterNode.connect(amp);
+  amp.connect(bus === "bgm" ? arcadeAudio.bgmBus : arcadeAudio.sfxBus);
+  source.start(start);
+  source.stop(end + 0.02);
+}
+
+function patternHit(pattern = [], step) {
+  return pattern.includes(step % 16);
+}
+
+function scaledTone(profile, degree) {
+  if (degree === null || degree === undefined) return null;
+  const scale = profile.scale || [0, 2, 4, 7, 9, 12];
+  const length = scale.length;
+  const octave = Math.floor(degree / length);
+  const index = ((degree % length) + length) % length;
+  return scale[index] + (octave * 12);
+}
+
+function bgmStepMs(profile) {
+  return profile.stepMs || (60000 / ((profile.bpm || 120) * 4));
+}
+
+function bgmCompositionKey() {
+  const selectedIds = selectedCourses()
+    .map((course) => course.id)
+    .sort((a, b) => a.localeCompare(b))
+    .join(",");
+  return `${state.course}|${selectedIds}`;
+}
+
+function bgmNoiseSeed(profile, arrangement, step, voice) {
+  return hashString(`${profile.key}|${arrangement.key}|${step}|${voice}`);
+}
+
+function playBgmRhythm(ctx, profile, step, dynamics, arrangement) {
+  const drumGain = profile.drumGain || 0.016;
+  if (patternHit(profile.kick, step)) {
+    tone(ctx, {
+      freq: Math.max(48, profile.root / 4),
+      duration: 0.075,
+      type: "sine",
+      gain: drumGain * 1.8 * dynamics,
+      slide: -34,
+      filter: 900,
+      bus: "bgm"
+    });
+  }
+  if (patternHit(profile.snare, step)) {
+    noiseHit(ctx, {
+      duration: 0.055,
+      gain: drumGain * 1.35 * dynamics,
+      filter: 1800,
+      filterType: "bandpass",
+      bus: "bgm",
+      seed: bgmNoiseSeed(profile, arrangement, step, "snare")
+    });
+  }
+  if (patternHit(profile.hat, step)) {
+    noiseHit(ctx, {
+      duration: 0.025,
+      gain: drumGain * 0.75 * dynamics,
+      filter: 5400,
+      filterType: "highpass",
+      bus: "bgm",
+      seed: bgmNoiseSeed(profile, arrangement, step, "hat")
+    });
+  }
+}
+
+function playBgmChord(ctx, profile, chordRoot, dynamics, voicing = null) {
+  (voicing || profile.chordVoicing || [0, 4, 7]).forEach((offset, index) => {
+    tone(ctx, {
+      freq: midiToFreq(profile.root, chordRoot + offset),
+      duration: profile.chordDuration || 0.2,
+      type: profile.chordType || "triangle",
+      gain: (profile.chordGain || 0.008) * dynamics * (index === 0 ? 1 : 0.72),
+      delay: index * 0.008,
+      filter: Math.max(900, (profile.filter || 2600) * 0.72),
+      bus: "bgm"
+    });
+  });
+}
+
+function fxLayer() {
+  return document.querySelector("#fxLayer");
+}
+
+function burstAtPoint(x, y, kind = "confirm", scale = 1) {
+  const layer = fxLayer();
+  if (!layer) return;
+  const palette = {
+    confirm: [164, 176, 182, 166, 154, 142],
+    cancel: [18, 10, 354, 348, 28, 22],
+    remove: [8, 12, 356, 350, 22, 16],
+    boost: [47, 39, 54, 63, 28, 34],
+    switch: [184, 190, 196, 202, 176, 168],
+    error: [0, 4, 8, 14, 18, 22]
+  };
+  const hues = palette[kind] || palette.confirm;
+  const count = kind === "boost" ? 12 : 8;
+  for (let index = 0; index < count; index += 1) {
+    const spark = document.createElement("span");
+    const hue = hues[index % hues.length] + (Math.random() * 12 - 6);
+    const angle = (Math.PI * 2 * index) / count + (Math.random() * 0.28 - 0.14);
+    const distance = (28 + Math.random() * 46) * scale * (kind === "boost" ? 1.25 : 1);
+    const size = (4 + Math.random() * 6) * (kind === "boost" ? 1.15 : 1);
+    spark.className = `fx-particle${kind === "boost" && index % 3 === 0 ? " fx-star" : ""}`;
+    spark.style.left = `${x}px`;
+    spark.style.top = `${y}px`;
+    spark.style.setProperty("--dx", `${Math.cos(angle) * distance}px`);
+    spark.style.setProperty("--dy", `${Math.sin(angle) * distance}px`);
+    spark.style.setProperty("--size", `${size}px`);
+    spark.style.setProperty("--hue", `${Math.round(hue)}`);
+    layer.appendChild(spark);
+    spark.addEventListener("animationend", () => spark.remove(), { once: true });
+  }
+}
+
+function burstAtElement(el, kind = "confirm", scale = 1) {
+  if (!el || typeof el.getBoundingClientRect !== "function") return;
+  const rect = el.getBoundingClientRect();
+  burstAtPoint(rect.left + (rect.width / 2), rect.top + (rect.height / 2), kind, scale);
+}
+
+function pulseBody(kind = "confirm") {
+  const body = document.body;
+  if (!body) return;
+  body.classList.remove("fx-shake");
+  void body.offsetWidth;
+  body.classList.add("fx-shake");
+  window.setTimeout(() => body.classList.remove("fx-shake"), kind === "boost" ? 280 : 220);
+}
+
+function playArcadeSfx(kind) {
+  if (!state.soundFx) return;
+  withArcadeAudio((ctx) => {
+    const patterns = {
+      confirm: [
+        { freq: 523.25, duration: 0.08, type: "square", gain: 0.05, slide: 94, filter: 4200 },
+        { freq: 659.25, duration: 0.10, type: "triangle", gain: 0.045, slide: 140, delay: 0.04, filter: 3600 }
+      ],
+      cancel: [
+        { freq: 740, duration: 0.055, type: "square", gain: 0.055, slide: -110, filter: 4600 },
+        { freq: 415.3, duration: 0.085, type: "triangle", gain: 0.048, slide: -72, delay: 0.035, filter: 3600 },
+        { freq: 277.18, duration: 0.11, type: "square", gain: 0.032, slide: -38, delay: 0.075, filter: 2600 }
+      ],
+      remove: [
+        { freq: 196, duration: 0.12, type: "sawtooth", gain: 0.04, slide: -60, filter: 1800 },
+        { freq: 155.56, duration: 0.16, type: "square", gain: 0.03, slide: -24, delay: 0.03, filter: 1200 }
+      ],
+      boost: [
+        { freq: 392, duration: 0.11, type: "square", gain: 0.04, slide: 196, filter: 5200 },
+        { freq: 523.25, duration: 0.12, type: "triangle", gain: 0.045, slide: 262, delay: 0.04, filter: 5000 },
+        { freq: 783.99, duration: 0.14, type: "square", gain: 0.05, slide: 156, delay: 0.08, filter: 4600 }
+      ],
+      switch: [
+        { freq: 659.25, duration: 0.06, type: "square", gain: 0.03, slide: 42, filter: 3500 },
+        { freq: 587.33, duration: 0.06, type: "triangle", gain: 0.025, slide: 28, delay: 0.04, filter: 3000 }
+      ],
+      error: [
+        { freq: 164.81, duration: 0.14, type: "sawtooth", gain: 0.05, slide: -96, filter: 1500 },
+        { freq: 103.83, duration: 0.18, type: "square", gain: 0.04, slide: -48, delay: 0.05, filter: 1000 }
+      ]
+    };
+    (patterns[kind] || patterns.confirm).forEach((pattern) => tone(ctx, pattern));
+  });
+}
+
+function currentArcadeBgmProfile() {
+  return arcadeBgmProfiles[state.course] || arcadeBgmProfiles[NO_COURSE];
+}
+
+function isBgmRequiredCourse(course) {
+  if (course.category === "basicRequired" || course.category === "commonRequired") return true;
+  return course.category === "courseRequired";
+}
+
+function isBgmMissingRequiredCourse(course) {
+  if (course.category === "basicRequired" || course.category === "commonRequired") return true;
+  return course.category === "courseRequired" && state.course !== NO_COURSE && course.course === state.course;
+}
+
+function bgmArrangementState() {
+  const arrangedCourses = selectedCourses()
+    .filter((course) => !isBgmRequiredCourse(course))
+    .filter((course) => course.category !== "teacher")
+    .sort((a, b) => a.id.localeCompare(b.id));
+  const missingRequired = allCourses.filter((course) => isBgmMissingRequiredCourse(course) && !state.planned.has(course.id));
+  const seed = arrangedCourses.reduce((total, course, index) => {
+    const idValue = [...course.id].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+    return total + (idValue * (index + 3));
+  }, arrangedCourses.length * 17);
+  return {
+    count: arrangedCourses.length,
+    intensity: Math.min(1, arrangedCourses.length / 18),
+    seed,
+    key: bgmCompositionKey(),
+    missingRequired: missingRequired.length,
+    radical: Math.min(1, missingRequired.length / 4)
+  };
+}
+
+function arrangedMelodyOffset(profile, melodyOffset, step, arrangement) {
+  if (melodyOffset === null) return null;
+  const subtleSlot = (step + arrangement.seed) % 16;
+  let offset = melodyOffset;
+  if (arrangement.count > 0 && arrangement.intensity > 0 && [5, 10, 14].includes(subtleSlot)) {
+    offset += arrangement.seed % 2 === 0 ? 1 : -1;
+  }
+  if (arrangement.radical > 0 && [3, 7, 11, 15].includes(step % 16)) {
+    offset += (arrangement.missingRequired % 2 === 0 ? 6 : -5);
+  }
+  return offset;
+}
+
+function arrangedBassOffset(bassOffset, step, arrangement) {
+  if (bassOffset !== null && bassOffset !== undefined) return bassOffset;
+  if (arrangement.count > 3 && (step + arrangement.seed) % 16 === 6) return -5;
+  if (arrangement.radical > 0 && [5, 13].includes(step % 16)) return arrangement.missingRequired % 2 === 0 ? 1 : -1;
+  return null;
+}
+
+function harmonyForStep(profile, arrangement, step) {
+  const beatStep = step % 16;
+  const barIndex = Math.floor(step / 16);
+  let root = (profile.progression || [0])[barIndex % (profile.progression || [0]).length];
+  let voicing = profile.chordVoicing || [0, 4, 7];
+  let kind = "base";
+  let label = "通常";
+  const outsideTones = [];
+  if (arrangement.radical > 0) {
+    if ([0, 8].includes(beatStep)) {
+      root += 6;
+      voicing = [0, 4, 10, 13];
+      kind = "tritone";
+      label = "TT代理";
+    } else if ([4, 12].includes(beatStep)) {
+      root -= 1;
+      voicing = [0, 3, 6, 10];
+      kind = "diminished";
+      label = "減五度";
+    }
+    if ([3, 7, 11, 15].includes(beatStep)) {
+      outsideTones.push(root + 1, root + 6);
+      if (kind === "base") {
+        kind = "outside";
+        label = "外音";
+      }
+    }
+  }
+  return { root, voicing, kind, label, outsideTones };
+}
+
+function bgmStepAnalysis(profile, arrangement, step) {
+  const beatStep = step % 16;
+  const harmony = harmonyForStep(profile, arrangement, step);
+  const melodyDegree = (profile.melody || [0])[step % (profile.melody || [0]).length];
+  const baseMelodyOffset = scaledTone(profile, melodyDegree);
+  const melodyOffset = arrangedMelodyOffset(profile, baseMelodyOffset, step, arrangement);
+  const baseBassOffset = (profile.bassLine || [0])[step % (profile.bassLine || [0]).length];
+  const bassOffset = arrangedBassOffset(baseBassOffset, step, arrangement);
+  const baseDynamics = (profile.dynamics || [1])[beatStep] || 0.82;
+  const subtlePulse = arrangement.count > 0 && (step + arrangement.seed) % 8 === 0 ? arrangement.intensity * 0.12 : 0;
+  const dynamics = baseDynamics * (1 + subtlePulse + (arrangement.radical * (beatStep % 4 === 0 ? 0.24 : -0.08)));
+  const arrangeNoise = arrangement.count > 0 && (step + arrangement.seed) % Math.max(4, 12 - Math.floor(arrangement.intensity * 5)) === 2;
+  const radicalNoise = arrangement.radical > 0 && [1, 6, 9, 14].includes(beatStep);
+  return {
+    beatStep,
+    harmony,
+    melodyDegree,
+    baseMelodyOffset,
+    melodyOffset,
+    melodyChanged: baseMelodyOffset !== melodyOffset,
+    baseBassOffset,
+    bassOffset,
+    bassChanged: baseBassOffset !== bassOffset,
+    dynamics,
+    arrangeNoise,
+    radicalNoise,
+    chordHit: patternHit(profile.chordHits, step),
+    kick: patternHit(profile.kick, step),
+    snare: patternHit(profile.snare, step),
+    hat: patternHit(profile.hat, step)
+  };
+}
+
+function startArcadeBgm() {
+  if (!state.soundBgm) return;
+  withArcadeAudio((ctx) => {
+    if (arcadeAudio.bgmTimer) return;
+    const tick = () => {
+      if (!state.soundBgm) return;
+      const profile = currentArcadeBgmProfile();
+      const arrangement = bgmArrangementState();
+      const step = arcadeAudio.bgmStep;
+      const analysis = bgmStepAnalysis(profile, arrangement, step);
+
+      playBgmRhythm(ctx, profile, step, analysis.dynamics, arrangement);
+      if (analysis.arrangeNoise) {
+        noiseHit(ctx, {
+          duration: 0.018,
+          gain: (profile.drumGain || 0.016) * 0.42 * arrangement.intensity,
+          filter: 6800,
+          filterType: "highpass",
+          bus: "bgm",
+          seed: bgmNoiseSeed(profile, arrangement, step, "arrange-hat")
+        });
+      }
+      if (analysis.radicalNoise) {
+        noiseHit(ctx, {
+          duration: 0.045,
+          gain: (profile.drumGain || 0.016) * 1.2 * arrangement.radical,
+          filter: 2600,
+          filterType: "bandpass",
+          bus: "bgm",
+          seed: bgmNoiseSeed(profile, arrangement, step, "radical")
+        });
+      }
+
+      if (analysis.bassOffset !== null && analysis.bassOffset !== undefined) {
+        tone(ctx, {
+          freq: midiToFreq(profile.root / 2, analysis.harmony.root + analysis.bassOffset),
+          duration: profile.bassDuration || 0.14,
+          type: profile.bassType || "triangle",
+          gain: (profile.bassGain || 0.012) * analysis.dynamics,
+          slide: -profile.detune,
+          delay: 0.006,
+          filter: Math.max(800, profile.filter * 0.42),
+          bus: "bgm"
+        });
+      }
+
+      if (analysis.chordHit) {
+        playBgmChord(ctx, profile, analysis.harmony.root, analysis.dynamics, analysis.harmony.voicing);
+      }
+
+      analysis.harmony.outsideTones.forEach((outsideTone, index) => {
+        tone(ctx, {
+          freq: midiToFreq(profile.root, outsideTone + (profile.leadOctave || 12)),
+          duration: 0.045,
+          type: "sawtooth",
+          gain: (profile.leadGain || 0.012) * analysis.dynamics * 0.72,
+          delay: index * 0.018,
+          filter: Math.max(1100, profile.filter * 0.58),
+          bus: "bgm"
+        });
+      });
+
+      if (analysis.melodyOffset !== null) {
+        const radicalMelody = arrangement.radical > 0 && analysis.melodyChanged;
+        tone(ctx, {
+          freq: midiToFreq(profile.root, analysis.harmony.root + analysis.melodyOffset + (profile.leadOctave || 12)),
+          duration: radicalMelody ? 0.055 : profile.leadDuration || 0.09,
+          type: radicalMelody ? "sawtooth" : profile.leadType || "square",
+          gain: (profile.leadGain || 0.012) * analysis.dynamics,
+          slide: radicalMelody ? (analysis.melodyOffset > analysis.baseMelodyOffset ? 22 : -22) : profile.detune,
+          filter: radicalMelody ? Math.max(1200, profile.filter * 0.62) : profile.filter,
+          bus: "bgm"
+        });
+      }
+
+      arcadeAudio.bgmStep += 1;
+      const swing = step % 2 === 0 ? 0.92 : 1.08;
+      const arrangeSwing = 1 + (arrangement.intensity * ([3, 11].includes(analysis.beatStep) ? 0.04 : 0));
+      const radicalSwing = arrangement.radical > 0 ? ([5, 13].includes(analysis.beatStep) ? 0.82 : 1.06) : 1;
+      arcadeAudio.bgmTimer = window.setTimeout(tick, bgmStepMs(profile) * swing * arrangeSwing * radicalSwing);
+    };
+    stopArcadeBgm();
+    arcadeAudio.bgmStep = 0;
+    tick();
+  });
+}
+
+function syncArcadeAudio(forceRestart = false) {
+  const stateKey = bgmCompositionKey();
+  if (forceRestart || (arcadeAudio.bgmStateKey && arcadeAudio.bgmStateKey !== stateKey)) {
+    stopArcadeBgm();
+  }
+  arcadeAudio.bgmStateKey = stateKey;
+  if (state.soundBgm) {
+    startArcadeBgm();
+  } else {
+    stopArcadeBgm();
+  }
+}
+
+function syncArcadeToggleLabels() {
+  const fxToggle = document.querySelector("#fxToggle");
+  const bgmToggle = document.querySelector("#bgmToggle");
+  if (fxToggle) fxToggle.checked = state.soundFx;
+  if (bgmToggle) bgmToggle.checked = state.soundBgm;
+}
+
+function triggerArcadeFeedback(kind, source) {
+  const element = source && source.nodeType === 1 ? source : null;
+  if (element) {
+    burstAtElement(element, kind);
+  } else {
+    burstAtPoint(window.innerWidth / 2, window.innerHeight / 5, kind, 1.05);
+  }
+  playArcadeSfx(kind);
+  if (kind === "boost") pulseBody(kind);
+}
 
 const standardTermOverrides = {
   "日本国憲法": "1前",
@@ -996,7 +1705,7 @@ function treeNodeTooltip(course, node, treeName) {
   if (course.category === "basicRequired") lines.push("基礎教育必修");
   if (course.category === "commonRequired") lines.push("コース共通必修");
   if (matchedCourseRequired) lines.push(`${course.course}コース必修`);
-  if (!mismatchedCourseRequired && (course.teacherRequired || node.teacherRequired)) lines.push("教職必修");
+  if (course.category !== "teacher" && !mismatchedCourseRequired && (course.teacherRequired || node.teacherRequired)) lines.push("教職必修");
   return lines.join("\n");
 }
 
@@ -1188,6 +1897,7 @@ function validatePlannedCourse(course) {
   const currentValue = state.planned.get(course.id);
   if (currentValue && !isValidPlannedValue(course, currentValue)) {
     state.planned.delete(course.id);
+    state.teacherAdded.delete(course.id);
   }
 }
 
@@ -1196,9 +1906,7 @@ function visibleCourses() {
   const terms = new Set([...document.querySelectorAll(".term-filter:checked")].map((input) => input.value));
   const categories = new Set([...document.querySelectorAll(".category-filter:checked")].map((input) => input.value));
   return allCourses.filter((course) => {
-    const retainedTeacherCourse = course.category === "teacher" && !state.teacher && state.planned.has(course.id);
-    if (retainedTeacherCourse) return true;
-    if (course.category === "teacher" && !state.teacher && !state.planned.has(course.id)) return false;
+    if (course.category === "teacher" && !state.teacher) return false;
     if (!categories.has(course.category)) return false;
     if (course.qualificationEligible) return years.size > 0 && terms.size > 0;
     if (!course.year && !course.term) return years.size > 0 && terms.size > 0;
@@ -1220,6 +1928,306 @@ function plannedMethod(course) {
   return parseRecognitionValue(state.planned.get(course.id))?.method || null;
 }
 
+function snapshotPlanned() {
+  return new Map(state.planned.entries());
+}
+
+function snapshotTermValue(value) {
+  return parseRecognitionValue(value)?.term || value;
+}
+
+function queuePlanTransition(beforePlan, afterPlan, options = {}) {
+  const beforeIds = new Set(beforePlan.keys());
+  const afterIds = new Set(afterPlan.keys());
+  const changes = [];
+  const removed = [...beforeIds].filter((id) => !afterIds.has(id));
+  const added = [...afterIds].filter((id) => !beforeIds.has(id));
+  added.forEach((courseId) => {
+    changes.push({
+      courseId,
+      kind: "confirm",
+      term: snapshotTermValue(afterPlan.get(courseId))
+    });
+  });
+  if (!changes.length || options.silent) {
+    if (removed.length) {
+      fxSequence.feedbackTimers.forEach((timer) => window.clearTimeout(timer));
+      fxSequence.feedbackTimers = [];
+      fxSequence.items.clear();
+      fxSequence.scheduled = false;
+      planFx.transitions.clear();
+      planFx.queuedDelays.clear();
+    }
+    return;
+  }
+
+  const itemStep = options.step || 24;
+  const cellStep = options.cellStep || Math.max(54, itemStep * 2);
+  const groupedCourses = new Map(TERM_IDS.map((term) => [term, []]));
+  changes.forEach((change) => {
+    const course = allCourses.find((item) => item.id === change.courseId);
+    if (!course || !groupedCourses.has(change.term)) return;
+    groupedCourses.get(change.term).push({
+      courseId: change.courseId,
+      name: course.name
+    });
+  });
+  groupedCourses.forEach((group) => {
+    group.sort((a, b) => a.name.localeCompare(b.name, "ja"));
+  });
+  const changeOrder = new Map();
+  TERM_IDS.forEach((term, termIdx) => {
+    const courseEntries = groupedCourses.get(term) || [];
+    courseEntries.forEach(({ courseId }, index) => {
+      changeOrder.set(courseId, (options.baseDelay || 0) + (termIdx * cellStep) + (index * itemStep));
+    });
+  });
+
+  planFx.queuedDelays.clear();
+  changes.forEach((change) => {
+    planFx.queuedDelays.set(change.courseId, changeOrder.get(change.courseId) ?? (options.baseDelay || 0));
+  });
+  fxSequence.feedbackTimers.forEach((timer) => window.clearTimeout(timer));
+  fxSequence.feedbackTimers = [];
+  fxSequence.items.clear();
+  fxSequence.scheduled = false;
+  changes
+    .slice()
+    .sort((a, b) => (changeOrder.get(a.courseId) || 0) - (changeOrder.get(b.courseId) || 0))
+    .slice(0, 48)
+    .forEach((change) => {
+    fxSequence.items.set(change.courseId, {
+      kind: change.kind,
+      delay: changeOrder.get(change.courseId) ?? (options.baseDelay || 0)
+    });
+  });
+}
+
+function animatedCourseClass(courseId) {
+  const item = fxSequence.items.get(courseId);
+  if (!item) return "";
+  return ` fx-sequence fx-${item.kind === "remove" ? "release" : "activate"}`;
+}
+
+function animatedCourseStyle(courseId) {
+  const item = fxSequence.items.get(courseId);
+  return item ? `--fx-delay:${item.delay}ms;` : "";
+}
+
+function currentVisibleCourseIdSet() {
+  return new Set([...document.querySelectorAll("#catalogList [data-course-id], #treeView [data-course-id]")]
+    .map((element) => element.dataset.courseId));
+}
+
+function queueFilterReveal(beforeIds, afterCourses, options = {}) {
+  const added = afterCourses
+    .filter((course) => !beforeIds.has(course.id))
+    .slice(0, 80);
+  if (!added.length) return;
+  if (filterFx.cleanupTimer) window.clearTimeout(filterFx.cleanupTimer);
+  filterFx.items.clear();
+  added.forEach((course, index) => {
+    filterFx.items.set(course.id, (options.baseDelay || 0) + (index * 24));
+  });
+  const maxDelay = (options.baseDelay || 0) + ((added.length - 1) * 24);
+  filterFx.cleanupTimer = window.setTimeout(() => {
+    filterFx.cleanupTimer = null;
+    filterFx.items.clear();
+    render();
+  }, maxDelay + 620);
+}
+
+function filterRevealClass(courseId) {
+  return filterFx.items.has(courseId) && !fxSequence.items.has(courseId) ? " fx-filter-reveal" : "";
+}
+
+function filterRevealStyle(courseId) {
+  const delay = filterFx.items.get(courseId);
+  return Number.isFinite(delay) ? `--filter-reveal-delay:${delay}ms;` : "";
+}
+
+function courseElementsForAnimation(courseId) {
+  const escaped = cssAttributeValue(courseId);
+  return [...document.querySelectorAll(`#catalogList [data-course-id="${escaped}"], #treeView [data-course-id="${escaped}"]`)];
+}
+
+function animateExistingCourseElements(courseIds, className, options = {}) {
+  const ids = [...courseIds].slice(0, options.limit || 120);
+  const step = options.step || 18;
+  ids.forEach((courseId, index) => {
+    courseElementsForAnimation(courseId).forEach((element) => {
+      element.classList.remove("fx-filter-hide", "fx-clear-release");
+      element.classList.add(className);
+      element.style.setProperty("--fx-exit-delay", `${index * step}ms`);
+    });
+  });
+  return ids.length ? ((ids.length - 1) * step) + (options.duration || 360) : 0;
+}
+
+function animateExistingPlanRows(courseIds, className, options = {}) {
+  const ids = [...courseIds].slice(0, options.limit || 120);
+  const step = options.step || 18;
+  ids.forEach((courseId, index) => {
+    const escaped = cssAttributeValue(courseId);
+    document.querySelectorAll(`#planGrid .planned-course[data-course-id="${escaped}"]`).forEach((element) => {
+      element.classList.remove("fx-clear-release");
+      element.classList.add(className);
+      element.style.setProperty("--fx-exit-delay", `${index * step}ms`);
+    });
+  });
+  return ids.length ? ((ids.length - 1) * step) + (options.duration || 360) : 0;
+}
+
+function cancelPendingPlanClear() {
+  if (!planFx.clearTimer) return;
+  window.clearTimeout(planFx.clearTimer);
+  planFx.clearTimer = null;
+  document.querySelectorAll(".fx-clear-release").forEach((element) => {
+    element.classList.remove("fx-clear-release");
+    element.style.removeProperty("--fx-exit-delay");
+  });
+}
+
+function handleFilterChange() {
+  const beforeIds = currentVisibleCourseIdSet();
+  const afterCourses = visibleCourses();
+  const afterIds = new Set(afterCourses.map((course) => course.id));
+  const hidden = [...beforeIds].filter((id) => !afterIds.has(id));
+  if (filterFx.exitTimer) window.clearTimeout(filterFx.exitTimer);
+  if (!hidden.length) {
+    queueFilterReveal(beforeIds, afterCourses);
+    render();
+    return;
+  }
+  const wait = animateExistingCourseElements(hidden, "fx-filter-hide", { step: 16, duration: 340 });
+  filterFx.exitTimer = window.setTimeout(() => {
+    filterFx.exitTimer = null;
+    queueFilterReveal(beforeIds, afterCourses);
+    render();
+  }, wait);
+}
+
+function planTransitionClass(courseId) {
+  const transition = planFx.transitions.get(courseId);
+  if (!transition) return "";
+  return ` fx-sequence fx-${transition.kind === "remove" ? "release" : "activate"}`;
+}
+
+function planAnimationDelay(courseId, fallbackDelay) {
+  const transition = planFx.transitions.get(courseId);
+  return transition ? transition.delay : fallbackDelay;
+}
+
+function planCellDelay(courseIds = []) {
+  const delays = courseIds
+    .map((courseId) => planFx.transitions.get(courseId)?.delay)
+    .filter((delay) => Number.isFinite(delay));
+  if (!delays.length) return null;
+  return Math.min(...delays);
+}
+
+function updatePlanTransitions(currentPlan = snapshotPlanned()) {
+  const now = Date.now();
+  const previous = planFx.prevSnapshot;
+  const nextTransitions = new Map();
+  const animationDuration = 520;
+  currentPlan.forEach((term, courseId) => {
+    if (previous.get(courseId) === term) return;
+    const old = planFx.transitions.get(courseId);
+    const delay = planFx.queuedDelays.get(courseId) ?? (old && old.kind === "remove" ? old.delay : 0);
+    nextTransitions.set(courseId, { kind: "activate", term, delay, expiresAt: now + delay + animationDuration });
+  });
+  planFx.transitions.forEach((transition, courseId) => {
+    if (transition.expiresAt > now && !nextTransitions.has(courseId)) {
+      nextTransitions.set(courseId, transition);
+    }
+  });
+  planFx.transitions = nextTransitions;
+  planFx.prevSnapshot = currentPlan;
+  planFx.queuedDelays.clear();
+  if (planFx.cleanupTimer) window.clearTimeout(planFx.cleanupTimer);
+  if (nextTransitions.size) {
+    const latestExpiry = Math.max(...[...nextTransitions.values()].map((transition) => transition.expiresAt));
+    planFx.cleanupTimer = window.setTimeout(() => {
+      planFx.cleanupTimer = null;
+      if (purgeExpiredPlanTransitions()) renderPlan();
+    }, Math.max(0, latestExpiry - now + 80));
+  } else {
+    planFx.cleanupTimer = null;
+  }
+  return nextTransitions;
+}
+
+function purgeExpiredPlanTransitions() {
+  const now = Date.now();
+  let changed = false;
+  planFx.transitions.forEach((transition, courseId) => {
+    if (transition.expiresAt <= now) {
+      planFx.transitions.delete(courseId);
+      changed = true;
+    }
+  });
+  return changed;
+}
+
+function cssAttributeValue(value) {
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") return CSS.escape(value);
+  return String(value).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
+function firstVisibleCourseElement(courseId) {
+  const selector = `[data-course-id="${cssAttributeValue(courseId)}"]`;
+  const preferred = state.viewMode === "tree"
+    ? document.querySelector(`#treeView ${selector} .tree-node-button`)
+    : document.querySelector(`#catalogList ${selector}`);
+  return preferred || document.querySelector(`${selector} .tree-node-button`) || document.querySelector(selector);
+}
+
+function scheduleQueuedNodeFeedback() {
+  if (fxSequence.scheduled || !fxSequence.items.size) return;
+  fxSequence.scheduled = true;
+  let maxDelay = 0;
+  fxSequence.items.forEach((item, courseId) => {
+    maxDelay = Math.max(maxDelay, item.delay);
+    const timer = window.setTimeout(() => {
+      const element = firstVisibleCourseElement(courseId);
+      if (element) burstAtElement(element, item.kind, item.kind === "remove" ? 0.78 : 0.92);
+      playArcadeSfx(item.kind);
+    }, item.delay + 80);
+    fxSequence.feedbackTimers.push(timer);
+  });
+  const cleanup = window.setTimeout(() => {
+    fxSequence.items.clear();
+    fxSequence.feedbackTimers = [];
+    fxSequence.scheduled = false;
+    render();
+  }, maxDelay + 980);
+  fxSequence.feedbackTimers.push(cleanup);
+}
+
+function startTreeReveal() {
+  fxSequence.treeTimers.forEach((timer) => window.clearTimeout(timer));
+  fxSequence.treeTimers = [];
+  fxSequence.treeReveal = true;
+  const pulses = Math.min(14, Math.max(6, Math.ceil(visibleTreeNodes().length / 18)));
+  for (let index = 0; index < pulses; index += 1) {
+    const pulse = window.setTimeout(() => {
+      playArcadeSfx(index === pulses - 1 ? "boost" : "switch");
+    }, 120 + (index * 110));
+    fxSequence.treeTimers.push(pulse);
+  }
+  const timer = window.setTimeout(() => {
+    fxSequence.treeReveal = false;
+  }, 1900);
+  fxSequence.treeTimers.push(timer);
+}
+
+function treeRevealDelay(node, sectionIndex, laneIndex, displayTerms) {
+  const termIndex = Math.max(0, displayTerms.findIndex((term) => term.id === node.term));
+  const rowIndex = Math.max(0, (node.row || 1) - 1);
+  return (termIndex * 90) + (sectionIndex * 38) + (laneIndex * 18) + (rowIndex * 42);
+}
+
 function isValidPlannedValue(course, value) {
   const recognition = parseRecognitionValue(value);
   if (recognition) {
@@ -1228,19 +2236,43 @@ function isValidPlannedValue(course, value) {
   return validTermsForCourse(course).some((term) => term.id === value) && !course.qualificationEligible;
 }
 
-function setPlanned(courseId, term) {
+function setPlanned(courseId, term, options = {}) {
+  cancelPendingPlanClear();
   const course = allCourses.find((item) => item.id === courseId);
+  const beforePlan = snapshotPlanned();
+  const before = state.planned.get(courseId);
+  let feedback = null;
   if (term === "none") {
-    state.planned.delete(courseId);
+    if (state.planned.delete(courseId)) {
+      state.teacherAdded.delete(courseId);
+      feedback = "remove";
+    }
   } else if (parseRecognitionValue(term)) {
     const recognition = parseRecognitionValue(term);
     const valid = course?.qualificationEligible && recognitionTermsForMethod(course, recognition.method).some((item) => item.id === recognition.term);
-    if (valid) state.planned.set(courseId, term);
+    if (valid) {
+      state.planned.set(courseId, term);
+      feedback = before === term ? null : "confirm";
+    } else {
+      feedback = "error";
+    }
   } else {
-    if (course && isValidPlannedValue(course, term)) state.planned.set(courseId, term);
+    if (course && isValidPlannedValue(course, term)) {
+      state.planned.set(courseId, term);
+      feedback = before === term ? null : "confirm";
+    } else if (course) {
+      feedback = "error";
+    }
   }
   state.openCourseId = null;
   state.openTreeNodeId = null;
+  if (feedback === "error") {
+    triggerArcadeFeedback(feedback, options.source);
+  } else if (feedback) {
+    if (feedback === "remove") triggerArcadeFeedback("cancel", options.source);
+    queuePlanTransition(beforePlan, snapshotPlanned(), { baseDelay: 0, step: 20, cellStep: 44 });
+    syncArcadeAudio(true);
+  }
   render();
 }
 
@@ -1268,18 +2300,38 @@ function teacherPlanCourses() {
   return [...preferred.values()];
 }
 
-function addTeacherPlanCourses() {
+function addTeacherPlanCourses(options = {}) {
+  const beforePlan = snapshotPlanned();
   let added = 0;
   teacherPlanCourses().forEach((course) => {
     if (state.planned.has(course.id)) return;
     state.planned.set(course.id, openingTermForCourse(course));
+    state.teacherAdded.add(course.id);
     added += 1;
   });
+  if (!options.silent) queuePlanTransition(beforePlan, snapshotPlanned(), { baseDelay: 0, step: 20, cellStep: 48 });
   return added;
 }
 
-function autoFill() {
+function removeTeacherPlanCourses() {
+  const beforePlan = snapshotPlanned();
+  let removed = 0;
+  allCourses.forEach((course) => {
+    const shouldRemove = course.category === "teacher" || state.teacherAdded.has(course.id);
+    if (!shouldRemove || !state.planned.has(course.id)) return;
+    state.planned.delete(course.id);
+    removed += 1;
+  });
+  state.teacherAdded.clear();
+  queuePlanTransition(beforePlan, snapshotPlanned(), { baseDelay: 0, step: 22, cellStep: 56 });
+  return removed;
+}
+
+function autoFill(options = {}) {
+  cancelPendingPlanClear();
+  const beforePlan = snapshotPlanned();
   state.planned.clear();
+  state.teacherAdded.clear();
   state.openCourseId = null;
   state.openTreeNodeId = null;
   resetCatalogFilters();
@@ -1291,9 +2343,76 @@ function autoFill() {
     }
   });
   if (state.teacher) {
-    addTeacherPlanCourses();
+    addTeacherPlanCourses({ silent: true });
   }
+  if (!options.silent) {
+    queuePlanTransition(beforePlan, snapshotPlanned(), { baseDelay: 0, step: 22, cellStep: 56 });
+    syncArcadeAudio(true);
+    render();
+    triggerArcadeFeedback("boost");
+    return;
+  }
+  syncArcadeAudio(true);
   render();
+}
+
+function clearPlan() {
+  const beforePlan = snapshotPlanned();
+  if (planFx.clearTimer || !beforePlan.size) {
+    triggerArcadeFeedback("remove", document.querySelector("#clearButton"));
+    return;
+  }
+  const courseIds = [...beforePlan.keys()];
+  const wait = Math.max(
+    animateExistingCourseElements(courseIds, "fx-clear-release", { step: 14, duration: 380 }),
+    animateExistingPlanRows(courseIds, "fx-clear-release", { step: 22, duration: 380 })
+  );
+  triggerArcadeFeedback("remove", document.querySelector("#clearButton"));
+  planFx.clearTimer = window.setTimeout(() => {
+    planFx.clearTimer = null;
+    state.planned.clear();
+    state.teacherAdded.clear();
+    state.openCourseId = null;
+    state.openTreeNodeId = null;
+    if (planFx.cleanupTimer) {
+      window.clearTimeout(planFx.cleanupTimer);
+      planFx.cleanupTimer = null;
+    }
+    planFx.transitions.clear();
+    planFx.queuedDelays.clear();
+    planFx.prevSnapshot = snapshotPlanned();
+    syncArcadeAudio(true);
+    render();
+  }, wait + 40);
+}
+
+const immediateButtonRuns = new Map();
+
+function runImmediateAction(key, event, action) {
+  const now = Date.now();
+  const lastRun = immediateButtonRuns.get(key) || 0;
+  if (now - lastRun < 240) {
+    event?.preventDefault?.();
+    return;
+  }
+  immediateButtonRuns.set(key, now);
+  event?.preventDefault?.();
+  action();
+}
+
+function handleAutoFillButton(event) {
+  runImmediateAction("autoFillButton", event, () => autoFill());
+}
+
+function handleClearButton(event) {
+  runImmediateAction("clearButton", event, clearPlan);
+}
+
+function bindImmediateButton(selector, key, action) {
+  const button = document.querySelector(selector);
+  const run = (event) => runImmediateAction(key, event, action);
+  button.addEventListener("pointerdown", run);
+  button.addEventListener("click", run);
 }
 
 function totals() {
@@ -1415,7 +2534,10 @@ function renderCatalog() {
   catalog.innerHTML = "";
   visibleCourses().forEach((course) => {
     const card = document.createElement("article");
-    card.className = `course-card${state.planned.has(course.id) ? " is-planned" : ""}`;
+    card.className = `course-card${state.planned.has(course.id) ? " is-planned" : ""}${animatedCourseClass(course.id)}${filterRevealClass(course.id)}`;
+    card.dataset.courseId = course.id;
+    const fxStyle = `${animatedCourseStyle(course.id)}${filterRevealStyle(course.id)}`;
+    if (fxStyle) card.setAttribute("style", fxStyle);
 
     const main = document.createElement("div");
     main.className = "course-main";
@@ -1465,7 +2587,7 @@ function renderCatalog() {
     select.setAttribute("aria-label", `${course.name}の配置`);
     select.innerHTML = optionMarkupForCourse(course);
     select.value = state.planned.get(course.id) || "none";
-    select.addEventListener("change", (event) => setPlanned(course.id, event.target.value));
+    select.addEventListener("change", (event) => setPlanned(course.id, event.target.value, { source: select }));
 
     const opening = document.createElement("button");
     opening.type = "button";
@@ -1475,6 +2597,7 @@ function renderCatalog() {
     opening.setAttribute("aria-label", `${course.name}の履修時期を選択${state.planned.has(course.id) ? `: ${plannedLabel(course)}` : ""}`);
     opening.addEventListener("click", () => {
       state.openCourseId = state.openCourseId === course.id ? null : course.id;
+      triggerArcadeFeedback("switch", opening);
       render();
     });
 
@@ -1483,7 +2606,7 @@ function renderCatalog() {
     remove.className = "remove-button";
     remove.textContent = "×";
     remove.setAttribute("aria-label", `${course.name}を外す`);
-    remove.addEventListener("click", () => setPlanned(course.id, "none"));
+    remove.addEventListener("click", () => setPlanned(course.id, "none", { source: remove }));
 
     actions.append(opening, remove);
     info.append(title, tags);
@@ -1502,6 +2625,9 @@ function renderCatalog() {
 function renderPlan() {
   const grid = document.querySelector("#planGrid");
   grid.innerHTML = "";
+  const currentPlan = snapshotPlanned();
+  updatePlanTransitions(currentPlan);
+  purgeExpiredPlanTransitions();
   const termLimit = state.gpa >= 3.7 ? 26 : 24;
   for (let year = 1; year <= 4; year += 1) {
     const column = document.createElement("div");
@@ -1509,10 +2635,16 @@ function renderPlan() {
     column.innerHTML = `<div class="year-title">${year}年</div>`;
     ["前", "後"].forEach((term) => {
       const id = termId(year, term);
-      const courses = selectedCourses().filter((course) => plannedTerm(course) === id);
+      const courses = selectedCourses()
+        .filter((course) => plannedTerm(course) === id)
+        .sort((a, b) => a.name.localeCompare(b.name, "ja"));
       const credits = termCredits(id);
+      const cellIndex = ((year - 1) * 2) + (term === "前" ? 0 : 1);
+      const startDelay = cellIndex * 56;
+      const cellDelay = planCellDelay(courses.map((course) => course.id));
       const box = document.createElement("section");
-      box.className = `term-box${credits.capCounted > termLimit ? " limit-exceeded" : ""}`;
+      box.className = `term-box${credits.capCounted > termLimit ? " limit-exceeded" : ""}${cellDelay !== null ? " fx-batch" : ""}`;
+      if (cellDelay !== null) box.setAttribute("style", `--plan-cell-delay:${cellDelay}ms;`);
       box.innerHTML = `
         <div class="term-head">
           <span>${term}期</span>
@@ -1523,12 +2655,15 @@ function renderPlan() {
           <span><b>${credits.capExcluded}</b><small>上限外</small></span>
         </div>
         <div class="planned-list">
-          ${courses.map((course) => `
-            <div class="planned-course${isCapExcludedInPlan(course) ? " cap-excluded" : ""}">
+          ${courses.map((course, index) => {
+            const delay = planAnimationDelay(course.id, startDelay + (index * 24));
+            return `
+            <div class="planned-course${isCapExcludedInPlan(course) ? " cap-excluded" : ""}${planTransitionClass(course.id)}" data-course-id="${course.id}" style="--fx-delay:${delay}ms;">
               <span>${course.name}</span>
               <small title="${categoryTitle(course.category)}">${categoryLabels[course.category]} / ${course.credits}単位${isRecognitionPlanned(course) ? ` / ${recognitionMethodLabel(course)}` : ""}${course.category === "teacher" ? " / 要件外" : ""}${isCapExcludedInPlan(course) ? " / 上限外" : ""}</small>
             </div>
-          `).join("")}
+          `;
+          }).join("")}
         </div>`;
       column.appendChild(box);
     });
@@ -1618,8 +2753,7 @@ function renderTree() {
   tree.innerHTML = "";
   const nodes = visibleTreeNodes();
   const displayTerms = treeTerms(nodes);
-  tree.style.setProperty("--tree-grid-template", `136px repeat(${displayTerms.length}, minmax(152px, 1fr))`);
-  tree.style.setProperty("--tree-grid-min-width", `${136 + (displayTerms.length * 152) + (displayTerms.length * 12)}px`);
+  tree.style.setProperty("--tree-grid-template", `136px repeat(${displayTerms.length}, minmax(0, 1fr))`);
   const termLabels = displayTerms.map((term) => `<div class="tree-term">${term.label}</div>`).join("");
   const connectionCounts = treeConnectionCounts(nodes);
   const sections = [...new Set(nodes.map((node) => node.section))]
@@ -1637,7 +2771,9 @@ function renderTree() {
   header.innerHTML = `<div></div>${termLabels}`;
   tree.appendChild(header);
 
-  sections.forEach((section) => {
+  tree.classList.toggle("is-revealing", fxSequence.treeReveal);
+
+  sections.forEach((section, sectionIndex) => {
     const sectionNodes = nodes.filter((node) => node.section === section);
     const lanes = sortTreeLanes(section, [...new Set(sectionNodes.map((node) => node.lane))]);
     const block = document.createElement("section");
@@ -1645,7 +2781,7 @@ function renderTree() {
     const sectionTitle = treeSectionTitle(section);
     block.innerHTML = `<div class="tree-section-title"${sectionTitle ? ` title="${sectionTitle}"` : ""}>${section}</div>`;
 
-    lanes.forEach((lane) => {
+    lanes.forEach((lane, laneIndex) => {
       const laneNodes = sectionNodes.filter((node) => node.lane === lane);
       const laneRows = laneRowSequence(section, lane, laneNodes);
       const row = document.createElement("div");
@@ -1669,22 +2805,26 @@ function renderTree() {
               const disabled = course.category === "teacher" && !state.teacher;
               const counts = connectionCounts.get(node.id) || { incoming: 0, outgoing: 0 };
               const item = document.createElement("article");
-              item.className = `tree-node level-${node.level || "none"}${treeRequiredClass(course, node)}${tooltip ? " has-tooltip" : ""}${state.planned.has(course.id) ? " is-planned" : ""}${disabled ? " is-disabled" : ""}${state.openTreeNodeId === node.id ? " is-open" : ""}${state.showTreeMeta ? " has-meta" : ""}${state.showTreeCodes ? " has-code" : ""}`;
+              item.className = `tree-node level-${node.level || "none"}${treeRequiredClass(course, node)}${tooltip ? " has-tooltip" : ""}${state.planned.has(course.id) ? " is-planned" : ""}${disabled ? " is-disabled" : ""}${state.openTreeNodeId === node.id ? " is-open" : ""}${state.showTreeMeta ? " has-meta" : ""}${state.showTreeCodes ? " has-code" : ""}${fxSequence.treeReveal ? " is-tree-reveal" : ""}${animatedCourseClass(course.id)}${filterRevealClass(course.id)}`;
               item.dataset.nodeId = node.id;
               item.dataset.courseId = course.id;
               item.dataset.incoming = counts.incoming;
               item.dataset.outgoing = counts.outgoing;
+              const fxStyle = `${animatedCourseStyle(course.id)}${filterRevealStyle(course.id)}`;
+              const revealStyle = fxSequence.treeReveal ? `--tree-reveal-delay:${treeRevealDelay(node, sectionIndex, laneIndex, displayTerms)}ms;` : "";
+              if (fxStyle || revealStyle) item.setAttribute("style", `${fxStyle}${revealStyle}`);
               item.innerHTML = `
                 <button type="button" class="tree-node-button" ${disabled ? "disabled" : ""} aria-expanded="${state.openTreeNodeId === node.id ? "true" : "false"}"${tooltip ? ` title="${tooltip}"` : ""}>
                   ${state.showTreeCodes ? `<span class="tree-node-code">${node.courseNumber}</span>` : ""}
                   <span class="tree-node-name" style="--tree-name-size:${treeNameFontSize(treeName)}px">${treeName}</span>
-                  ${state.showTreeMeta ? `<span class="tree-node-meta">${node.level || categoryLabels[course.category]}${state.planned.has(course.id) ? ` / ${plannedButtonLabel(course)}` : ""}</span>` : ""}
+                  ${state.showTreeMeta ? `<span class="tree-node-meta">${node.level || categoryLabels[course.category]}${state.planned.has(course.id) ? ` / ${plannedButtonLabel(course)}` : ""}${course.category !== "teacher" && (course.teacherRequired || node.teacherRequired) ? " / 教職必修" : ""}</span>` : ""}
                 </button>
               `;
               const button = item.querySelector(".tree-node-button");
               button.addEventListener("click", () => {
                 state.openTreeNodeId = state.openTreeNodeId === node.id ? null : node.id;
                 state.openCourseId = null;
+                triggerArcadeFeedback("switch", button);
                 render();
               });
               if (state.openTreeNodeId === node.id) {
@@ -1694,13 +2834,13 @@ function renderTree() {
                 select.setAttribute("aria-label", `${course.name}の配置`);
                 select.innerHTML = optionMarkupForCourse(course);
                 select.value = state.planned.get(course.id) || "none";
-                select.addEventListener("change", (event) => setPlanned(course.id, event.target.value));
+                select.addEventListener("change", (event) => setPlanned(course.id, event.target.value, { source: select }));
                 const remove = document.createElement("button");
                 remove.type = "button";
                 remove.className = "remove-button";
                 remove.textContent = "×";
                 remove.setAttribute("aria-label", `${course.name}を外す`);
-                remove.addEventListener("click", () => setPlanned(course.id, "none"));
+                remove.addEventListener("click", () => setPlanned(course.id, "none", { source: remove }));
                 menu.append(select, remove);
                 item.appendChild(menu);
               }
@@ -1826,6 +2966,8 @@ function renderViewMode() {
   const treeCodeToggle = document.querySelector("#treeCodeToggle");
   const treeMetaToggleWrap = document.querySelector("#treeMetaToggleWrap");
   const treeMetaToggle = document.querySelector("#treeMetaToggle");
+  const fxToggle = document.querySelector("#fxToggle");
+  const bgmToggle = document.querySelector("#bgmToggle");
   const isTree = state.viewMode === "tree";
   catalog.hidden = isTree;
   tree.hidden = !isTree;
@@ -1833,6 +2975,8 @@ function renderViewMode() {
   treeCodeToggle.checked = state.showTreeCodes;
   treeMetaToggleWrap.hidden = !isTree;
   treeMetaToggle.checked = state.showTreeMeta;
+  fxToggle.checked = state.soundFx;
+  bgmToggle.checked = state.soundBgm;
   filters.hidden = !state.filtersOpen;
   filterToggle.setAttribute("aria-expanded", String(state.filtersOpen));
   workspace.classList.toggle("catalog-tree-mode", isTree);
@@ -1845,6 +2989,98 @@ function renderViewMode() {
     drawTreeEdges();
     requestAnimationFrame(updateTreeMenuPlacement);
   }
+}
+
+function signedOffset(value) {
+  if (value === null || value === undefined) return "";
+  return value > 0 ? `+${value}` : String(value);
+}
+
+function bgmCellClass(analysis, base = "") {
+  const classes = ["bgm-roll-cell"];
+  if (base) classes.push(base);
+  if (analysis.harmony.kind !== "base" || analysis.radicalNoise || analysis.harmony.outsideTones.length) {
+    classes.push("is-radical");
+  } else if (analysis.melodyChanged || analysis.bassChanged || analysis.arrangeNoise) {
+    classes.push("is-subtle");
+  } else {
+    classes.push("is-active");
+  }
+  return classes.join(" ");
+}
+
+function appendBgmRollCell(grid, text, className, title = "") {
+  const cell = document.createElement("div");
+  cell.className = className;
+  cell.textContent = text;
+  if (title) cell.title = title;
+  grid.appendChild(cell);
+}
+
+function appendBgmRollRow(grid, label, cells) {
+  appendBgmRollCell(grid, label, "bgm-roll-label");
+  cells.forEach((cell) => appendBgmRollCell(grid, cell.text, cell.className, cell.title));
+}
+
+function renderBgmRoll() {
+  const panel = document.querySelector("#bgmRollPanel");
+  const grid = document.querySelector("#bgmRollGrid");
+  const toggle = document.querySelector("#bgmRollToggle");
+  if (!panel || !grid) return;
+  panel.hidden = !state.showBgmRoll;
+  if (toggle) toggle.checked = state.showBgmRoll;
+  if (!state.showBgmRoll) {
+    grid.innerHTML = "";
+    return;
+  }
+  const profile = currentArcadeBgmProfile();
+  const arrangement = bgmArrangementState();
+  const analyses = Array.from({ length: 16 }, (_, step) => bgmStepAnalysis(profile, arrangement, step));
+  document.querySelector("#bgmRollCourse").textContent = state.course;
+  document.querySelector("#bgmRollTempo").textContent = `${profile.bpm || 120} BPM`;
+  document.querySelector("#bgmRollArrange").textContent = `微調整 ${arrangement.count}`;
+  document.querySelector("#bgmRollRadical").textContent = `外れ値 ${arrangement.missingRequired}`;
+  grid.innerHTML = "";
+  appendBgmRollCell(grid, "", "bgm-roll-label");
+  analyses.forEach((_, index) => appendBgmRollCell(grid, String(index + 1), "bgm-roll-step"));
+  appendBgmRollRow(grid, "旋律", analyses.map((analysis) => ({
+    text: signedOffset(analysis.melodyOffset),
+    className: analysis.melodyOffset === null
+      ? "bgm-roll-cell is-empty"
+      : bgmCellClass(analysis, "bgm-roll-melody"),
+    title: analysis.melodyChanged ? "旋律を調整" : "旋律"
+  })));
+  appendBgmRollRow(grid, "低音", analyses.map((analysis) => ({
+    text: signedOffset(analysis.bassOffset),
+    className: analysis.bassOffset === null || analysis.bassOffset === undefined
+      ? "bgm-roll-cell is-empty"
+      : bgmCellClass(analysis, "bgm-roll-bass"),
+    title: analysis.bassChanged ? "ベースを調整" : "ベース"
+  })));
+  appendBgmRollRow(grid, "和音", analyses.map((analysis) => ({
+    text: analysis.chordHit ? analysis.harmony.label : "",
+    className: analysis.chordHit ? bgmCellClass(analysis, "bgm-roll-chord") : "bgm-roll-cell is-empty",
+    title: analysis.harmony.kind === "base" ? "通常和音" : `専用ハーモニー: ${analysis.harmony.label}`
+  })));
+  appendBgmRollRow(grid, "律動", analyses.map((analysis) => {
+    const hits = [
+      analysis.kick ? "K" : "",
+      analysis.snare ? "S" : "",
+      analysis.hat ? "H" : "",
+      analysis.arrangeNoise ? "+" : "",
+      analysis.radicalNoise ? "!" : ""
+    ].filter(Boolean).join("");
+    return {
+      text: hits,
+      className: hits ? bgmCellClass(analysis, "bgm-roll-rhythm") : "bgm-roll-cell is-empty",
+      title: analysis.radicalNoise ? "外れ値リズム" : analysis.arrangeNoise ? "追加リズム" : "リズム"
+    };
+  }));
+  appendBgmRollRow(grid, "外音", analyses.map((analysis) => ({
+    text: analysis.harmony.outsideTones.length ? analysis.harmony.outsideTones.map(signedOffset).join("/") : "",
+    className: analysis.harmony.outsideTones.length ? "bgm-roll-cell is-radical" : "bgm-roll-cell is-empty",
+    title: analysis.harmony.outsideTones.length ? "スケール外アクセント" : ""
+  })));
 }
 
 function setMeter(id, value, target) {
@@ -1943,11 +3179,13 @@ function render() {
   const stats = totals();
   renderCatalog();
   renderPlan();
-  renderTree();
-  renderViewMode();
+  renderBgmRoll();
   renderSummary(stats);
   renderRequirements(stats);
   renderAlerts(stats);
+  renderTree();
+  renderViewMode();
+  requestAnimationFrame(scheduleQueuedNodeFeedback);
 }
 
 function init() {
@@ -1955,6 +3193,8 @@ function init() {
   courseSelect.innerHTML = COURSES.map((course) => `<option value="${course}">${course}</option>`).join("");
   courseSelect.value = state.course;
   courseSelect.addEventListener("change", (event) => {
+    cancelPendingPlanClear();
+    const beforePlan = snapshotPlanned();
     const hadCoursePlan = selectedCourses().some((course) => course.category === "courseRequired");
     state.course = event.target.value;
     [...state.planned.keys()].forEach((id) => {
@@ -1966,20 +3206,27 @@ function init() {
         .filter((course) => course.category === "courseRequired" && course.course === state.course)
         .forEach((course) => state.planned.set(course.id, openingTermForCourse(course)));
     }
+    queuePlanTransition(beforePlan, snapshotPlanned(), { baseDelay: 0, step: 20, cellStep: 50 });
+    triggerArcadeFeedback("switch", courseSelect);
+    syncArcadeAudio(true);
     render();
   });
 
   document.querySelector("#teacherToggle").addEventListener("change", (event) => {
+    cancelPendingPlanClear();
     state.teacher = event.target.checked;
     if (state.teacher) {
       const added = addTeacherPlanCourses();
       state.teacherNotice = `教職課程をONにしました。教職課程科目と教職必修指定科目を履修状態にしました（新規追加 ${added}科目）。`;
     } else {
-      state.teacherNotice = "教職課程をOFFにしました。すでに履修状態にした教職課程科目・教職必修指定科目は外していません。不要な科目は個別に×で外してください。";
+      const removed = removeTeacherPlanCourses();
+      state.teacherNotice = `教職課程をOFFにしました。教職課程科目と自動追加した教職必修指定科目を履修計画から外しました（削除 ${removed}科目）。`;
     }
     state.openCourseId = null;
     state.openTreeNodeId = null;
     resetCatalogFilters();
+    triggerArcadeFeedback(state.teacher ? "boost" : "switch", event.currentTarget);
+    syncArcadeAudio(true);
     render();
   });
   document.querySelector("#gpaInput").addEventListener("change", (event) => {
@@ -1995,38 +3242,70 @@ function init() {
     render();
   });
   document.querySelectorAll(".year-filter, .term-filter, .category-filter").forEach((input) => {
-    input.addEventListener("change", render);
+    input.addEventListener("change", handleFilterChange);
   });
   document.querySelector("#filterToggle").addEventListener("click", () => {
     state.filtersOpen = !state.filtersOpen;
+    triggerArcadeFeedback("switch", document.querySelector("#filterToggle"));
     render();
   });
   document.querySelector("#viewModeToggle").addEventListener("change", (event) => {
     if (event.target.checked) {
       state.viewMode = "tree";
       state.openCourseId = null;
+      startTreeReveal();
     } else {
       state.viewMode = "list";
       state.openTreeNodeId = null;
     }
+    triggerArcadeFeedback("switch", event.currentTarget);
     render();
   });
   document.querySelector("#treeCodeToggle").addEventListener("change", (event) => {
     state.showTreeCodes = event.target.checked;
+    triggerArcadeFeedback("switch", event.currentTarget);
     render();
   });
   document.querySelector("#treeMetaToggle").addEventListener("change", (event) => {
     state.showTreeMeta = event.target.checked;
+    triggerArcadeFeedback("switch", event.currentTarget);
     render();
   });
-  document.querySelector("#autoFillButton").addEventListener("click", autoFill);
-  document.querySelector("#clearButton").addEventListener("click", () => {
-    state.planned.clear();
-    state.openCourseId = null;
-    state.openTreeNodeId = null;
+  document.querySelector("#fxToggle").addEventListener("change", (event) => {
+    state.soundFx = event.target.checked;
+    if (state.soundFx) triggerArcadeFeedback("switch", event.currentTarget);
     render();
   });
-  autoFill();
+  document.querySelector("#bgmToggle").addEventListener("change", (event) => {
+    state.soundBgm = event.target.checked;
+    triggerArcadeFeedback(state.soundBgm ? "boost" : "remove", event.currentTarget);
+    syncArcadeAudio(true);
+    render();
+  });
+  document.querySelector("#bgmRollToggle").addEventListener("change", (event) => {
+    state.showBgmRoll = event.target.checked;
+    triggerArcadeFeedback("switch", event.currentTarget);
+    render();
+  });
+  window.hctAutoFillButton = handleAutoFillButton;
+  window.hctClearButton = handleClearButton;
+  bindImmediateButton("#autoFillButton", "autoFillButton", () => autoFill());
+  bindImmediateButton("#clearButton", "clearButton", clearPlan);
+  document.addEventListener("pointerdown", syncArcadeAudio, { once: true, capture: true });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      stopArcadeBgm();
+    } else {
+      syncArcadeAudio();
+    }
+  });
+  window.addEventListener("resize", () => {
+    if (state.viewMode !== "tree") return;
+    requestAnimationFrame(drawTreeEdges);
+    requestAnimationFrame(updateTreeMenuPlacement);
+  });
+  syncArcadeToggleLabels();
+  autoFill({ silent: true });
 }
 
 init();

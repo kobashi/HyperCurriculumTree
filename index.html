@@ -4,9 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>情報メディア学科 履修計画チェッカー</title>
-    <link rel="stylesheet" href="styles.css?v=catalog-tree-20260615r">
+    <link rel="stylesheet" href="styles.css?v=playful-ux-20260617ac">
   </head>
   <body>
+    <div id="fxLayer" aria-hidden="true"></div>
     <main class="app-shell">
       <section class="topbar" aria-label="設定">
         <div>
@@ -38,7 +39,37 @@
             <input id="teacherToggle" type="checkbox">
             <span>教職課程</span>
           </label>
+          <label class="switch audio-switch">
+            <input id="fxToggle" type="checkbox" checked>
+            <span>SE</span>
+          </label>
+          <label class="switch audio-switch">
+            <input id="bgmToggle" type="checkbox" checked>
+            <span>BGM</span>
+          </label>
+          <label class="switch audio-switch">
+            <input id="bgmRollToggle" type="checkbox">
+            <span>ロール</span>
+          </label>
         </div>
+      </section>
+
+      <section id="bgmRollPanel" class="bgm-roll-panel" aria-label="BGMピアノロール" hidden>
+        <div class="bgm-roll-head">
+          <h2>BGM</h2>
+          <div class="bgm-roll-stats">
+            <span id="bgmRollCourse">なし</span>
+            <span id="bgmRollTempo">112 BPM</span>
+            <span id="bgmRollArrange">微調整 0</span>
+            <span id="bgmRollRadical">外れ値 0</span>
+          </div>
+        </div>
+        <div class="bgm-roll-legend" aria-hidden="true">
+          <span class="legend-base">通常</span>
+          <span class="legend-subtle">微調整</span>
+          <span class="legend-radical">外れ値</span>
+        </div>
+        <div id="bgmRollGrid" class="bgm-roll-grid"></div>
       </section>
 
       <section class="summary-grid" aria-label="卒業要件">
@@ -123,8 +154,8 @@
           <div class="plan-head">
             <h2>4年間の履修計画</h2>
             <div class="quick-actions">
-              <button id="autoFillButton" type="button">標準配置</button>
-              <button id="clearButton" type="button">クリア</button>
+              <button id="autoFillButton" type="button" onpointerdown="window.hctAutoFillButton && window.hctAutoFillButton(event)" onclick="window.hctAutoFillButton && window.hctAutoFillButton(event)">標準配置</button>
+              <button id="clearButton" type="button" onpointerdown="window.hctClearButton && window.hctClearButton(event)" onclick="window.hctClearButton && window.hctClearButton(event)">クリア</button>
             </div>
           </div>
           <div id="planGrid" class="plan-grid"></div>
@@ -142,6 +173,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=catalog-tree-20260615r"></script>
+    <script src="app.js?v=playful-ux-20260617ac"></script>
   </body>
 </html>

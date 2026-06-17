@@ -51,6 +51,10 @@
             <input id="bgmRollToggle" type="checkbox">
             <span>ロール</span>
           </label>
+          <div class="settings-actions" aria-label="履修計画操作">
+            <button id="autoFillButton" type="button" onpointerdown="window.hctAutoFillButton && window.hctAutoFillButton(event)" onclick="window.hctAutoFillButton && window.hctAutoFillButton(event)">標準配置</button>
+            <button id="clearButton" type="button" onpointerdown="window.hctClearButton && window.hctClearButton(event)" onclick="window.hctClearButton && window.hctClearButton(event)">クリア</button>
+          </div>
         </div>
       </section>
 
@@ -153,10 +157,6 @@
         <section class="plan-panel" aria-label="4年間の履修計画">
           <div class="plan-head">
             <h2>4年間の履修計画</h2>
-            <div class="quick-actions">
-              <button id="autoFillButton" type="button" onpointerdown="window.hctAutoFillButton && window.hctAutoFillButton(event)" onclick="window.hctAutoFillButton && window.hctAutoFillButton(event)">標準配置</button>
-              <button id="clearButton" type="button" onpointerdown="window.hctClearButton && window.hctClearButton(event)" onclick="window.hctClearButton && window.hctClearButton(event)">クリア</button>
-            </div>
           </div>
           <div id="planGrid" class="plan-grid"></div>
         </section>

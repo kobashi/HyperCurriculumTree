@@ -156,6 +156,19 @@ h2 {
   align-items: end;
 }
 
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+}
+
+.settings-actions button {
+  min-height: 34px;
+  padding: 0 14px;
+}
+
 label {
   display: grid;
   gap: 5px;
@@ -734,11 +747,6 @@ input {
   padding: 14px;
 }
 
-.quick-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
 
 .view-mode-switch {
   display: inline-flex;

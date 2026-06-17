@@ -2425,7 +2425,7 @@ function totals() {
   const basicElectiveOutside = Math.max(0, basicElectiveRaw - 24);
   const basic = basicRequiredCredits + basicElectiveCredits;
   const common = sum((course) => course.category === "commonRequired");
-  const courseSpecific = sum((course) => course.category === "courseRequired" && course.course === state.course);
+  const courseSpecific = sum((course) => course.category === "courseRequired");
   const qualification = sum((course) => isQualificationPlanned(course));
   const specialized = sum((course) => course.category === "specializedElective" && !isQualificationPlanned(course));
   const otherDeptRaw = sum((course) => course.category === "otherDept");
@@ -3195,13 +3195,8 @@ function init() {
   courseSelect.addEventListener("change", (event) => {
     cancelPendingPlanClear();
     const beforePlan = snapshotPlanned();
-    const hadCoursePlan = selectedCourses().some((course) => course.category === "courseRequired");
     state.course = event.target.value;
-    [...state.planned.keys()].forEach((id) => {
-      const course = allCourses.find((item) => item.id === id);
-      if (course?.category === "courseRequired" && course.course !== state.course) state.planned.delete(id);
-    });
-    if (hadCoursePlan) {
+    if (state.course !== NO_COURSE) {
       allCourses
         .filter((course) => course.category === "courseRequired" && course.course === state.course)
         .forEach((course) => state.planned.set(course.id, openingTermForCourse(course)));

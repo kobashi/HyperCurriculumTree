@@ -1215,16 +1215,21 @@ function bgmArrangementState() {
     .filter((course) => course.category !== "teacher")
     .sort((a, b) => a.id.localeCompare(b.id));
   const missingRequired = allCourses.filter((course) => isBgmMissingRequiredCourse(course) && !state.planned.has(course.id));
+  const missingPrereqs = [...prerequisiteIssuesByCourse()]
+    .map((id) => allCourses.find((course) => course.id === id))
+    .filter(Boolean)
+    .sort((a, b) => a.id.localeCompare(b.id));
   const seed = arrangedCourses.reduce((total, course, index) => {
     const idValue = [...course.id].reduce((sum, char) => sum + char.charCodeAt(0), 0);
     return total + (idValue * (index + 3));
-  }, arrangedCourses.length * 17);
+  }, arrangedCourses.length * 17 + missingPrereqs.length * 31);
   const arrangedDepth = Math.min(4, arrangedCourses.length);
   const missingDepth = Math.min(4, missingRequired.length);
+  const prereqDepth = Math.min(4, missingPrereqs.length);
   const missingStack = Math.min(12, missingRequired.length);
   const radicalLayers = Math.min(6, Math.max(0, Math.ceil(missingRequired.length / 4)));
   const mutationStep = seed % 16;
-  const mutationSlots = bgmMutationSlots(arrangedCourses, missingRequired, seed);
+  const mutationSlots = bgmMutationSlots(arrangedCourses, missingRequired, missingPrereqs, seed);
   return {
     count: arrangedCourses.length,
     intensity: Math.min(1, arrangedCourses.length / 18),
@@ -1234,20 +1239,23 @@ function bgmArrangementState() {
     mutationSlots,
     mutationStepCount: mutationSlots.filter((slot) => slot.depth > 0).length,
     missingRequired: missingRequired.length,
+    missingPrereqs: missingPrereqs.length,
     arrangedDepth,
     missingDepth,
+    prereqDepth,
     missingStack,
     radicalLayers,
-    mutationDepth: Math.min(4, arrangedDepth + missingDepth),
+    mutationDepth: Math.min(4, arrangedDepth + missingDepth + prereqDepth),
     radical: Math.min(1, missingRequired.length / 4)
   };
 }
 
-function bgmMutationSlots(arrangedCourses, missingRequired, seed) {
+function bgmMutationSlots(arrangedCourses, missingRequired, missingPrereqs, seed) {
   const slots = Array.from({ length: 16 }, (_, step) => ({
     step,
     arranged: 0,
     missing: 0,
+    prereq: 0,
     depth: 0,
     seed: hashString(`${seed}|${step}`)
   }));
@@ -1276,11 +1284,12 @@ function bgmMutationSlots(arrangedCourses, missingRequired, seed) {
   };
   arrangedCourses.forEach((course, index) => assign("arranged", course, index));
   missingRequired.forEach((course, index) => assign("missing", course, index));
+  missingPrereqs.forEach((course, index) => assign("prereq", course, index));
   return slots;
 }
 
 function bgmMutationSlot(arrangement, step) {
-  return arrangement.mutationSlots?.[step % 16] || { arranged: 0, missing: 0, depth: 0, seed: arrangement.seed };
+  return arrangement.mutationSlots?.[step % 16] || { arranged: 0, missing: 0, prereq: 0, depth: 0, seed: arrangement.seed };
 }
 
 function isBgmMutationStep(arrangement, step) {
@@ -1306,6 +1315,12 @@ function arrangedMelodyOffset(profile, melodyOffset, step, arrangement) {
   if (slot.arranged >= 3) {
     offset += direction * 2;
   }
+  if (slot.prereq >= 1) {
+    offset += direction * 3;
+  }
+  if (slot.prereq >= 2) {
+    offset += direction * 2;
+  }
   if (slot.missing >= 1) {
     offset += slot.seed % 2 === 0 ? 6 : -5;
   }
@@ -1326,6 +1341,7 @@ function arrangedBassOffset(bassOffset, step, arrangement) {
     return bassOffset + direction * Math.max(1, Math.min(3, slot.depth));
   }
   if (slot.arranged >= 2) return direction * -5;
+  if (slot.prereq >= 1) return direction * -3;
   if (slot.missing >= 1) return slot.seed % 2 === 0 ? 1 : -1;
   return null;
 }
@@ -1356,6 +1372,17 @@ function harmonyForStep(profile, arrangement, step) {
       outsideTones.push(root + direction * 4);
       kind = "arrange";
       label = "履修差";
+    }
+    if (slot.prereq >= 1) {
+      voicing = [0, 3, 6, 10];
+      outsideTones.push(root + direction * 5);
+      kind = "prereq";
+      label = "前提不足";
+    }
+    if (slot.prereq >= 2) {
+      outsideTones.push(root - direction * 2);
+      kind = "prereq";
+      label = "前提不足";
     }
     if (slot.missing >= 1) {
       root += direction * 2;
@@ -1416,9 +1443,10 @@ function bgmStepAnalysis(profile, arrangement, step) {
   const mutationHit = isBgmMutationStep(arrangement, step);
   const slot = bgmMutationSlot(arrangement, step);
   const subtlePulse = mutationHit ? Math.min(0.24, slot.arranged * 0.07) : 0;
+  const prereqPulse = mutationHit ? Math.min(0.32, slot.prereq * 0.1) : 0;
   const radicalPulse = mutationHit ? Math.min(0.48, slot.missing * 0.12) : 0;
-  const dynamics = baseDynamics * (1 + subtlePulse + radicalPulse + (slot.missing > 0 ? (beatStep % 4 === 0 ? 0.24 : -0.08) : 0));
-  const arrangeNoise = mutationHit && slot.arranged > 0;
+  const dynamics = baseDynamics * (1 + subtlePulse + prereqPulse + radicalPulse + (slot.missing > 0 ? (beatStep % 4 === 0 ? 0.24 : -0.08) : 0));
+  const arrangeNoise = mutationHit && (slot.arranged > 0 || slot.prereq > 0);
   const radicalNoise = mutationHit && slot.missing > 0;
   return {
     beatStep,
@@ -3236,7 +3264,7 @@ function renderBgmRoll() {
   const analyses = Array.from({ length: 16 }, (_, step) => bgmStepAnalysis(profile, arrangement, step));
   document.querySelector("#bgmRollCourse").textContent = state.course;
   document.querySelector("#bgmRollTempo").textContent = `${profile.bpm || 120} BPM`;
-  document.querySelector("#bgmRollArrange").textContent = `履修 ${arrangement.count} / 欠損 ${arrangement.missingRequired} / 変化 ${arrangement.mutationStepCount}箇所`;
+  document.querySelector("#bgmRollArrange").textContent = `履修 ${arrangement.count} / 前提 ${arrangement.missingPrereqs} / 欠損 ${arrangement.missingRequired} / 変化 ${arrangement.mutationStepCount}箇所`;
   document.querySelector("#bgmRollRadical").textContent = `外れ値 ${arrangement.missingRequired}`;
   grid.innerHTML = "";
   appendBgmRollCell(grid, "", "bgm-roll-label");

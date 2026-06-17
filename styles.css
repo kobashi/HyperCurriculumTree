@@ -1192,6 +1192,18 @@ input {
   animation: arcadeCollect 320ms ease-out;
 }
 
+.tree-node.is-missing-required .tree-node-button {
+  border-color: #c74f4a;
+  background: linear-gradient(180deg, #fff0ef, #ffe1de);
+  box-shadow: 0 0 0 1px rgba(199, 79, 74, 0.22);
+}
+
+.tree-node.is-prereq-missing .tree-node-button {
+  border-color: #8a61c6;
+  background: linear-gradient(180deg, #f5ecff, #eadfff);
+  box-shadow: 0 0 0 1px rgba(138, 97, 198, 0.22);
+}
+
 .tree-node.fx-activate .tree-node-button {
   animation: nodeActivate 720ms cubic-bezier(0.15, 0.9, 0.2, 1.1) both;
   animation-delay: var(--fx-delay, 0ms);

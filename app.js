@@ -1792,6 +1792,19 @@ function treeRequiredClass(course, node) {
   return "";
 }
 
+function treeMissingRequiredClass(course) {
+  if (state.planned.has(course.id)) return "";
+  if (course.category === "basicRequired" || course.category === "commonRequired") return " is-missing-required";
+  if (course.category === "courseRequired" && state.course !== NO_COURSE && course.course === state.course) {
+    return " is-missing-required";
+  }
+  return "";
+}
+
+function treePrereqMissingClass(course, prereqIssues) {
+  return prereqIssues.has(course.id) ? " is-prereq-missing" : "";
+}
+
 const treeShortNameMap = new Map([
   ["フードビジネス・イングリッシュⅠ", "フードビジネス英語Ⅰ"],
   ["フードビジネス・イングリッシュⅡ", "フードビジネス英語Ⅱ"],
@@ -2553,6 +2566,29 @@ function validatePrereqs() {
   return problems;
 }
 
+function prerequisiteIssuesByCourse() {
+  const selected = selectedCourses();
+  const issues = new Map();
+  selected.forEach((course) => {
+    if (isQualificationPlanned(course)) return;
+    const required = prereqs[course.name] || [];
+    const missing = [];
+    const order = [];
+    required.forEach((requiredName) => {
+      const prereqCourse = selected.find((item) => item.key === normalizeName(requiredName));
+      if (!prereqCourse) {
+        missing.push(requiredName);
+        return;
+      }
+      if (termIndex(plannedTerm(prereqCourse)) >= termIndex(plannedTerm(course))) {
+        order.push(requiredName);
+      }
+    });
+    if (missing.length || order.length) issues.set(course.id, { missing, order });
+  });
+  return issues;
+}
+
 function capProblems() {
   const cap = state.gpa >= 3.7 ? 26 : 24;
   return TERMS.map((term) => ({ term: term.label, ...termCredits(term.id), cap }))
@@ -2817,6 +2853,7 @@ function renderTree() {
   tree.style.setProperty("--tree-grid-template", `136px repeat(${displayTerms.length}, minmax(0, 1fr))`);
   const termLabels = displayTerms.map((term) => `<div class="tree-term">${term.label}</div>`).join("");
   const connectionCounts = treeConnectionCounts(nodes);
+  const prereqIssues = prerequisiteIssuesByCourse();
   const sections = [...new Set(nodes.map((node) => node.section))]
     .sort((a, b) => {
       const aIndex = treeSectionOrder.indexOf(a);
@@ -2866,7 +2903,7 @@ function renderTree() {
               const disabled = course.category === "teacher" && !state.teacher;
               const counts = connectionCounts.get(node.id) || { incoming: 0, outgoing: 0 };
               const item = document.createElement("article");
-              item.className = `tree-node level-${node.level || "none"}${treeRequiredClass(course, node)}${tooltip ? " has-tooltip" : ""}${state.planned.has(course.id) ? " is-planned" : ""}${disabled ? " is-disabled" : ""}${state.openTreeNodeId === node.id ? " is-open" : ""}${state.showTreeMeta ? " has-meta" : ""}${state.showTreeCodes ? " has-code" : ""}${fxSequence.treeReveal ? " is-tree-reveal" : ""}${animatedCourseClass(course.id)}${filterRevealClass(course.id)}`;
+              item.className = `tree-node level-${node.level || "none"}${treeRequiredClass(course, node)}${treeMissingRequiredClass(course)}${treePrereqMissingClass(course, prereqIssues)}${tooltip ? " has-tooltip" : ""}${state.planned.has(course.id) ? " is-planned" : ""}${disabled ? " is-disabled" : ""}${state.openTreeNodeId === node.id ? " is-open" : ""}${state.showTreeMeta ? " has-meta" : ""}${state.showTreeCodes ? " has-code" : ""}${fxSequence.treeReveal ? " is-tree-reveal" : ""}${animatedCourseClass(course.id)}${filterRevealClass(course.id)}`;
               item.dataset.nodeId = node.id;
               item.dataset.courseId = course.id;
               item.dataset.incoming = counts.incoming;

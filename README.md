@@ -1,8 +1,8 @@
-# HyperCurriculumTree
+# 超履修計画2026
 
 名古屋文理大学 情報メディア学科の履修計画と卒業要件を確認するための静的Webアプリです。
 
-2026年度版 `Ver.1.01` として、カリキュラムツリー表示、卒業要件判定、演出付きUI、SE/BGM、BGM可視化を含む完成版の履修計画チェッカーです。
+2026年度版 `Ver.1.01` の release版として、カリキュラムツリー表示、卒業要件判定、演出付きUI、SE/BGM、BGM可視化を含む完成版の履修計画チェッカーです。
 
 公開URL: https://kobashi.github.io/HyperCurriculumTree/
 
@@ -51,6 +51,7 @@
 ## 版情報
 
 - 現在の公開版: `2026年度版 Ver.1.01`
+- 公開タイトル: `超履修計画2026`
 - 現在の開発正本: `main`
 - 退避した試作版: `prototype/main-before-tree`
 - 演出版の作業は `codex/playful-ux` から `main` に統合済みです。

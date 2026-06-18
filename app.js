@@ -1272,7 +1272,7 @@ function bgmCompositionKey() {
     .map((course) => course.id)
     .sort((a, b) => a.localeCompare(b))
     .join(",");
-  return `${state.course}|${selectedIds}`;
+  return `${state.course}|teacher:${state.teacher ? 1 : 0}|${selectedIds}`;
 }
 
 function bgmArrangementCacheKey() {
@@ -1280,7 +1280,7 @@ function bgmArrangementCacheKey() {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([id, term]) => `${id}:${term}`)
     .join(",");
-  return `${state.course}|${planned}`;
+  return `${state.course}|teacher:${state.teacher ? 1 : 0}|${planned}`;
 }
 
 function bgmPlaybackKey() {
@@ -1345,6 +1345,56 @@ function playBgmChord(ctx, profile, chordRoot, dynamics, voicing = null) {
       bus: "bgm"
     });
   });
+}
+
+function playBgmContextAccents(ctx, profile, step, analysis, arrangement) {
+  if (analysis.teacherAccent) {
+    const bellRoot = analysis.harmony.root + (step % 8 === 0 ? 24 : 19);
+    [0, 7].forEach((offset, index) => {
+      tone(ctx, {
+        freq: midiToFreq(profile.root, bellRoot + offset),
+        duration: 0.16,
+        type: "sine",
+        gain: (profile.chordGain || 0.008) * analysis.dynamics * (0.72 - index * 0.18),
+        delay: index * 0.028,
+        filter: 6200,
+        filterType: "bandpass",
+        q: 2.2,
+        delayMix: 0.16,
+        delayTime: 0.22,
+        delayFeedback: 0.24,
+        bus: "bgm"
+      });
+    });
+  }
+  if (analysis.otherDeptAccent) {
+    const direction = bgmMutationDirection(analysis.mutationSlot);
+    tone(ctx, {
+      freq: midiToFreq(profile.root, analysis.harmony.root + (direction > 0 ? 13 : 10) + (profile.leadOctave || 12)),
+      duration: 0.052,
+      type: "triangle",
+      gain: (profile.leadGain || 0.012) * analysis.dynamics * Math.min(0.9, 0.42 + arrangement.otherDeptCount * 0.08),
+      slide: direction * 18,
+      delay: 0.018,
+      filter: Math.max(1400, profile.filter * 0.82),
+      filterType: "bandpass",
+      q: 3.6,
+      fuzz: 0.08,
+      delayMix: 0.08,
+      delayTime: 0.13,
+      delayFeedback: 0.18,
+      bus: "bgm"
+    });
+    noiseHit(ctx, {
+      duration: 0.026,
+      gain: (profile.drumGain || 0.016) * analysis.dynamics * 0.34,
+      filter: 3600 + ((analysis.mutationSlot.seed % 5) * 480),
+      filterType: "bandpass",
+      delay: 0.006,
+      bus: "bgm",
+      seed: bgmNoiseSeed(profile, arrangement, step, "other-dept")
+    });
+  }
 }
 
 function fxLayer() {
@@ -1451,28 +1501,39 @@ function bgmArrangementState() {
   if (arcadeAudio.arrangementCacheKey === cacheKey && arcadeAudio.arrangementCache) {
     return arcadeAudio.arrangementCache;
   }
-  const arrangedCourses = selectedCourses()
+  const selected = selectedCourses();
+  const teacherCourses = selected
+    .filter((course) => course.category === "teacher")
+    .sort((a, b) => a.id.localeCompare(b.id));
+  const otherDeptCourses = selected
+    .filter((course) => course.category === "otherDept")
+    .sort((a, b) => a.id.localeCompare(b.id));
+  const arrangedCourses = selected
     .filter((course) => !isBgmRequiredCourse(course))
     .filter((course) => course.category !== "teacher")
+    .filter((course) => course.category !== "otherDept")
     .sort((a, b) => a.id.localeCompare(b.id));
   const missingRequired = allCourses.filter((course) => isBgmMissingRequiredCourse(course) && !state.planned.has(course.id));
   const missingPrereqs = [...prerequisiteIssuesByCourse()]
     .map((id) => allCourses.find((course) => course.id === id))
     .filter(Boolean)
     .sort((a, b) => a.id.localeCompare(b.id));
-  const seed = arrangedCourses.reduce((total, course, index) => {
+  const seed = [...arrangedCourses, ...otherDeptCourses].reduce((total, course, index) => {
     const idValue = [...course.id].reduce((sum, char) => sum + char.charCodeAt(0), 0);
     return total + (idValue * (index + 3));
-  }, arrangedCourses.length * 17 + missingPrereqs.length * 31);
+  }, arrangedCourses.length * 17 + otherDeptCourses.length * 23 + teacherCourses.length * 29 + (state.teacher ? 41 : 0) + missingPrereqs.length * 31);
   const arrangedDepth = Math.min(4, arrangedCourses.length);
   const missingDepth = Math.min(4, missingRequired.length);
   const prereqDepth = Math.min(4, missingPrereqs.length);
   const missingStack = Math.min(12, missingRequired.length);
   const radicalLayers = Math.min(4, Math.max(0, Math.ceil(missingRequired.length / 5)));
   const mutationStep = seed % 16;
-  const mutationSlots = bgmMutationSlots(arrangedCourses, missingRequired, missingPrereqs, seed);
+  const mutationSlots = bgmMutationSlots(arrangedCourses, missingRequired, missingPrereqs, otherDeptCourses, state.teacher, seed);
   const arrangement = {
     count: arrangedCourses.length,
+    teacherActive: state.teacher,
+    teacherCount: teacherCourses.length,
+    otherDeptCount: otherDeptCourses.length,
     intensity: Math.min(1, arrangedCourses.length / 18),
     seed,
     key: bgmCompositionKey(),
@@ -1486,7 +1547,7 @@ function bgmArrangementState() {
     prereqDepth,
     missingStack,
     radicalLayers,
-    mutationDepth: Math.min(4, arrangedDepth + missingDepth + prereqDepth),
+    mutationDepth: Math.min(4, arrangedDepth + missingDepth + prereqDepth + Math.min(2, otherDeptCourses.length) + (state.teacher ? 1 : 0)),
     radical: Math.min(1, missingRequired.length / 4)
   };
   arcadeAudio.arrangementCacheKey = cacheKey;
@@ -1494,12 +1555,14 @@ function bgmArrangementState() {
   return arrangement;
 }
 
-function bgmMutationSlots(arrangedCourses, missingRequired, missingPrereqs, seed) {
+function bgmMutationSlots(arrangedCourses, missingRequired, missingPrereqs, otherDeptCourses, teacherActive, seed) {
   const slots = Array.from({ length: 16 }, (_, step) => ({
     step,
     arranged: 0,
     missing: 0,
     prereq: 0,
+    teacher: 0,
+    otherDept: 0,
     depth: 0,
     seed: hashString(`${seed}|${step}`)
   }));
@@ -1527,13 +1590,22 @@ function bgmMutationSlots(arrangedCourses, missingRequired, missingPrereqs, seed
     slot.seed = hashString(`${slot.seed}|${course.id}|${kind}`);
   };
   arrangedCourses.forEach((course, index) => assign("arranged", course, index));
+  otherDeptCourses.forEach((course, index) => assign("otherDept", course, index));
   missingRequired.forEach((course, index) => assign("missing", course, index));
   missingPrereqs.forEach((course, index) => assign("prereq", course, index));
+  if (teacherActive) {
+    [0, 4, 8, 12].forEach((step, index) => {
+      const slot = slots[(step + (seed % 2)) % 16];
+      slot.teacher += 1;
+      slot.depth += 1;
+      slot.seed = hashString(`${slot.seed}|teacher|${index}`);
+    });
+  }
   return slots;
 }
 
 function bgmMutationSlot(arrangement, step) {
-  return arrangement.mutationSlots?.[step % 16] || { arranged: 0, missing: 0, prereq: 0, depth: 0, seed: arrangement.seed };
+  return arrangement.mutationSlots?.[step % 16] || { arranged: 0, missing: 0, prereq: 0, teacher: 0, otherDept: 0, depth: 0, seed: arrangement.seed };
 }
 
 function isBgmMutationStep(arrangement, step) {
@@ -1550,6 +1622,9 @@ function arrangedMelodyOffset(profile, melodyOffset, step, arrangement) {
   let offset = melodyOffset;
   const slot = bgmMutationSlot(arrangement, step);
   const direction = bgmMutationDirection(slot);
+  if (slot.otherDept >= 1 && slot.prereq === 0 && slot.missing === 0) {
+    offset += direction > 0 ? 1 : -1;
+  }
   if (slot.arranged >= 1 && slot.prereq === 0 && slot.missing === 0) {
     offset += direction > 0 ? 2 : -2;
   }
@@ -1582,6 +1657,9 @@ function arrangedBassOffset(bassOffset, step, arrangement) {
   const slot = bgmMutationSlot(arrangement, step);
   const direction = bgmMutationDirection(slot);
   if (bassOffset !== null && bassOffset !== undefined) {
+    if (slot.otherDept > 0 && slot.prereq === 0 && slot.missing === 0) {
+      return bassOffset + direction;
+    }
     if (slot.prereq === 0 && slot.missing === 0) {
       return bassOffset + (direction > 0 ? 2 : -2);
     }
@@ -1608,6 +1686,12 @@ function harmonyForStep(profile, arrangement, step) {
       voicing = [0, 4, 7, 9];
       kind = "arrange";
       label = "履修差";
+    }
+    if (slot.otherDept >= 1 && slot.prereq === 0 && slot.missing === 0) {
+      voicing = [0, 5, 7, 11];
+      outsideTones.push(root + direction);
+      kind = "other";
+      label = "他学科";
     }
     if (slot.arranged >= 2 && slot.prereq === 0 && slot.missing === 0) {
       voicing = [0, 2, 7, 9];
@@ -1689,10 +1773,12 @@ function bgmStepAnalysis(profile, arrangement, step) {
   const mutationHit = isBgmMutationStep(arrangement, step);
   const slot = bgmMutationSlot(arrangement, step);
   const subtlePulse = mutationHit ? Math.min(0.24, slot.arranged * 0.07) : 0;
+  const otherDeptPulse = mutationHit ? Math.min(0.22, slot.otherDept * 0.08) : 0;
+  const teacherPulse = mutationHit ? Math.min(0.14, slot.teacher * 0.05) : 0;
   const prereqPulse = mutationHit ? Math.min(0.32, slot.prereq * 0.1) : 0;
   const radicalPulse = mutationHit ? Math.min(0.48, slot.missing * 0.12) : 0;
-  const dynamics = baseDynamics * (1 + subtlePulse + prereqPulse + radicalPulse + (slot.missing > 0 ? (beatStep % 4 === 0 ? 0.24 : -0.08) : 0));
-  const arrangeNoise = mutationHit && slot.prereq > 0;
+  const dynamics = baseDynamics * (1 + subtlePulse + otherDeptPulse + teacherPulse + prereqPulse + radicalPulse + (slot.missing > 0 ? (beatStep % 4 === 0 ? 0.24 : -0.08) : 0));
+  const arrangeNoise = mutationHit && (slot.prereq > 0 || slot.otherDept > 0);
   const radicalNoise = mutationHit && slot.missing > 0;
   return {
     beatStep,
@@ -1709,6 +1795,8 @@ function bgmStepAnalysis(profile, arrangement, step) {
     dynamics,
     arrangeNoise,
     radicalNoise,
+    teacherAccent: mutationHit && slot.teacher > 0,
+    otherDeptAccent: mutationHit && slot.otherDept > 0,
     radicalLayers: radicalNoise ? Math.min(4, slot.missing) : 0,
     chordHit: patternHit(profile.chordHits, step),
     kick: patternHit(profile.kick, step),
@@ -1736,6 +1824,7 @@ function startArcadeBgm() {
         const analysis = bgmStepAnalysis(profile, arrangement, step);
 
         playBgmRhythm(ctx, profile, step, analysis.dynamics, arrangement);
+        playBgmContextAccents(ctx, profile, step, analysis, arrangement);
         if (analysis.arrangeNoise) {
           noiseHit(ctx, {
             duration: 0.018,
@@ -3908,7 +3997,7 @@ function bgmCellClass(analysis, base = "") {
   if (base) classes.push(base);
   if (analysis.radicalNoise || analysis.harmony.kind === "tritone" || analysis.harmony.kind === "diminished" || analysis.harmony.kind === "outside" || analysis.harmony.kind === "prereq" || analysis.harmony.outsideTones.length) {
     classes.push("is-radical");
-  } else if (analysis.melodyChanged || analysis.bassChanged || analysis.arrangeNoise) {
+  } else if (analysis.melodyChanged || analysis.bassChanged || analysis.arrangeNoise || analysis.teacherAccent || analysis.otherDeptAccent) {
     classes.push("is-subtle");
   } else {
     classes.push("is-active");
@@ -3945,7 +4034,7 @@ function renderBgmRoll() {
   const analyses = Array.from({ length: 16 }, (_, step) => bgmStepAnalysis(profile, arrangement, step));
   document.querySelector("#bgmRollCourse").textContent = state.course;
   document.querySelector("#bgmRollTempo").textContent = `${profile.bpm || 120} BPM`;
-  document.querySelector("#bgmRollArrange").textContent = `履修 ${arrangement.count} / 前提 ${arrangement.missingPrereqs} / 欠損 ${arrangement.missingRequired} / 変化 ${arrangement.mutationStepCount}箇所`;
+  document.querySelector("#bgmRollArrange").textContent = `履修 ${arrangement.count} / 他学科 ${arrangement.otherDeptCount} / 教職 ${arrangement.teacherActive ? "ON" : "OFF"} / 変化 ${arrangement.mutationStepCount}箇所`;
   document.querySelector("#bgmRollRadical").textContent = `外れ値 ${arrangement.missingRequired}`;
   grid.innerHTML = "";
   appendBgmRollCell(grid, "", "bgm-roll-label");
@@ -3974,13 +4063,15 @@ function renderBgmRoll() {
       analysis.kick ? "K" : "",
       analysis.snare ? "S" : "",
       analysis.hat ? "H" : "",
+      analysis.teacherAccent ? "T" : "",
+      analysis.otherDeptAccent ? "O" : "",
       analysis.arrangeNoise ? "+" : "",
       analysis.radicalNoise ? "!" : ""
     ].filter(Boolean).join("");
     return {
       text: hits,
       className: hits ? bgmCellClass(analysis, "bgm-roll-rhythm") : "bgm-roll-cell is-empty",
-      title: analysis.radicalNoise ? "外れ値リズム" : analysis.arrangeNoise ? "追加リズム" : "リズム"
+      title: analysis.teacherAccent ? "教職アクセント" : analysis.otherDeptAccent ? "他学科アクセント" : analysis.radicalNoise ? "外れ値リズム" : analysis.arrangeNoise ? "追加リズム" : "リズム"
     };
   }));
   appendBgmRollRow(grid, "外音", analyses.map((analysis) => ({

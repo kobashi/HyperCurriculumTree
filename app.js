@@ -3300,9 +3300,9 @@ function renderPlan() {
           ${courses.map((course, index) => {
             const delay = planAnimationDelay(course.id, startDelay + (index * 24));
             return `
-            <div class="planned-course${isCapExcludedInPlan(course) ? " cap-excluded" : ""}${planTransitionClass(course.id)}" data-course-id="${course.id}" style="--fx-delay:${delay}ms;">
+            <div class="planned-course ${catalogCategoryClass(course)}${isCapExcludedInPlan(course) ? " cap-excluded" : ""}${planTransitionClass(course.id)}" data-course-id="${course.id}" style="--fx-delay:${delay}ms;">
               <span>${course.name}</span>
-              <small title="${categoryTitle(course.category)}"><span class="planned-course-category ${plannedCategoryClass(course)}">${categoryLabels[course.category]}</span><span class="planned-course-credit">${course.credits}単位</span>${isRecognitionPlanned(course) ? `<span class="planned-course-method">${recognitionMethodLabel(course)}</span>` : ""}${course.category === "teacher" ? `<span class="planned-course-flag">要件外</span>` : ""}${isCapExcludedInPlan(course) ? `<span class="planned-course-flag">上限外</span>` : ""}</small>
+              <small title="${categoryTitle(course.category)}">${categoryLabels[course.category]} / <span class="planned-course-credit">${course.credits}単位</span>${isRecognitionPlanned(course) ? ` / ${recognitionMethodLabel(course)}` : ""}${course.category === "teacher" ? " / 要件外" : ""}${isCapExcludedInPlan(course) ? " / 上限外" : ""}</small>
             </div>
           `;
           }).join("")}

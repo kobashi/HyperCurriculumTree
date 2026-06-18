@@ -1985,8 +1985,30 @@ function catalogCategoryClass(course) {
   return "tree-section-common";
 }
 
+const specializedPrimaryAffinities = new Map([
+  ["ゲームプログラミング", "情報システム"],
+  ["サウンドプログラミング", "サウンド制作"],
+  ["ドキュメンタリー・シナリオ", "映像メディア"],
+  ["ＣＭ制作", "映像メディア"],
+  ["ドキュメンタリー演習", "映像メディア"],
+  ["放送・配信論", "映像メディア"],
+  ["写真技術", "映像メディア"],
+  ["照明技術", "サウンド制作"],
+  ["舞台制作", "サウンド制作"],
+  ["サウンドプロダクション", "サウンド制作"],
+  ["音響制作演習", "サウンド制作"],
+  ["ＣＡＤ", "メディアデザイン"],
+  ["メディア文化論", "メディアデザイン"],
+  ["デジタルファブリケーション", "メディアデザイン"],
+  ["暮しとデザイン", "メディアデザイン"],
+  ["Ｗｅｂ解析", "メディアデザイン"],
+  ["アート&デザイン演習", "メディアデザイン"]
+]);
+
 function catalogSpecializedAffinity(course) {
   if (course.category !== "specializedElective") return null;
+  const primaryAffinity = specializedPrimaryAffinities.get(course.name);
+  if (primaryAffinity) return primaryAffinity;
   const affiliations = professionalSubjectAffiliations(course);
   const orderedAffiliations = affiliations.filter((affiliation) => affiliation !== "common");
   if (orderedAffiliations.length) {
@@ -1994,6 +2016,18 @@ function catalogSpecializedAffinity(course) {
   }
   if (affiliations.includes("common")) return "common";
   return null;
+}
+
+function treeNodeCategoryClass(course, node) {
+  if (course.category === "basicRequired") return "tree-section-basic-required";
+  if (course.category === "basicElective") return "tree-section-basic-elective";
+  if (course.category === "commonRequired" || node.section === "コース共通") return "tree-section-common";
+  const sectionCourse = node.section?.replace(/コース$/, "");
+  if (sectionCourse === "情報システム") return "tree-section-system";
+  if (sectionCourse === "映像メディア") return "tree-section-movie";
+  if (sectionCourse === "サウンド制作") return "tree-section-sound";
+  if (sectionCourse === "メディアデザイン") return "tree-section-design";
+  return catalogCategoryClass(course);
 }
 
 const capExcludedCourseNames = new Set([
@@ -2280,6 +2314,7 @@ function treeMissingRequiredClass(course) {
 }
 
 function treePrereqMissingClass(course, prereqIssues) {
+  if (treeMissingRequiredClass(course)) return "";
   return prereqIssues.has(course.id) ? " is-prereq-missing" : "";
 }
 
@@ -3034,18 +3069,48 @@ function termIndex(term) {
   return TERMS.findIndex((item) => item.id === term);
 }
 
+function isPrerequisiteIssueCourse(course) {
+  return [
+    "basicRequired",
+    "basicElective",
+    "commonRequired",
+    "courseRequired",
+    "specializedElective"
+  ].includes(course.category);
+}
+
 function validatePrereqs() {
   const selected = selectedCourses();
   const problems = [];
+  const seen = new Set();
+
+  function appendMissingPrereqs(courseName) {
+    const required = prereqs[courseName] || [];
+    required.forEach((requiredName) => {
+      const prereqCourses = allCourses.filter((item) => item.key === normalizeName(requiredName));
+      if (!prereqCourses.length) return;
+      if (prereqCourses.some((item) => state.planned.has(item.id))) return;
+      prereqCourses.forEach((prereqCourse) => {
+        if (!isPrerequisiteIssueCourse(prereqCourse)) return;
+        const issueKey = `${courseName}::${prereqCourse.id}`;
+        if (seen.has(issueKey)) return;
+        seen.add(issueKey);
+        problems.push(`${courseName}: ${requiredName} が未配置`);
+        appendMissingPrereqs(prereqCourse.name);
+      });
+    });
+  }
+
   selected.forEach((course) => {
     if (isQualificationPlanned(course)) return;
     const required = prereqs[course.name] || [];
     required.forEach((requiredName) => {
-      if (!hasCourseByName(requiredName)) {
+      const prereqCourse = selected.find((item) => item.key === normalizeName(requiredName));
+      if (!prereqCourse) {
         problems.push(`${course.name}: ${requiredName} が未配置`);
+        appendMissingPrereqs(requiredName);
         return;
       }
-      const prereqCourse = selected.find((item) => item.key === normalizeName(requiredName));
       if (prereqCourse && termIndex(plannedTerm(prereqCourse)) >= termIndex(plannedTerm(course))) {
         problems.push(`${course.name}: ${requiredName} を前の学期に配置`);
       }
@@ -3057,23 +3122,29 @@ function validatePrereqs() {
 function prerequisiteIssuesByCourse() {
   const selected = selectedCourses();
   const issues = new Set();
+  const visited = new Set();
+
+  function collectMissingPrereq(course) {
+    if (!course || visited.has(course.id)) return;
+    visited.add(course.id);
+    if (!isPrerequisiteIssueCourse(course)) return;
+    if (!state.planned.has(course.id)) issues.add(course.id);
+    const nestedRequired = prereqs[course.name] || [];
+    nestedRequired.forEach((requiredName) => {
+      const nestedCourses = allCourses.filter((item) => item.key === normalizeName(requiredName));
+      if (!nestedCourses.length) return;
+      if (nestedCourses.some((item) => state.planned.has(item.id))) return;
+      nestedCourses.forEach(collectMissingPrereq);
+    });
+  }
+
   selected.forEach((course) => {
     if (isQualificationPlanned(course)) return;
     const required = prereqs[course.name] || [];
     required.forEach((requiredName) => {
       const prereqCourses = allCourses.filter((item) => item.key === normalizeName(requiredName));
       if (prereqCourses.some((item) => state.planned.has(item.id))) return;
-      prereqCourses.forEach((prereqCourse) => {
-        if (
-          prereqCourse.category !== "basicElective" &&
-          prereqCourse.category !== "specializedElective" &&
-          prereqCourse.category !== "courseRequired"
-        ) {
-          return;
-        }
-        if (prereqCourse.category === "courseRequired" && prereqCourse.course === state.course) return;
-        issues.add(prereqCourse.id);
-      });
+      prereqCourses.forEach(collectMissingPrereq);
     });
   });
   return issues;
@@ -3141,7 +3212,7 @@ function buildCatalogCard(course, prereqIssues) {
   const tagTexts = [categoryLabels[course.category], course.course, termTag].filter(Boolean);
   tagTexts.forEach((text, index) => {
     const tag = document.createElement("span");
-    tag.className = `tag ${index === 0 ? catalogCategoryClass(course) : ""}`;
+    tag.className = "tag";
     tag.textContent = text;
     if (index === 0) tag.title = categoryTitle(course.category);
     if (text === "履修/資格") tag.title = "科目履修 / 資格取得";
@@ -3448,7 +3519,7 @@ function renderTree() {
               const disabled = course.category === "teacher" && !state.teacher;
               const counts = connectionCounts.get(node.id) || { incoming: 0, outgoing: 0 };
               const item = document.createElement("article");
-              item.className = `tree-node level-${node.level || "none"}${treeRequiredClass(course, node)}${treeMissingRequiredClass(course)}${treePrereqMissingClass(course, prereqIssues)}${tooltip ? " has-tooltip" : ""}${state.planned.has(course.id) ? " is-planned" : ""}${disabled ? " is-disabled" : ""}${state.openTreeNodeId === node.id ? " is-open" : ""}${state.showTreeMeta ? " has-meta" : ""}${state.showTreeCodes ? " has-code" : ""}${fxSequence.treeReveal ? " is-tree-reveal" : ""}${animatedCourseClass(course.id)}${filterRevealClass(course.id)}`;
+              item.className = `tree-node ${treeNodeCategoryClass(course, node)} level-${node.level || "none"}${treeRequiredClass(course, node)}${treeMissingRequiredClass(course)}${treePrereqMissingClass(course, prereqIssues)}${tooltip ? " has-tooltip" : ""}${state.planned.has(course.id) ? " is-planned" : ""}${disabled ? " is-disabled" : ""}${state.openTreeNodeId === node.id ? " is-open" : ""}${state.showTreeMeta ? " has-meta" : ""}${state.showTreeCodes ? " has-code" : ""}${fxSequence.treeReveal ? " is-tree-reveal" : ""}${animatedCourseClass(course.id)}${filterRevealClass(course.id)}`;
               item.dataset.nodeId = node.id;
               item.dataset.courseId = course.id;
               item.dataset.incoming = counts.incoming;

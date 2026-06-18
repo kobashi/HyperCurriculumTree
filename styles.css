@@ -964,81 +964,126 @@ input {
 }
 
 .course-card {
+  --course-card-border: var(--line);
+  --course-card-bg: var(--surface-strong);
+  --course-card-planned-border: var(--brand);
+  --course-card-planned-bg: #e7fbf7;
   display: grid;
   gap: 8px;
   padding: 10px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--course-card-border);
+  border-left: 6px solid var(--course-card-border);
   border-radius: 8px;
-  background: var(--surface-strong);
+  background: var(--course-card-bg);
   break-inside: avoid-column;
   width: 100%;
   margin: 0 0 8px;
-  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background-color 160ms ease;
 }
 
 .course-card.tree-section-common {
-  border-left: 6px solid #7c878b;
+  --course-card-border: #7c878b;
+  --course-card-bg: #f4f6f6;
+  --course-card-planned-border: #5f6a6e;
+  --course-card-planned-bg: #dfe5e6;
 }
 
 .course-card.tree-section-basic-required {
-  border-left: 6px solid #4a91bd;
+  --course-card-border: #4a91bd;
+  --course-card-bg: #edf6fc;
+  --course-card-planned-border: #2f79a9;
+  --course-card-planned-bg: #d3e9f7;
 }
 
 .course-card.tree-section-basic-elective {
-  border-left: 6px solid #9cae42;
+  --course-card-border: #9cae42;
+  --course-card-bg: #f5f8e7;
+  --course-card-planned-border: #7f9227;
+  --course-card-planned-bg: #e8efc4;
 }
 
 .course-card.tree-section-system {
-  border-left: 6px solid #26947b;
+  --course-card-border: #26947b;
+  --course-card-bg: #e8f6f2;
+  --course-card-planned-border: #147a63;
+  --course-card-planned-bg: #c9eadd;
 }
 
 .course-card.tree-section-movie {
-  border-left: 6px solid #8dbd3d;
+  --course-card-border: #8dbd3d;
+  --course-card-bg: #f0f8df;
+  --course-card-planned-border: #6f9e22;
+  --course-card-planned-bg: #dcedb7;
 }
 
 .course-card.tree-section-sound {
-  border-left: 6px solid #e1b72c;
+  --course-card-border: #e1b72c;
+  --course-card-bg: #fff8d6;
+  --course-card-planned-border: #c29212;
+  --course-card-planned-bg: #f7e294;
 }
 
 .course-card.tree-section-design {
-  border-left: 6px solid #d69332;
+  --course-card-border: #d69332;
+  --course-card-bg: #fff1dd;
+  --course-card-planned-border: #b87216;
+  --course-card-planned-bg: #f6d1a0;
 }
 
 .course-card.tree-section-specialized {
-  border-left: 6px solid #7364b8;
+  --course-card-border: #7364b8;
+  --course-card-bg: #f0ecfb;
+  --course-card-planned-border: #5c4ba1;
+  --course-card-planned-bg: #ddd3f3;
 }
 
 .course-card.tree-section-common-soft {
-  border-left: 6px solid #a9b2b5;
-  background: #f4f7f6;
+  --course-card-border: #a9b2b5;
+  --course-card-bg: #f4f7f6;
+  --course-card-planned-border: #7c878b;
+  --course-card-planned-bg: #e1e7e7;
 }
 
 .course-card.tree-section-system-soft {
-  border-left: 6px solid #77b7a6;
-  background: #edf8f4;
+  --course-card-border: #77b7a6;
+  --course-card-bg: #edf8f4;
+  --course-card-planned-border: #26947b;
+  --course-card-planned-bg: #cfeee3;
 }
 
 .course-card.tree-section-movie-soft {
-  border-left: 6px solid #b9d97f;
-  background: #f4f9e7;
+  --course-card-border: #b9d97f;
+  --course-card-bg: #f4f9e7;
+  --course-card-planned-border: #8dbd3d;
+  --course-card-planned-bg: #e2f0bf;
 }
 
 .course-card.tree-section-sound-soft {
-  border-left: 6px solid #edd46c;
-  background: #fffbe9;
+  --course-card-border: #edd46c;
+  --course-card-bg: #fffbe9;
+  --course-card-planned-border: #e1b72c;
+  --course-card-planned-bg: #f9e9a8;
 }
 
 .course-card.tree-section-design-soft {
-  border-left: 6px solid #e4b77c;
-  background: #fff6e8;
+  --course-card-border: #e4b77c;
+  --course-card-bg: #fff6e8;
+  --course-card-planned-border: #d69332;
+  --course-card-planned-bg: #f8d8ae;
 }
 
 .course-card.tree-section-other {
-  border-left: 6px solid #7281cf;
+  --course-card-border: #7281cf;
+  --course-card-bg: #f0f2fb;
+  --course-card-planned-border: #5868ba;
+  --course-card-planned-bg: #dce2f6;
 }
 
 .course-card.tree-section-teacher {
-  border-left: 6px solid #8a61c6;
+  --course-card-border: #8a61c6;
+  --course-card-bg: #f4edff;
+  --course-card-planned-border: #7349b4;
+  --course-card-planned-bg: #e5d4fb;
 }
 
 .course-card:hover {
@@ -1047,22 +1092,25 @@ input {
 }
 
 .course-card.is-planned {
-  border-color: rgba(20, 108, 104, 0.55);
-  background: linear-gradient(180deg, #e7fbf7, #edf8f6);
+  border-color: var(--course-card-planned-border);
+  border-left-color: var(--course-card-planned-border);
+  background: var(--course-card-planned-bg);
   box-shadow: 0 0 0 1px rgba(66, 215, 210, 0.14) inset, 0 0 20px rgba(66, 215, 210, 0.12);
   animation: arcadeCollect 320ms ease-out;
 }
 
-.course-card.is-missing-required {
-  border-color: #c74f4a;
-  background: linear-gradient(180deg, #fff2f1, #ffe6e4);
-  box-shadow: 0 0 0 1px rgba(199, 79, 74, 0.18) inset, 0 0 20px rgba(199, 79, 74, 0.1);
-}
-
 .course-card.is-prereq-missing {
   border-color: #8a61c6;
-  background: linear-gradient(180deg, #f6efff, #ede0ff);
+  border-left-color: #8a61c6;
+  background: #ede0ff;
   box-shadow: 0 0 0 1px rgba(138, 97, 198, 0.18) inset, 0 0 20px rgba(138, 97, 198, 0.1);
+}
+
+.course-card.is-missing-required {
+  border-color: #c74f4a;
+  border-left-color: #c74f4a;
+  background: #ffe6e4;
+  box-shadow: 0 0 0 1px rgba(199, 79, 74, 0.18) inset, 0 0 20px rgba(199, 79, 74, 0.1);
 }
 
 .course-card.fx-activate {
@@ -1138,89 +1186,10 @@ input {
   font-weight: 700;
 }
 
-.tag.tree-section-common {
-  background: #eef0f1;
-  color: #5c666a;
-}
-
-.tag.tree-section-basic-required {
-  background: #e9f3fb;
-  color: #245c82;
-}
-
-.tag.tree-section-basic-elective {
-  background: #f2f6df;
-  color: #66741c;
-}
-
-.tag.tree-section-system {
-  background: #e3f4ef;
-  color: #1e6958;
-}
-
-.tag.tree-section-movie {
-  background: #edf7d9;
-  color: #55751f;
-}
-
-.tag.tree-section-sound {
-  background: #fff8bd;
-  color: #8f7012;
-}
-
-.tag.tree-section-design {
-  background: #fde8c7;
-  color: #8e5c17;
-}
-
-.tag.tree-section-specialized {
-  background: #ece8f7;
-  color: #6254a0;
-}
-
-.tag.tree-section-other {
-  background: #edf0fa;
-  color: #5864a8;
-}
-
-.tag.tree-section-teacher {
-  background: #f0e8ff;
-  color: #6b4e9e;
-}
-
-.tag.tree-section-common-soft {
-  background: #f4f7f6;
-  color: #667074;
-}
-
-.tag.tree-section-system-soft {
-  background: #edf8f4;
-  color: #2c786a;
-}
-
-.tag.tree-section-movie-soft {
-  background: #f4f9e7;
-  color: #6a8a38;
-}
-
-.tag.tree-section-sound-soft {
-  background: #fffbe9;
-  color: #8d7420;
-}
-
-.tag.tree-section-design-soft {
-  background: #fff6e8;
-  color: #9a6b22;
-}
-
-.tag.teacher {
+.tag.teacher,
+.tag.qualification {
   background: #e4e9e8;
   color: var(--muted);
-}
-
-.tag.qualification {
-  background: #e8edf7;
-  color: #3f5f99;
 }
 
 .course-actions {
@@ -1562,6 +1531,10 @@ input {
 }
 
 .tree-node {
+  --tree-node-border: rgba(23, 33, 37, 0.3);
+  --tree-node-bg: #fff;
+  --tree-node-planned-border: var(--brand);
+  --tree-node-planned-bg: #d9f7f2;
   position: relative;
   z-index: 3;
 }
@@ -1577,14 +1550,119 @@ input {
   width: 100%;
   min-height: 0;
   padding: 5px 9px;
-  border: 1.5px solid rgba(23, 33, 37, 0.3);
-  border-color: rgba(23, 33, 37, 0.3);
+  border: 1.5px solid var(--tree-node-border);
+  border-color: var(--tree-node-border);
   border-radius: 6px;
-  background: #fff;
+  background: var(--tree-node-bg);
   text-align: left;
   align-items: start;
   cursor: default;
   transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background-color 160ms ease;
+}
+
+.tree-node.tree-section-common {
+  --tree-node-border: #7c878b;
+  --tree-node-bg: #f4f6f6;
+  --tree-node-planned-border: #5f6a6e;
+  --tree-node-planned-bg: #dfe5e6;
+}
+
+.tree-node.tree-section-basic-required {
+  --tree-node-border: #4a91bd;
+  --tree-node-bg: #edf6fc;
+  --tree-node-planned-border: #2f79a9;
+  --tree-node-planned-bg: #d3e9f7;
+}
+
+.tree-node.tree-section-basic-elective {
+  --tree-node-border: #9cae42;
+  --tree-node-bg: #f5f8e7;
+  --tree-node-planned-border: #7f9227;
+  --tree-node-planned-bg: #e8efc4;
+}
+
+.tree-node.tree-section-system {
+  --tree-node-border: #26947b;
+  --tree-node-bg: #e8f6f2;
+  --tree-node-planned-border: #147a63;
+  --tree-node-planned-bg: #c9eadd;
+}
+
+.tree-node.tree-section-movie {
+  --tree-node-border: #8dbd3d;
+  --tree-node-bg: #f0f8df;
+  --tree-node-planned-border: #6f9e22;
+  --tree-node-planned-bg: #dcedb7;
+}
+
+.tree-node.tree-section-sound {
+  --tree-node-border: #e1b72c;
+  --tree-node-bg: #fff8d6;
+  --tree-node-planned-border: #c29212;
+  --tree-node-planned-bg: #f7e294;
+}
+
+.tree-node.tree-section-design {
+  --tree-node-border: #d69332;
+  --tree-node-bg: #fff1dd;
+  --tree-node-planned-border: #b87216;
+  --tree-node-planned-bg: #f6d1a0;
+}
+
+.tree-node.tree-section-specialized {
+  --tree-node-border: #7364b8;
+  --tree-node-bg: #f0ecfb;
+  --tree-node-planned-border: #5c4ba1;
+  --tree-node-planned-bg: #ddd3f3;
+}
+
+.tree-node.tree-section-common-soft {
+  --tree-node-border: #a9b2b5;
+  --tree-node-bg: #f4f7f6;
+  --tree-node-planned-border: #7c878b;
+  --tree-node-planned-bg: #e1e7e7;
+}
+
+.tree-node.tree-section-system-soft {
+  --tree-node-border: #77b7a6;
+  --tree-node-bg: #edf8f4;
+  --tree-node-planned-border: #26947b;
+  --tree-node-planned-bg: #cfeee3;
+}
+
+.tree-node.tree-section-movie-soft {
+  --tree-node-border: #b9d97f;
+  --tree-node-bg: #f4f9e7;
+  --tree-node-planned-border: #8dbd3d;
+  --tree-node-planned-bg: #e2f0bf;
+}
+
+.tree-node.tree-section-sound-soft {
+  --tree-node-border: #edd46c;
+  --tree-node-bg: #fffbe9;
+  --tree-node-planned-border: #e1b72c;
+  --tree-node-planned-bg: #f9e9a8;
+}
+
+.tree-node.tree-section-design-soft {
+  --tree-node-border: #e4b77c;
+  --tree-node-bg: #fff6e8;
+  --tree-node-planned-border: #d69332;
+  --tree-node-planned-bg: #f8d8ae;
+}
+
+.tree-node.tree-section-other {
+  --tree-node-border: #7281cf;
+  --tree-node-bg: #f0f2fb;
+  --tree-node-planned-border: #5868ba;
+  --tree-node-planned-bg: #dce2f6;
+}
+
+.tree-node.tree-section-teacher {
+  --tree-node-border: #8a61c6;
+  --tree-node-bg: #f4edff;
+  --tree-node-planned-border: #7349b4;
+  --tree-node-planned-bg: #e5d4fb;
 }
 
 .tree-node.has-tooltip .tree-node-button {
@@ -1631,23 +1709,26 @@ input {
   box-shadow: 0 0 0 1px rgba(214, 147, 50, 0.2);
 }
 
-.tree-node-button[aria-expanded="true"],
 .tree-node.is-planned .tree-node-button {
-  border-color: var(--brand);
-  background: linear-gradient(180deg, #d9f7f2, #c9ece5);
+  border-color: var(--tree-node-planned-border);
+  background: var(--tree-node-planned-bg);
   animation: arcadeCollect 320ms ease-out;
 }
 
-.tree-node.is-missing-required .tree-node-button {
-  border-color: #c74f4a;
-  background: linear-gradient(180deg, #fff0ef, #ffe1de);
-  box-shadow: 0 0 0 1px rgba(199, 79, 74, 0.22);
+.tree-node-button[aria-expanded="true"] {
+  box-shadow: 0 0 0 2px rgba(20, 108, 104, 0.16);
 }
 
 .tree-node.is-prereq-missing .tree-node-button {
   border-color: #8a61c6;
-  background: linear-gradient(180deg, #f5ecff, #eadfff);
+  background: #eadfff;
   box-shadow: 0 0 0 1px rgba(138, 97, 198, 0.22);
+}
+
+.tree-node.is-missing-required .tree-node-button {
+  border-color: #c74f4a;
+  background: #ffe1de;
+  box-shadow: 0 0 0 1px rgba(199, 79, 74, 0.22);
 }
 
 .tree-node.fx-activate .tree-node-button {

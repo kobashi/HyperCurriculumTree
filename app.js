@@ -3376,10 +3376,19 @@ function renderPlan() {
         <div class="planned-list">
           ${courses.map((course, index) => {
             const delay = planAnimationDelay(course.id, startDelay + (index * 24));
+            const isOpen = state.openCourseId === course.id;
             return `
-            <div class="planned-course ${catalogCategoryClass(course)}${isCapExcludedInPlan(course) ? " cap-excluded" : ""}${planTransitionClass(course.id)}" data-course-id="${course.id}" style="--fx-delay:${delay}ms;">
+            <div class="planned-course ${catalogCategoryClass(course)}${isCapExcludedInPlan(course) ? " cap-excluded" : ""}${planTransitionClass(course.id)}${isOpen ? " is-open" : ""}" data-course-id="${course.id}" role="button" tabindex="0" aria-expanded="${isOpen ? "true" : "false"}" aria-label="${course.name}の履修時期を選択${state.planned.has(course.id) ? `: ${plannedLabel(course)}` : ""}" style="--fx-delay:${delay}ms;">
               <span>${course.name}</span>
               <small title="${categoryTitle(course.category)}">${categoryLabels[course.category]} / <span class="planned-course-credit">${course.credits}単位</span>${isRecognitionPlanned(course) ? ` / ${recognitionMethodLabel(course)}` : ""}${course.category === "teacher" ? " / 要件外" : ""}${isCapExcludedInPlan(course) ? " / 上限外" : ""}</small>
+              ${isOpen ? `
+              <div class="course-menu planned-course-menu">
+                <select aria-label="${course.name}の配置">
+                  ${optionMarkupForCourse(course)}
+                </select>
+                <button type="button" class="remove-button" aria-label="${course.name}を外す">×</button>
+              </div>
+              ` : ""}
             </div>
           `;
           }).join("")}
@@ -3388,6 +3397,39 @@ function renderPlan() {
     });
     grid.appendChild(column);
   }
+
+  grid.querySelectorAll(".planned-course").forEach((item) => {
+    const courseId = item.dataset.courseId;
+    const course = allCourses.find((entry) => entry.id === courseId);
+    if (!course) return;
+    item.addEventListener("click", (event) => {
+      if (event.target.closest(".course-menu")) return;
+      state.openCourseId = state.openCourseId === course.id ? null : course.id;
+      state.openTreeNodeId = null;
+      triggerArcadeFeedback("switch", item);
+      render();
+    });
+    item.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      state.openCourseId = state.openCourseId === course.id ? null : course.id;
+      state.openTreeNodeId = null;
+      triggerArcadeFeedback("switch", item);
+      render();
+    });
+    const menu = item.querySelector(".planned-course-menu");
+    if (!menu) return;
+    menu.addEventListener("click", (event) => event.stopPropagation());
+    const select = menu.querySelector("select");
+    const remove = menu.querySelector(".remove-button");
+    if (select) {
+      select.value = state.planned.get(course.id) || "none";
+      select.addEventListener("change", (event) => setPlanned(course.id, event.target.value, { source: select }));
+    }
+    if (remove) {
+      remove.addEventListener("click", () => setPlanned(course.id, "none", { source: remove }));
+    }
+  });
 }
 
 function sectionClass(section) {

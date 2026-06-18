@@ -750,6 +750,7 @@ const state = {
   openCourseId: null,
   openTreeNodeId: null,
   planned: new Map(),
+  plannedCourseAffinities: new Map(),
   teacherAdded: new Set()
 };
 
@@ -2246,12 +2247,9 @@ function professionalSubjectAffiliations(course) {
 function professionalSubjectBreakdown(selected) {
   const breakdown = emptyProfessionalSubjectBreakdown();
   selected.forEach((course) => {
-    const affiliations = professionalSubjectAffiliations(course);
-    if (!affiliations.length) return;
-    const creditShare = course.credits / affiliations.length;
-    affiliations.forEach((affiliation) => {
-      breakdown[affiliation] = (breakdown[affiliation] || 0) + creditShare;
-    });
+    const affiliation = plannedAffiliationForCourse(course);
+    if (!affiliation) return;
+    breakdown[affiliation] = (breakdown[affiliation] || 0) + course.credits;
   });
   return breakdown;
 }
@@ -2496,6 +2494,7 @@ function validatePlannedCourse(course) {
   const currentValue = state.planned.get(course.id);
   if (currentValue && !isValidPlannedValue(course, currentValue)) {
     state.planned.delete(course.id);
+    state.plannedCourseAffinities.delete(course.id);
     state.teacherAdded.delete(course.id);
   }
 }
@@ -2520,8 +2519,26 @@ function visibleCourses() {
   });
 }
 
+function preferredPlannedCourse(current, candidate) {
+  if (current.category === "teacher" || candidate.category === "teacher") return current;
+  if (state.course !== NO_COURSE) {
+    if (candidate.course === state.course && current.course !== state.course) return candidate;
+    if (current.course === state.course && candidate.course !== state.course) return current;
+  }
+  const currentAffinity = state.plannedCourseAffinities.get(current.id);
+  const candidateAffinity = state.plannedCourseAffinities.get(candidate.id);
+  if (candidate.course && candidate.course === candidateAffinity && current.course !== currentAffinity) return candidate;
+  return current;
+}
+
 function selectedCourses() {
-  return allCourses.filter((course) => state.planned.has(course.id));
+  const selected = new Map();
+  allCourses.filter((course) => state.planned.has(course.id)).forEach((course) => {
+    const key = course.category === "teacher" ? course.id : course.key;
+    const existing = selected.get(key);
+    selected.set(key, existing ? preferredPlannedCourse(existing, course) : course);
+  });
+  return [...selected.values()];
 }
 
 function plannedTerm(course) {
@@ -2535,6 +2552,26 @@ function plannedMethod(course) {
 
 function snapshotPlanned() {
   return new Map(state.planned.entries());
+}
+
+function treeSectionAffiliation(section) {
+  if (section === "コース共通") return "common";
+  const courseName = section?.replace(/コース$/, "");
+  return COURSES.includes(courseName) && courseName !== NO_COURSE ? courseName : null;
+}
+
+function plannedAffiliationForCourse(course) {
+  if (course.category === "commonRequired") return "common";
+  if (course.category === "courseRequired") return course.course;
+  if (course.category !== "specializedElective") return null;
+  const affiliations = professionalSubjectAffiliations(course);
+  if (affiliations.includes("common")) return "common";
+  if (state.course !== NO_COURSE && affiliations.includes(state.course)) return state.course;
+  const plannedAffinity = state.plannedCourseAffinities.get(course.id);
+  if (plannedAffinity && affiliations.includes(plannedAffinity)) return plannedAffinity;
+  const catalogAffinity = catalogSpecializedAffinity(course);
+  if (catalogAffinity && affiliations.includes(catalogAffinity)) return catalogAffinity;
+  return affiliations.find((affiliation) => affiliation !== "common") || affiliations[0] || null;
 }
 
 function snapshotTermValue(value) {
@@ -2847,10 +2884,12 @@ function setPlanned(courseId, term, options = {}) {
   const sharedCourses = sharedPlanCourses(course);
   const beforePlan = snapshotPlanned();
   const before = course ? state.planned.get(course.id) : undefined;
+  const sourceAffinity = options.affinity || (course ? plannedAffiliationForCourse(course) : null);
   let feedback = null;
   if (term === "none") {
     const removed = sharedCourses.reduce((count, item) => {
       if (!state.planned.delete(item.id)) return count;
+      state.plannedCourseAffinities.delete(item.id);
       state.teacherAdded.delete(item.id);
       return count + 1;
     }, 0);
@@ -2861,14 +2900,28 @@ function setPlanned(courseId, term, options = {}) {
     const recognition = parseRecognitionValue(term);
     const valid = course?.qualificationEligible && recognitionTermsForMethod(course, recognition.method).some((item) => item.id === recognition.term);
     if (valid) {
-      sharedCourses.forEach((item) => state.planned.set(item.id, term));
+      sharedCourses.forEach((item) => {
+        state.planned.set(item.id, term);
+        if (sourceAffinity) {
+          state.plannedCourseAffinities.set(item.id, sourceAffinity);
+        } else {
+          state.plannedCourseAffinities.delete(item.id);
+        }
+      });
       feedback = before === term ? null : "confirm";
     } else {
       feedback = "error";
     }
   } else {
     if (course && isValidPlannedValue(course, term)) {
-      sharedCourses.forEach((item) => state.planned.set(item.id, term));
+      sharedCourses.forEach((item) => {
+        state.planned.set(item.id, term);
+        if (sourceAffinity) {
+          state.plannedCourseAffinities.set(item.id, sourceAffinity);
+        } else {
+          state.plannedCourseAffinities.delete(item.id);
+        }
+      });
       feedback = before === term ? null : "confirm";
     } else if (course) {
       feedback = "error";
@@ -2915,6 +2968,8 @@ function addTeacherPlanCourses(options = {}) {
   teacherPlanCourses().forEach((course) => {
     if (state.planned.has(course.id)) return;
     state.planned.set(course.id, openingTermForCourse(course));
+    const affinity = plannedAffiliationForCourse(course);
+    if (affinity) state.plannedCourseAffinities.set(course.id, affinity);
     state.teacherAdded.add(course.id);
     added += 1;
   });
@@ -2926,9 +2981,10 @@ function removeTeacherPlanCourses() {
   const beforePlan = snapshotPlanned();
   let removed = 0;
   allCourses.forEach((course) => {
-    const shouldRemove = course.category === "teacher" || state.teacherAdded.has(course.id);
+    const shouldRemove = course.category === "teacher";
     if (!shouldRemove || !state.planned.has(course.id)) return;
     state.planned.delete(course.id);
+    state.plannedCourseAffinities.delete(course.id);
     removed += 1;
   });
   state.teacherAdded.clear();
@@ -2950,6 +3006,8 @@ function autoFill(options = {}) {
     if (!isCoreRequired && !isTeacherRequired) return;
     if (state.planned.has(course.id)) return;
     state.planned.set(course.id, openingTermForCourse(course));
+    const affinity = plannedAffiliationForCourse(course);
+    if (affinity) state.plannedCourseAffinities.set(course.id, affinity);
     if (isTeacherRequired) state.teacherAdded.add(course.id);
     added += 1;
   });
@@ -2979,6 +3037,7 @@ function clearPlan() {
   planFx.clearTimer = window.setTimeout(() => {
     planFx.clearTimer = null;
     state.planned.clear();
+    state.plannedCourseAffinities.clear();
     state.teacherAdded.clear();
     state.openCourseId = null;
     state.openTreeNodeId = null;
@@ -3048,19 +3107,16 @@ function totals() {
     : Math.max(0, courseSpecificRaw - selectedCourseRequiredRaw);
   const selectedCourseElective = sum((course) => {
     if (course.category !== "specializedElective" || isQualificationPlanned(course) || state.course === NO_COURSE) return false;
-    const affiliations = professionalSubjectAffiliations(course);
-    return affiliations.includes(state.course) && !affiliations.includes("common");
+    return plannedAffiliationForCourse(course) === state.course;
   });
   const commonElective = commonOther + sum((course) => {
     if (course.category !== "specializedElective" || isQualificationPlanned(course)) return false;
-    return professionalSubjectAffiliations(course).includes("common");
+    return plannedAffiliationForCourse(course) === "common";
   });
   const otherCourseSubjects = otherCourseRequiredOther + sum((course) => {
     if (course.category !== "specializedElective" || isQualificationPlanned(course)) return false;
-    const affiliations = professionalSubjectAffiliations(course);
-    if (affiliations.includes("common")) return false;
-    if (state.course !== NO_COURSE && affiliations.includes(state.course)) return false;
-    return affiliations.some((affiliation) => COURSES.includes(affiliation) && affiliation !== NO_COURSE);
+    const affiliation = plannedAffiliationForCourse(course);
+    return COURSES.includes(affiliation) && affiliation !== NO_COURSE && affiliation !== state.course;
   });
   const qualification = sum((course) => isQualificationPlanned(course));
   const specialized = selectedCourseElective + commonElective + otherCourseSubjects;
@@ -3650,13 +3706,13 @@ function renderTree() {
                 select.setAttribute("aria-label", `${course.name}の配置`);
                 select.innerHTML = optionMarkupForCourse(course);
                 select.value = state.planned.get(course.id) || "none";
-                select.addEventListener("change", (event) => setPlanned(course.id, event.target.value, { source: select }));
+                select.addEventListener("change", (event) => setPlanned(course.id, event.target.value, { source: select, affinity: treeSectionAffiliation(node.section) }));
                 const remove = document.createElement("button");
                 remove.type = "button";
                 remove.className = "remove-button";
                 remove.textContent = "×";
                 remove.setAttribute("aria-label", `${course.name}を外す`);
-                remove.addEventListener("click", () => setPlanned(course.id, "none", { source: remove }));
+                remove.addEventListener("click", () => setPlanned(course.id, "none", { source: remove, affinity: treeSectionAffiliation(node.section) }));
                 menu.append(select, remove);
                 item.appendChild(menu);
               }
@@ -4053,6 +4109,8 @@ function annotateRequirementTerms(text) {
 
 function renderRequirements(stats) {
   const promotion = promotionStatus(stats);
+  const artDesignCourse = allCourses.find((course) => course.name === "アート&デザイン演習");
+  const artDesignPlanned = artDesignCourse ? state.planned.has(artDesignCourse.id) : false;
   const teacherRequired = allCourses.filter((course) =>
     course.teacherRequired &&
     (course.category !== "teacher" || state.teacher)
@@ -4070,6 +4128,9 @@ function renderRequirements(stats) {
     infoRequirement("要件外内訳", `教職課程科目 ${stats.teacher}単位、基礎選択超過 ${stats.basicElectiveOutside}単位、他学科超過 ${stats.otherDeptOutside}単位、他大学認定超過 ${stats.otherUniversityOutside}単位`),
     requirement("3年次進級", promotion.ok, `${promotion.credits}単位 / 50単位、GPA条件 ${promotion.gpaOk ? "達成" : "未達"}`)
   ];
+  if (artDesignPlanned) {
+    html.push(requirement("アート&デザイン演習", state.gpa >= 2, `履修条件 GPA 2.0以上、現在 ${state.gpa >= 2 ? "達成" : "未達"}`));
+  }
   if (state.teacher) {
     html.push(requirement("教職必修", teacherMissing.length === 0, teacherMissing.length ? `${teacherMissing.length}科目が未配置` : "対象科目を配置済み"));
   }
@@ -4087,13 +4148,19 @@ function applyCourseSelection(nextCourse, mode, source) {
       const course = allCourses.find((item) => item.id === id);
       const removeCourseRequired = course?.category === "courseRequired" && course.course !== nextCourse;
       const removeSpecializedElective = course?.category === "specializedElective" && !course.qualificationEligible;
-      if (removeCourseRequired || removeSpecializedElective) state.planned.delete(id);
+      if (removeCourseRequired || removeSpecializedElective) {
+        state.planned.delete(id);
+        state.plannedCourseAffinities.delete(id);
+      }
     });
   }
   if (nextCourse !== NO_COURSE) {
     allCourses
       .filter((course) => course.category === "courseRequired" && course.course === nextCourse)
-      .forEach((course) => state.planned.set(course.id, openingTermForCourse(course)));
+      .forEach((course) => {
+        state.planned.set(course.id, openingTermForCourse(course));
+        state.plannedCourseAffinities.set(course.id, course.course);
+      });
   }
   state.courseMenuOpen = false;
   queuePlanTransition(beforePlan, snapshotPlanned(), { baseDelay: 0, step: 20, cellStep: 50 });
@@ -4179,7 +4246,7 @@ function init() {
       state.teacherNotice = `教職課程をONにしました。教職課程科目と教職必修指定科目を履修状態にしました（新規追加 ${added}科目）。`;
     } else {
       const removed = removeTeacherPlanCourses();
-      state.teacherNotice = `教職課程をOFFにしました。教職課程科目と自動追加した教職必修指定科目を履修計画から外しました（削除 ${removed}科目）。`;
+      state.teacherNotice = `教職課程をOFFにしました。教職課程科目を履修計画から外しました（削除 ${removed}科目）。教職必修指定科目は履修状態のまま残します。`;
     }
     state.openCourseId = null;
     state.openTreeNodeId = null;

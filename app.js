@@ -3041,8 +3041,8 @@ function totals() {
   const courseSpecific = Math.min(selectedCourseRequiredRaw, 16);
   const courseSpecificOther = Math.max(0, courseSpecificRaw - courseSpecific);
   const qualification = sum((course) => isQualificationPlanned(course));
-  const specialized = sum((course) => course.category === "specializedElective");
-  const professionalOther = commonOther + courseSpecificOther + specialized;
+  const specialized = sum((course) => course.category === "specializedElective" && !isQualificationPlanned(course));
+  const professionalOther = commonOther + courseSpecificOther + specialized + qualification;
   const otherDeptRaw = sum((course) => course.category === "otherDept");
   const otherDeptCounted = Math.min(otherDeptRaw, 12);
   const otherDeptOutside = Math.max(0, otherDeptRaw - otherDeptCounted);
@@ -4034,7 +4034,7 @@ function renderRequirements(stats) {
     requirement("専門共通必修", stats.common >= 20, `${stats.commonRaw}単位 / 20単位`),
     requirement("コース必修", stats.courseSpecific >= 16, `${stats.selectedCourseRequiredRaw}単位 / 16単位`),
     requirement("専門教育計", stats.professional >= 36, `${stats.professional}単位 / 36単位以上`),
-    requirement("その他", stats.other >= 52, `${stats.other}単位 / 52単位以上、基礎振替 ${stats.basicElectiveTransfer}単位、専門教育 ${stats.professionalOther}単位、他学科 ${stats.otherDeptCounted}単位、他大学認定 ${stats.otherUniversityCounted}単位`),
+    requirement("その他", stats.other >= 52, `${stats.other}単位 / 52単位以上、基礎振替 ${stats.basicElectiveTransfer}単位、専門教育 ${stats.professionalOther}単位、単位認定 ${stats.qualification}単位、他学科 ${stats.otherDeptCounted}単位、他大学認定 ${stats.otherUniversityCounted}単位`),
     infoRequirement("要件外内訳", `教職課程科目 ${stats.teacher}単位、基礎選択超過 ${stats.basicElectiveOutside}単位、他学科超過 ${stats.otherDeptOutside}単位、他大学認定超過 ${stats.otherUniversityOutside}単位`),
     requirement("3年次進級", promotion.ok, `${promotion.credits}単位 / 50単位、GPA条件 ${promotion.gpaOk ? "達成" : "未達"}`)
   ];

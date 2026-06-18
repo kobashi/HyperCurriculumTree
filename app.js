@@ -2499,6 +2499,12 @@ function validatePlannedCourse(course) {
   }
 }
 
+function sharedPlanCourses(course) {
+  if (!course) return [];
+  const shared = allCourses.filter((item) => item.category === course.category && item.key === course.key);
+  return shared.length > 1 ? shared : [course];
+}
+
 function visibleCourses() {
   const years = new Set([...document.querySelectorAll(".year-filter:checked")].map((input) => Number(input.value)));
   const terms = new Set([...document.querySelectorAll(".term-filter:checked")].map((input) => input.value));
@@ -2837,26 +2843,31 @@ function isValidPlannedValue(course, value) {
 function setPlanned(courseId, term, options = {}) {
   cancelPendingPlanClear();
   const course = allCourses.find((item) => item.id === courseId);
+  const sharedCourses = sharedPlanCourses(course);
   const beforePlan = snapshotPlanned();
-  const before = state.planned.get(courseId);
+  const before = course ? state.planned.get(course.id) : undefined;
   let feedback = null;
   if (term === "none") {
-    if (state.planned.delete(courseId)) {
-      state.teacherAdded.delete(courseId);
+    const removed = sharedCourses.reduce((count, item) => {
+      if (!state.planned.delete(item.id)) return count;
+      state.teacherAdded.delete(item.id);
+      return count + 1;
+    }, 0);
+    if (removed > 0) {
       feedback = "remove";
     }
   } else if (parseRecognitionValue(term)) {
     const recognition = parseRecognitionValue(term);
     const valid = course?.qualificationEligible && recognitionTermsForMethod(course, recognition.method).some((item) => item.id === recognition.term);
     if (valid) {
-      state.planned.set(courseId, term);
+      sharedCourses.forEach((item) => state.planned.set(item.id, term));
       feedback = before === term ? null : "confirm";
     } else {
       feedback = "error";
     }
   } else {
     if (course && isValidPlannedValue(course, term)) {
-      state.planned.set(courseId, term);
+      sharedCourses.forEach((item) => state.planned.set(item.id, term));
       feedback = before === term ? null : "confirm";
     } else if (course) {
       feedback = "error";

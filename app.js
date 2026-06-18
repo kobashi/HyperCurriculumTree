@@ -2898,10 +2898,9 @@ function resetCatalogFilters() {
 function teacherPlanCourses() {
   const preferred = new Map();
   allCourses.filter((course) =>
-    (course.category === "teacher" || course.teacherRequired) &&
-    (course.category !== "courseRequired" || (state.course !== NO_COURSE && course.course === state.course))
+    course.category === "teacher" || course.teacherRequired
   ).forEach((course) => {
-    const key = course.key;
+    const key = `${course.category}:${course.key}`;
     const existing = preferred.get(key);
     if (!existing || course.category === "teacher") {
       preferred.set(key, course);
@@ -4056,7 +4055,6 @@ function renderRequirements(stats) {
   const promotion = promotionStatus(stats);
   const teacherRequired = allCourses.filter((course) =>
     course.teacherRequired &&
-    (course.category !== "courseRequired" || course.course === state.course) &&
     (course.category !== "teacher" || state.teacher)
   );
   const teacherMissing = teacherRequired.filter((course) => !state.planned.has(course.id));

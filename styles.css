@@ -811,7 +811,7 @@ input {
 
 .catalog-list {
   display: block;
-  column-width: 320px;
+  column-count: var(--catalog-column-count, 1);
   column-gap: 12px;
   column-fill: balance;
 }

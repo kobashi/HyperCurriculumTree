@@ -3250,6 +3250,14 @@ function renderCatalogGroup(list, title, subgroups, prereqIssues) {
   return group;
 }
 
+function updateCatalogColumnCount() {
+  const catalog = document.querySelector("#catalogList");
+  if (!catalog || catalog.hidden) return;
+  const width = catalog.clientWidth || 0;
+  const count = width >= 1080 ? 3 : width >= 680 ? 2 : 1;
+  catalog.style.setProperty("--catalog-column-count", String(count));
+}
+
 function renderCatalog() {
   const catalog = document.querySelector("#catalogList");
   catalog.innerHTML = "";
@@ -3264,6 +3272,7 @@ function renderCatalog() {
     }));
     renderCatalogGroup(catalog, groupDef.title, subgroups, prereqIssues);
   });
+  requestAnimationFrame(updateCatalogColumnCount);
 }
 
 function renderPlan() {
@@ -4077,6 +4086,7 @@ function init() {
     }
   });
   window.addEventListener("resize", () => {
+    requestAnimationFrame(updateCatalogColumnCount);
     if (state.viewMode !== "tree") return;
     requestAnimationFrame(drawTreeEdges);
     requestAnimationFrame(updateTreeMenuPlacement);

@@ -3940,15 +3940,20 @@ function formatCredits(value) {
 
 function professionalBreakdownDetail(stats) {
   const breakdown = stats.professionalSubjectByCourse;
+  const selectedCourse = state.course !== NO_COURSE ? state.course : null;
+  const selectedCourseValue = selectedCourse ? (breakdown[selectedCourse] || 0) : 0;
+  const otherCourseValue = Math.max(0, stats.professionalSubjectTotal - breakdown.common - selectedCourseValue);
   const parts = [
-    ["コース共通", breakdown.common, "tree-section-common"],
-    ["情報システム", breakdown.情報システム, TREE_COURSE_CLASSES.情報システム],
-    ["サウンド制作", breakdown.サウンド制作, TREE_COURSE_CLASSES.サウンド制作],
-    ["メディアデザイン", breakdown.メディアデザイン, TREE_COURSE_CLASSES.メディアデザイン],
-    ["映像メディア", breakdown.映像メディア, TREE_COURSE_CLASSES.映像メディア]
+    { label: "専門共通", value: breakdown.common, className: "tree-section-common" },
+    { label: "自コース", value: selectedCourseValue, className: selectedCourse ? TREE_COURSE_CLASSES[selectedCourse] : "tree-section-common", title: selectedCourse ? `${selectedCourse}コース` : "" },
+    { label: "他コース", value: otherCourseValue, className: "tree-section-other", title: selectedCourse ? `${selectedCourse}以外のコース` : "" },
+    { label: "情報システム", value: breakdown.情報システム, className: TREE_COURSE_CLASSES.情報システム },
+    { label: "サウンド制作", value: breakdown.サウンド制作, className: TREE_COURSE_CLASSES.サウンド制作 },
+    { label: "メディアデザイン", value: breakdown.メディアデザイン, className: TREE_COURSE_CLASSES.メディアデザイン },
+    { label: "映像メディア", value: breakdown.映像メディア, className: TREE_COURSE_CLASSES.映像メディア }
   ]
-    .filter(([, value]) => value > 0)
-    .map(([label, value, className]) => `<span class="professional-breakdown-chip ${className}">${label} ${formatCredits(value)}</span>`);
+    .filter(({ value }) => value > 0)
+    .map(({ label, value, className, title }) => `<span class="professional-breakdown-chip ${className}"${title ? ` title="${title}"` : ""}>${label} ${formatCredits(value)}</span>`);
   const detail = parts.length ? parts.join("") : '<span class="professional-breakdown-empty">未登録</span>';
   return `
     <span class="professional-breakdown-title">専門科目計 ${formatCredits(stats.professionalSubjectTotal)}単位</span>

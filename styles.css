@@ -970,6 +970,9 @@ input {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface-strong);
+  break-inside: avoid-column;
+  width: 100%;
+  margin: 0 0 8px;
   transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
 }
 

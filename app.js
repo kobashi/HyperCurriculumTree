@@ -3084,52 +3084,6 @@ function promotionStatus(stats) {
   return { credits: earnedBySecondYear, ok: earnedBySecondYear >= 50 && gpaOk, gpaOk };
 }
 
-const catalogGroupOrder = [
-  "basic",
-  "common",
-  "course",
-  "teacher",
-  "other"
-];
-
-const catalogGroupDefinitions = {
-  basic: {
-    title: "基礎科目",
-    subgroups: [
-      { key: "basicRequired", title: "基礎教育必修", className: "tree-section-basic-required", match: (course) => course.category === "basicRequired" },
-      { key: "basicElective", title: "基礎教育選択", className: "tree-section-basic-elective", match: (course) => course.category === "basicElective" }
-    ]
-  },
-  common: {
-    title: "専門共通科目",
-    subgroups: [
-      { key: "commonRequired", title: "コース共通", className: "tree-section-common", match: (course) => course.category === "commonRequired" }
-    ]
-  },
-  course: {
-    title: "各コース",
-    subgroups: [
-      { key: "情報システム", title: "情報システムコース", className: "tree-section-system", match: (course) => course.category === "courseRequired" && course.course === "情報システム" },
-      { key: "サウンド制作", title: "サウンド制作コース", className: "tree-section-sound", match: (course) => course.category === "courseRequired" && course.course === "サウンド制作" },
-      { key: "メディアデザイン", title: "メディアデザインコース", className: "tree-section-design", match: (course) => course.category === "courseRequired" && course.course === "メディアデザイン" },
-      { key: "映像メディア", title: "映像メディアコース", className: "tree-section-movie", match: (course) => course.category === "courseRequired" && course.course === "映像メディア" },
-      { key: "specializedElective", title: "専門選択", className: "tree-section-specialized", match: (course) => course.category === "specializedElective" }
-    ]
-  },
-  teacher: {
-    title: "教職課程",
-    subgroups: [
-      { key: "teacher", title: "教職課程に関する科目", className: "tree-section-teacher", match: (course) => course.category === "teacher" }
-    ]
-  },
-  other: {
-    title: "他学科履修",
-    subgroups: [
-      { key: "otherDept", title: "他学科履修", className: "tree-section-other", match: (course) => course.category === "otherDept" }
-    ]
-  }
-};
-
 function buildCatalogCard(course, prereqIssues) {
   const card = document.createElement("article");
   card.className = `course-card${state.planned.has(course.id) ? " is-planned" : ""}${treeMissingRequiredClass(course)}${treePrereqMissingClass(course, prereqIssues)}${animatedCourseClass(course.id)}${filterRevealClass(course.id)}`;
@@ -3219,35 +3173,39 @@ function buildCatalogCard(course, prereqIssues) {
   return card;
 }
 
-function renderCatalogGroup(list, title, subgroups, prereqIssues) {
-  if (!subgroups.some((subgroup) => subgroup.courses.length)) return null;
-  const group = document.createElement("section");
-  group.className = "catalog-group";
+const catalogCategoryOrder = {
+  basicRequired: 0,
+  basicElective: 1,
+  commonRequired: 2,
+  courseRequired: 3,
+  specializedElective: 4,
+  teacher: 5,
+  otherDept: 6
+};
 
-  const head = document.createElement("div");
-  head.className = "catalog-group-title";
-  head.textContent = title;
-  group.appendChild(head);
+const catalogCourseOrder = ["情報システム", "サウンド制作", "メディアデザイン", "映像メディア"];
 
-  subgroups.forEach((subgroup) => {
-    if (!subgroup.courses.length) return;
-    const block = document.createElement("section");
-    block.className = `catalog-subgroup ${subgroup.className}`;
-    const label = document.createElement("div");
-    label.className = `catalog-subgroup-title ${subgroup.className}`;
-    label.textContent = subgroup.title;
-    block.appendChild(label);
-    const body = document.createElement("div");
-    body.className = "catalog-subgroup-body";
-    subgroup.courses.forEach((course) => {
-      body.appendChild(buildCatalogCard(course, prereqIssues));
-    });
-    block.appendChild(body);
-    group.appendChild(block);
+function catalogSortValue(course) {
+  const categoryOrder = catalogCategoryOrder[course.category] ?? 99;
+  const courseOrder = course.category === "courseRequired" && course.course
+    ? catalogCourseOrder.indexOf(course.course)
+    : -1;
+  const typeOrder = course.category === "courseRequired" ? courseOrder : 0;
+  const yearOrder = Number.isFinite(course.year) ? course.year : 99;
+  const termOrder = course.term === "前" ? 0 : course.term === "後" ? 1 : 2;
+  return [categoryOrder, typeOrder < 0 ? 99 : typeOrder, yearOrder, termOrder, course.name];
+}
+
+function sortCatalogCourses(courses) {
+  return [...courses].sort((a, b) => {
+    const aValue = catalogSortValue(a);
+    const bValue = catalogSortValue(b);
+    for (let index = 0; index < aValue.length; index += 1) {
+      if (aValue[index] < bValue[index]) return -1;
+      if (aValue[index] > bValue[index]) return 1;
+    }
+    return 0;
   });
-
-  list.appendChild(group);
-  return group;
 }
 
 function updateCatalogColumnCount() {
@@ -3262,15 +3220,8 @@ function renderCatalog() {
   const catalog = document.querySelector("#catalogList");
   catalog.innerHTML = "";
   const prereqIssues = prerequisiteIssuesByCourse();
-  const visible = visibleCourses();
-  catalogGroupOrder.forEach((groupKey) => {
-    const groupDef = catalogGroupDefinitions[groupKey];
-    if (!groupDef) return;
-    const subgroups = groupDef.subgroups.map((subgroup) => ({
-      ...subgroup,
-      courses: visible.filter((course) => subgroup.match(course))
-    }));
-    renderCatalogGroup(catalog, groupDef.title, subgroups, prereqIssues);
+  sortCatalogCourses(visibleCourses()).forEach((course) => {
+    catalog.appendChild(buildCatalogCard(course, prereqIssues));
   });
   requestAnimationFrame(updateCatalogColumnCount);
 }

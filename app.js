@@ -1272,7 +1272,11 @@ function bgmCompositionKey() {
     .map((course) => course.id)
     .sort((a, b) => a.localeCompare(b))
     .join(",");
-  return `${state.course}|teacher:${state.teacher ? 1 : 0}|${selectedIds}`;
+  const affinities = [...state.plannedCourseAffinities.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([id, affinity]) => `${id}:${affinity}`)
+    .join(",");
+  return `${state.course}|teacher:${state.teacher ? 1 : 0}|${selectedIds}|aff:${affinities}`;
 }
 
 function bgmArrangementCacheKey() {
@@ -1280,7 +1284,11 @@ function bgmArrangementCacheKey() {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([id, term]) => `${id}:${term}`)
     .join(",");
-  return `${state.course}|teacher:${state.teacher ? 1 : 0}|${planned}`;
+  const affinities = [...state.plannedCourseAffinities.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([id, affinity]) => `${id}:${affinity}`)
+    .join(",");
+  return `${state.course}|teacher:${state.teacher ? 1 : 0}|${planned}|aff:${affinities}`;
 }
 
 function bgmPlaybackKey() {
@@ -1348,6 +1356,65 @@ function playBgmChord(ctx, profile, chordRoot, dynamics, voicing = null) {
 }
 
 function playBgmContextAccents(ctx, profile, step, analysis, arrangement) {
+  const slot = analysis.mutationSlot;
+  const cleanArrangement = slot.prereq === 0 && slot.missing === 0;
+  if (cleanArrangement && analysis.ownCourseAccent) {
+    const octaveBoost = (step + slot.seed) % 4 === 0 ? 12 : 7;
+    tone(ctx, {
+      freq: midiToFreq(profile.root, analysis.harmony.root + octaveBoost + (profile.leadOctave || 12)),
+      duration: 0.07,
+      type: profile.leadType || "square",
+      gain: (profile.leadGain || 0.012) * analysis.dynamics * 0.58,
+      slide: profile.detune * 0.75,
+      delay: 0.014,
+      filter: Math.max(1300, profile.filter * 1.12),
+      filterType: profile.leadFilterType || "lowpass",
+      q: profile.leadQ || 0.8,
+      fuzz: profile.leadFuzz || 0,
+      bitDepth: profile.leadBitDepth || 0,
+      delayMix: profile.leadDelayMix || 0,
+      delayTime: profile.leadDelayTime || 0.18,
+      delayFeedback: profile.leadDelayFeedback || 0.22,
+      bus: "bgm"
+    });
+  }
+  if (cleanArrangement && analysis.commonCourseAccent) {
+    tone(ctx, {
+      freq: midiToFreq(profile.root, analysis.harmony.root + 19),
+      duration: 0.095,
+      type: "sine",
+      gain: (profile.chordGain || 0.008) * analysis.dynamics * 0.5,
+      delay: 0.022,
+      filter: 3600,
+      filterType: "bandpass",
+      q: 1.4,
+      delayMix: 0.08,
+      delayTime: 0.2,
+      delayFeedback: 0.18,
+      bus: "bgm"
+    });
+  }
+  if (cleanArrangement && analysis.foreignCourseAccent) {
+    const foreignProfile = bgmForeignCourseProfile(slot);
+    const flavorOffset = bgmForeignFlavorOffset(slot, step, 3);
+    tone(ctx, {
+      freq: midiToFreq(profile.root, analysis.harmony.root + flavorOffset + (foreignProfile?.leadOctave || profile.leadOctave || 12)),
+      duration: foreignProfile?.leadDuration || 0.075,
+      type: foreignProfile?.leadType || "triangle",
+      gain: (profile.leadGain || 0.012) * analysis.dynamics * 0.54,
+      slide: (foreignProfile?.detune || profile.detune || 0) * 0.75,
+      delay: 0.018,
+      filter: Math.max(1100, (foreignProfile?.filter || profile.filter) * 0.84),
+      filterType: foreignProfile?.leadFilterType || "bandpass",
+      q: foreignProfile?.leadQ || 1.4,
+      fuzz: foreignProfile?.leadFuzz || 0,
+      bitDepth: foreignProfile?.leadBitDepth || 0,
+      delayMix: foreignProfile?.leadDelayMix || 0,
+      delayTime: foreignProfile?.leadDelayTime || 0.16,
+      delayFeedback: foreignProfile?.leadDelayFeedback || 0.2,
+      bus: "bgm"
+    });
+  }
   if (analysis.teacherAccent) {
     const bellRoot = analysis.harmony.root + (step % 8 === 0 ? 24 : 19);
     [0, 7].forEach((offset, index) => {
@@ -1496,6 +1563,34 @@ function isBgmMissingRequiredCourse(course) {
   return course.category === "courseRequired" && state.course !== NO_COURSE && course.course === state.course;
 }
 
+function bgmCourseContextForCourse(course) {
+  const affiliation = plannedAffiliationForCourse(course);
+  if (affiliation === "common") return { kind: "common", course: "common" };
+  if (COURSES.includes(affiliation) && affiliation !== NO_COURSE) {
+    return {
+      kind: state.course !== NO_COURSE && affiliation === state.course ? "own" : "foreign",
+      course: affiliation
+    };
+  }
+  return { kind: "neutral", course: null };
+}
+
+function bgmForeignCourseProfile(slot) {
+  const entries = Object.entries(slot.foreignCourses || {});
+  if (!entries.length) return null;
+  entries.sort(([courseA, countA], [courseB, countB]) => countB - countA || courseA.localeCompare(courseB));
+  return arcadeBgmProfiles[entries[0][0]] || null;
+}
+
+function bgmForeignFlavorOffset(slot, step, fallback = 2) {
+  const foreignProfile = bgmForeignCourseProfile(slot);
+  if (!foreignProfile) return bgmMutationDirection(slot) * fallback;
+  const scale = foreignProfile.scale || [0, 2, 4, 7, 9];
+  const raw = scale[(slot.seed + step) % scale.length] ?? fallback;
+  const centered = ((raw % 12) + 12) % 12 - 6;
+  return Math.max(-5, Math.min(5, centered));
+}
+
 function bgmArrangementState() {
   const cacheKey = bgmArrangementCacheKey();
   if (arcadeAudio.arrangementCacheKey === cacheKey && arcadeAudio.arrangementCache) {
@@ -1529,8 +1624,18 @@ function bgmArrangementState() {
   const radicalLayers = Math.min(4, Math.max(0, Math.ceil(missingRequired.length / 5)));
   const mutationStep = seed % 16;
   const mutationSlots = bgmMutationSlots(arrangedCourses, missingRequired, missingPrereqs, otherDeptCourses, state.teacher, seed);
+  const contextCounts = mutationSlots.reduce((total, slot) => ({
+    ownCourse: total.ownCourse + slot.ownCourse,
+    commonCourse: total.commonCourse + slot.commonCourse,
+    foreignCourse: total.foreignCourse + slot.foreignCourse,
+    neutralCourse: total.neutralCourse + slot.neutralCourse
+  }), { ownCourse: 0, commonCourse: 0, foreignCourse: 0, neutralCourse: 0 });
   const arrangement = {
     count: arrangedCourses.length,
+    ownCourseCount: contextCounts.ownCourse,
+    commonCourseCount: contextCounts.commonCourse,
+    foreignCourseCount: contextCounts.foreignCourse,
+    neutralCourseCount: contextCounts.neutralCourse,
     teacherActive: state.teacher,
     teacherCount: teacherCourses.length,
     otherDeptCount: otherDeptCourses.length,
@@ -1559,6 +1664,11 @@ function bgmMutationSlots(arrangedCourses, missingRequired, missingPrereqs, othe
   const slots = Array.from({ length: 16 }, (_, step) => ({
     step,
     arranged: 0,
+    ownCourse: 0,
+    commonCourse: 0,
+    foreignCourse: 0,
+    neutralCourse: 0,
+    foreignCourses: {},
     missing: 0,
     prereq: 0,
     teacher: 0,
@@ -1568,7 +1678,7 @@ function bgmMutationSlots(arrangedCourses, missingRequired, missingPrereqs, othe
   }));
   const used = new Set();
   let overflowIndex = 0;
-  const assign = (kind, course, index) => {
+  const assign = (kind, course, index, context = null) => {
     const preferred = hashString(`${kind}|${course.id}|${index}|${seed}`) % 16;
     let step = preferred;
     if (used.size < 16) {
@@ -1586,10 +1696,24 @@ function bgmMutationSlots(arrangedCourses, missingRequired, missingPrereqs, othe
     }
     const slot = slots[step];
     slot[kind] += 1;
+    if (kind === "arranged" && context) {
+      if (context.kind === "own") {
+        slot.ownCourse += 1;
+      } else if (context.kind === "common") {
+        slot.commonCourse += 1;
+      } else if (context.kind === "foreign") {
+        slot.foreignCourse += 1;
+        if (context.course) {
+          slot.foreignCourses[context.course] = (slot.foreignCourses[context.course] || 0) + 1;
+        }
+      } else {
+        slot.neutralCourse += 1;
+      }
+    }
     slot.depth += 1;
     slot.seed = hashString(`${slot.seed}|${course.id}|${kind}`);
   };
-  arrangedCourses.forEach((course, index) => assign("arranged", course, index));
+  arrangedCourses.forEach((course, index) => assign("arranged", course, index, bgmCourseContextForCourse(course)));
   otherDeptCourses.forEach((course, index) => assign("otherDept", course, index));
   missingRequired.forEach((course, index) => assign("missing", course, index));
   missingPrereqs.forEach((course, index) => assign("prereq", course, index));
@@ -1605,7 +1729,20 @@ function bgmMutationSlots(arrangedCourses, missingRequired, missingPrereqs, othe
 }
 
 function bgmMutationSlot(arrangement, step) {
-  return arrangement.mutationSlots?.[step % 16] || { arranged: 0, missing: 0, prereq: 0, teacher: 0, otherDept: 0, depth: 0, seed: arrangement.seed };
+  return arrangement.mutationSlots?.[step % 16] || {
+    arranged: 0,
+    ownCourse: 0,
+    commonCourse: 0,
+    foreignCourse: 0,
+    neutralCourse: 0,
+    foreignCourses: {},
+    missing: 0,
+    prereq: 0,
+    teacher: 0,
+    otherDept: 0,
+    depth: 0,
+    seed: arrangement.seed
+  };
 }
 
 function isBgmMutationStep(arrangement, step) {
@@ -1624,6 +1761,15 @@ function arrangedMelodyOffset(profile, melodyOffset, step, arrangement) {
   const direction = bgmMutationDirection(slot);
   if (slot.otherDept >= 1 && slot.prereq === 0 && slot.missing === 0) {
     offset += direction > 0 ? 1 : -1;
+  }
+  if (slot.commonCourse >= 1 && slot.prereq === 0 && slot.missing === 0) {
+    offset += direction > 0 ? 1 : -1;
+  }
+  if (slot.ownCourse >= 1 && slot.prereq === 0 && slot.missing === 0) {
+    offset += direction > 0 ? 3 : -3;
+  }
+  if (slot.foreignCourse >= 1 && slot.prereq === 0 && slot.missing === 0) {
+    offset += bgmForeignFlavorOffset(slot, step, 2);
   }
   if (slot.arranged >= 1 && slot.prereq === 0 && slot.missing === 0) {
     offset += direction > 0 ? 2 : -2;
@@ -1660,6 +1806,15 @@ function arrangedBassOffset(bassOffset, step, arrangement) {
     if (slot.otherDept > 0 && slot.prereq === 0 && slot.missing === 0) {
       return bassOffset + direction;
     }
+    if (slot.foreignCourse > 0 && slot.prereq === 0 && slot.missing === 0) {
+      return bassOffset + Math.sign(bgmForeignFlavorOffset(slot, step, 1));
+    }
+    if (slot.commonCourse > 0 && slot.prereq === 0 && slot.missing === 0) {
+      return bassOffset + direction;
+    }
+    if (slot.ownCourse > 0 && slot.prereq === 0 && slot.missing === 0) {
+      return bassOffset + (direction > 0 ? 4 : -3);
+    }
     if (slot.prereq === 0 && slot.missing === 0) {
       return bassOffset + (direction > 0 ? 2 : -2);
     }
@@ -1682,7 +1837,27 @@ function harmonyForStep(profile, arrangement, step) {
   if (arrangement.mutationDepth > 0 && isBgmMutationStep(arrangement, step)) {
     const slot = bgmMutationSlot(arrangement, step);
     const direction = bgmMutationDirection(slot);
-    if (slot.arranged >= 1 && slot.prereq === 0 && slot.missing === 0) {
+    const hasCourseContext = slot.ownCourse > 0 || slot.commonCourse > 0 || slot.foreignCourse > 0;
+    if (slot.commonCourse >= 1 && slot.prereq === 0 && slot.missing === 0) {
+      voicing = [0, 4, 7, 9];
+      kind = "common";
+      label = "専門共通";
+    }
+    if (slot.ownCourse >= 1 && slot.prereq === 0 && slot.missing === 0) {
+      voicing = [0, 4, 7, 12];
+      kind = "own";
+      label = "自コース";
+    }
+    if (slot.foreignCourse >= 1 && slot.prereq === 0 && slot.missing === 0) {
+      const foreignProfile = bgmForeignCourseProfile(slot);
+      const foreignProgression = foreignProfile?.progression || [0];
+      const foreignRoot = foreignProgression[(slot.seed + beatStep) % foreignProgression.length] || 0;
+      root += Math.max(-3, Math.min(4, foreignRoot));
+      voicing = foreignProfile?.chordVoicing || [0, 5, 7, 10];
+      kind = "foreign";
+      label = "他コース";
+    }
+    if (slot.arranged >= 1 && !hasCourseContext && slot.prereq === 0 && slot.missing === 0) {
       voicing = [0, 4, 7, 9];
       kind = "arrange";
       label = "履修差";
@@ -1693,12 +1868,12 @@ function harmonyForStep(profile, arrangement, step) {
       kind = "other";
       label = "他学科";
     }
-    if (slot.arranged >= 2 && slot.prereq === 0 && slot.missing === 0) {
+    if (slot.arranged >= 2 && !hasCourseContext && slot.prereq === 0 && slot.missing === 0) {
       voicing = [0, 2, 7, 9];
       kind = "arrange";
       label = "履修差";
     }
-    if (slot.arranged >= 3 && slot.prereq === 0 && slot.missing === 0) {
+    if (slot.arranged >= 3 && !hasCourseContext && slot.prereq === 0 && slot.missing === 0) {
       voicing = [0, 4, 7, 12];
       kind = "arrange";
       label = "履修差";
@@ -1773,11 +1948,14 @@ function bgmStepAnalysis(profile, arrangement, step) {
   const mutationHit = isBgmMutationStep(arrangement, step);
   const slot = bgmMutationSlot(arrangement, step);
   const subtlePulse = mutationHit ? Math.min(0.24, slot.arranged * 0.07) : 0;
+  const ownCoursePulse = mutationHit ? Math.min(0.18, slot.ownCourse * 0.08) : 0;
+  const commonCoursePulse = mutationHit ? Math.min(0.1, slot.commonCourse * 0.04) : 0;
+  const foreignCoursePulse = mutationHit ? Math.min(0.2, slot.foreignCourse * 0.08) : 0;
   const otherDeptPulse = mutationHit ? Math.min(0.22, slot.otherDept * 0.08) : 0;
   const teacherPulse = mutationHit ? Math.min(0.14, slot.teacher * 0.05) : 0;
   const prereqPulse = mutationHit ? Math.min(0.32, slot.prereq * 0.1) : 0;
   const radicalPulse = mutationHit ? Math.min(0.48, slot.missing * 0.12) : 0;
-  const dynamics = baseDynamics * (1 + subtlePulse + otherDeptPulse + teacherPulse + prereqPulse + radicalPulse + (slot.missing > 0 ? (beatStep % 4 === 0 ? 0.24 : -0.08) : 0));
+  const dynamics = baseDynamics * (1 + subtlePulse + ownCoursePulse + commonCoursePulse + foreignCoursePulse + otherDeptPulse + teacherPulse + prereqPulse + radicalPulse + (slot.missing > 0 ? (beatStep % 4 === 0 ? 0.24 : -0.08) : 0));
   const arrangeNoise = mutationHit && (slot.prereq > 0 || slot.otherDept > 0);
   const radicalNoise = mutationHit && slot.missing > 0;
   return {
@@ -1797,6 +1975,9 @@ function bgmStepAnalysis(profile, arrangement, step) {
     radicalNoise,
     teacherAccent: mutationHit && slot.teacher > 0,
     otherDeptAccent: mutationHit && slot.otherDept > 0,
+    ownCourseAccent: mutationHit && slot.ownCourse > 0,
+    commonCourseAccent: mutationHit && slot.commonCourse > 0,
+    foreignCourseAccent: mutationHit && slot.foreignCourse > 0,
     radicalLayers: radicalNoise ? Math.min(4, slot.missing) : 0,
     chordHit: patternHit(profile.chordHits, step),
     kick: patternHit(profile.kick, step),
@@ -3997,7 +4178,7 @@ function bgmCellClass(analysis, base = "") {
   if (base) classes.push(base);
   if (analysis.radicalNoise || analysis.harmony.kind === "tritone" || analysis.harmony.kind === "diminished" || analysis.harmony.kind === "outside" || analysis.harmony.kind === "prereq" || analysis.harmony.outsideTones.length) {
     classes.push("is-radical");
-  } else if (analysis.melodyChanged || analysis.bassChanged || analysis.arrangeNoise || analysis.teacherAccent || analysis.otherDeptAccent) {
+  } else if (analysis.melodyChanged || analysis.bassChanged || analysis.arrangeNoise || analysis.teacherAccent || analysis.otherDeptAccent || analysis.ownCourseAccent || analysis.commonCourseAccent || analysis.foreignCourseAccent) {
     classes.push("is-subtle");
   } else {
     classes.push("is-active");
@@ -4034,7 +4215,7 @@ function renderBgmRoll() {
   const analyses = Array.from({ length: 16 }, (_, step) => bgmStepAnalysis(profile, arrangement, step));
   document.querySelector("#bgmRollCourse").textContent = state.course;
   document.querySelector("#bgmRollTempo").textContent = `${profile.bpm || 120} BPM`;
-  document.querySelector("#bgmRollArrange").textContent = `履修 ${arrangement.count} / 他学科 ${arrangement.otherDeptCount} / 教職 ${arrangement.teacherActive ? "ON" : "OFF"} / 変化 ${arrangement.mutationStepCount}箇所`;
+  document.querySelector("#bgmRollArrange").textContent = `履修 ${arrangement.count} / 自 ${arrangement.ownCourseCount} / 共 ${arrangement.commonCourseCount} / 他 ${arrangement.foreignCourseCount} / 他学科 ${arrangement.otherDeptCount} / 教職 ${arrangement.teacherActive ? "ON" : "OFF"} / 変化 ${arrangement.mutationStepCount}箇所`;
   document.querySelector("#bgmRollRadical").textContent = `外れ値 ${arrangement.missingRequired}`;
   grid.innerHTML = "";
   appendBgmRollCell(grid, "", "bgm-roll-label");
@@ -4063,6 +4244,9 @@ function renderBgmRoll() {
       analysis.kick ? "K" : "",
       analysis.snare ? "S" : "",
       analysis.hat ? "H" : "",
+      analysis.ownCourseAccent ? "自" : "",
+      analysis.commonCourseAccent ? "共" : "",
+      analysis.foreignCourseAccent ? "他" : "",
       analysis.teacherAccent ? "T" : "",
       analysis.otherDeptAccent ? "O" : "",
       analysis.arrangeNoise ? "+" : "",
@@ -4071,7 +4255,7 @@ function renderBgmRoll() {
     return {
       text: hits,
       className: hits ? bgmCellClass(analysis, "bgm-roll-rhythm") : "bgm-roll-cell is-empty",
-      title: analysis.teacherAccent ? "教職アクセント" : analysis.otherDeptAccent ? "他学科アクセント" : analysis.radicalNoise ? "外れ値リズム" : analysis.arrangeNoise ? "追加リズム" : "リズム"
+      title: analysis.teacherAccent ? "教職アクセント" : analysis.otherDeptAccent ? "他学科アクセント" : analysis.foreignCourseAccent ? "他コース要素" : analysis.ownCourseAccent ? "自コース強化" : analysis.commonCourseAccent ? "専門共通ニュートラル" : analysis.radicalNoise ? "外れ値リズム" : analysis.arrangeNoise ? "追加リズム" : "リズム"
     };
   }));
   appendBgmRollRow(grid, "外音", analyses.map((analysis) => ({

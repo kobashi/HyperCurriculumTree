@@ -2321,6 +2321,7 @@ function treeMissingRequiredClass(course) {
   if (course.category === "courseRequired" && state.course !== NO_COURSE && course.course === state.course) {
     return " is-missing-required";
   }
+  if (state.teacher && course.teacherRequired) return " is-missing-required";
   return "";
 }
 
@@ -2342,10 +2343,10 @@ function treeDisplayName(name) {
 
 function treeNameFontSize(name) {
   const length = Array.from((name || "").normalize("NFKC")).length;
-  if (/^プラクティカル・イングリッシュ[ⅠⅡⅢⅣ]$/.test(name || "")) return 7.7;
-  if (length >= 16) return 8.1;
-  if (length >= 13) return 8.7;
-  return 10;
+  if (/^プラクティカル・イングリッシュ[ⅠⅡⅢⅣ]$/.test(name || "")) return 7.3;
+  if (length >= 16) return 7.7;
+  if (length >= 13) return 8.3;
+  return 9.6;
 }
 
 const treeSectionOrder = [
@@ -2942,11 +2943,15 @@ function autoFill(options = {}) {
   state.openCourseId = null;
   state.openTreeNodeId = null;
   let added = 0;
+  const teacherCourseIds = state.teacher ? new Set(teacherPlanCourses().map((course) => course.id)) : new Set();
   allCourses.forEach((course) => {
-    if (course.category === "courseRequired" && (state.course === NO_COURSE || course.course !== state.course)) return;
-    if (!["basicRequired", "commonRequired", "courseRequired"].includes(course.category)) return;
+    const isSelectedCourseRequired = course.category === "courseRequired" && state.course !== NO_COURSE && course.course === state.course;
+    const isCoreRequired = ["basicRequired", "commonRequired"].includes(course.category) || isSelectedCourseRequired;
+    const isTeacherRequired = teacherCourseIds.has(course.id);
+    if (!isCoreRequired && !isTeacherRequired) return;
     if (state.planned.has(course.id)) return;
     state.planned.set(course.id, openingTermForCourse(course));
+    if (isTeacherRequired) state.teacherAdded.add(course.id);
     added += 1;
   });
   if (!options.silent) {
@@ -3039,14 +3044,28 @@ function totals() {
   );
   const selectedCourseRequiredRaw = state.course === NO_COURSE ? 0 : (courseSpecificByCourse[state.course] || 0);
   const courseSpecific = Math.min(selectedCourseRequiredRaw, 16);
-  const selectedCourseRequiredOther = Math.max(0, selectedCourseRequiredRaw - courseSpecific);
   const otherCourseRequiredOther = state.course === NO_COURSE
     ? courseSpecificRaw
     : Math.max(0, courseSpecificRaw - selectedCourseRequiredRaw);
-  const courseSpecificOther = selectedCourseRequiredOther + otherCourseRequiredOther;
+  const selectedCourseElective = sum((course) => {
+    if (course.category !== "specializedElective" || isQualificationPlanned(course) || state.course === NO_COURSE) return false;
+    const affiliations = professionalSubjectAffiliations(course);
+    return affiliations.includes(state.course) && !affiliations.includes("common");
+  });
+  const commonElective = commonOther + sum((course) => {
+    if (course.category !== "specializedElective" || isQualificationPlanned(course)) return false;
+    return professionalSubjectAffiliations(course).includes("common");
+  });
+  const otherCourseSubjects = otherCourseRequiredOther + sum((course) => {
+    if (course.category !== "specializedElective" || isQualificationPlanned(course)) return false;
+    const affiliations = professionalSubjectAffiliations(course);
+    if (affiliations.includes("common")) return false;
+    if (state.course !== NO_COURSE && affiliations.includes(state.course)) return false;
+    return affiliations.some((affiliation) => COURSES.includes(affiliation) && affiliation !== NO_COURSE);
+  });
   const qualification = sum((course) => isQualificationPlanned(course));
-  const specialized = sum((course) => course.category === "specializedElective" && !isQualificationPlanned(course));
-  const professionalEducationOther = commonOther + courseSpecificOther + specialized;
+  const specialized = selectedCourseElective + commonElective + otherCourseSubjects;
+  const professionalEducationOther = selectedCourseElective + commonElective + otherCourseSubjects;
   const professionalOther = professionalEducationOther + qualification;
   const otherDeptRaw = sum((course) => course.category === "otherDept");
   const otherDeptCounted = Math.min(otherDeptRaw, 12);
@@ -3076,9 +3095,10 @@ function totals() {
     courseSpecificRaw,
     selectedCourseRequiredRaw,
     courseSpecific,
-    selectedCourseRequiredOther,
     otherCourseRequiredOther,
-    courseSpecificOther,
+    selectedCourseElective,
+    commonElective,
+    otherCourseSubjects,
     courseSpecificByCourse,
     professionalSubjectByCourse,
     professionalSubjectTotal,
@@ -3948,13 +3968,8 @@ function formatCredits(value) {
 
 function professionalBreakdownDetail(stats) {
   const breakdown = stats.professionalSubjectByCourse;
-  const selectedCourse = state.course !== NO_COURSE ? state.course : null;
-  const selectedCourseValue = selectedCourse ? (breakdown[selectedCourse] || 0) : 0;
-  const otherCourseValue = Math.max(0, stats.professionalSubjectTotal - breakdown.common - selectedCourseValue);
   const parts = [
     { label: "専門共通", value: breakdown.common, className: "tree-section-common" },
-    { label: "自コース", value: selectedCourseValue, className: selectedCourse ? TREE_COURSE_CLASSES[selectedCourse] : "tree-section-common", title: selectedCourse ? `${selectedCourse}コース` : "" },
-    { label: "他コース", value: otherCourseValue, className: "tree-section-other", title: selectedCourse ? `${selectedCourse}以外のコース` : "" },
     { label: "情報システム", value: breakdown.情報システム, className: TREE_COURSE_CLASSES.情報システム },
     { label: "サウンド制作", value: breakdown.サウンド制作, className: TREE_COURSE_CLASSES.サウンド制作 },
     { label: "メディアデザイン", value: breakdown.メディアデザイン, className: TREE_COURSE_CLASSES.メディアデザイン },
@@ -3995,7 +4010,9 @@ function renderSummary(stats) {
   ], Math.max(36, stats.professionalSubjectTotal));
   setMeterSegments("otherMeter", [
     { label: "基礎振替", value: stats.basicElectiveTransfer, className: "meter-segment-basic-elective" },
-    { label: "専門教育", value: stats.professionalEducationOther, className: "meter-segment-professional" },
+    { label: "選択コース", value: stats.selectedCourseElective, className: "meter-segment-professional" },
+    { label: "専門共通選択", value: stats.commonElective, className: "meter-segment-common" },
+    { label: "他コース", value: stats.otherCourseSubjects, className: "meter-segment-professional" },
     { label: "単位認定", value: stats.qualification, className: "meter-segment-professional" },
     { label: "他学科", value: stats.otherDeptCounted, className: "meter-segment-other" },
     { label: "他大学認定", value: stats.otherUniversityCounted, className: "meter-segment-other" }
@@ -4014,6 +4031,9 @@ const requirementTermTitles = {
   "要件外": "卒業要件124単位や各内訳要件に算入されない単位です。",
   "振替": "基礎教育選択の超過分のうち、その他の卒業要件へ回して数える単位です。",
   "基礎振替": "基礎教育選択の超過分から、その他の卒業要件52単位へ算入した単位です。",
+  "選択コースの選択科目": "選択中コースに配置された専門選択科目のうち、その他52単位へ算入する単位です。",
+  "専門共通の選択科目": "専門共通に配置された選択科目のうち、その他52単位へ算入する単位です。",
+  "他コースの科目": "選択中ではないコースに配置された専門科目のうち、その他52単位へ算入する単位です。",
   "他学科": "他学科履修として卒業要件に算入した単位です。",
   "単位認定": "資格取得などにより認定された単位です。",
   "他大学認定": "手入力で加えた認定単位です。主に他大学科目など、個別に認定された単位を想定しています。",
@@ -4048,7 +4068,7 @@ function renderRequirements(stats) {
     requirement("専門共通必修", stats.common >= 20, `${stats.commonRaw}単位 / 20単位`),
     requirement("コース必修", stats.courseSpecific >= 16, `${stats.selectedCourseRequiredRaw}単位 / 16単位`),
     requirement("専門教育計", stats.professional >= 36, `${stats.professional}単位 / 36単位以上`),
-    requirement("その他", stats.other >= 52, `${stats.other}単位 / 52単位以上、基礎振替 ${stats.basicElectiveTransfer}単位、専門教育 ${stats.professionalEducationOther}単位（専門共通 ${stats.commonOther}単位、自コース ${stats.selectedCourseRequiredOther}単位、他コース ${stats.otherCourseRequiredOther}単位、専門選択 ${stats.specialized}単位）、単位認定 ${stats.qualification}単位、他学科 ${stats.otherDeptCounted}単位、他大学認定 ${stats.otherUniversityCounted}単位`),
+    requirement("その他", stats.other >= 52, `${stats.other}単位 / 52単位以上、基礎振替 ${stats.basicElectiveTransfer}単位、選択コースの選択科目 ${stats.selectedCourseElective}単位、専門共通の選択科目 ${stats.commonElective}単位、他コースの科目 ${stats.otherCourseSubjects}単位、単位認定 ${stats.qualification}単位、他学科 ${stats.otherDeptCounted}単位、他大学認定 ${stats.otherUniversityCounted}単位`),
     infoRequirement("要件外内訳", `教職課程科目 ${stats.teacher}単位、基礎選択超過 ${stats.basicElectiveOutside}単位、他学科超過 ${stats.otherDeptOutside}単位、他大学認定超過 ${stats.otherUniversityOutside}単位`),
     requirement("3年次進級", promotion.ok, `${promotion.credits}単位 / 50単位、GPA条件 ${promotion.gpaOk ? "達成" : "未達"}`)
   ];

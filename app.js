@@ -13,6 +13,21 @@ const TREE_UNASSIGNED_TERM = "none";
 
 const NO_COURSE = "未選択";
 const COURSES = [NO_COURSE, "情報システム", "映像メディア", "サウンド制作", "メディアデザイン"];
+const TREE_COURSE_ORDER = ["情報システム", "サウンド制作", "メディアデザイン", "映像メディア"];
+const TREE_COURSE_CLASSES = {
+  情報システム: "tree-section-system",
+  サウンド制作: "tree-section-sound",
+  メディアデザイン: "tree-section-design",
+  映像メディア: "tree-section-movie",
+  未選択: "tree-section-common"
+};
+const TREE_COURSE_ACCENTS = {
+  情報システム: "#26947b",
+  サウンド制作: "#e1b72c",
+  メディアデザイン: "#d69332",
+  映像メディア: "#8dbd3d",
+  未選択: "#7c878b"
+};
 
 const aliases = new Map([
   ["Webプログラミング", "Ｗｅｂプログラミング"],
@@ -3055,97 +3070,185 @@ function promotionStatus(stats) {
   return { credits: earnedBySecondYear, ok: earnedBySecondYear >= 50 && gpaOk, gpaOk };
 }
 
+const catalogGroupOrder = [
+  "basic",
+  "common",
+  "course",
+  "teacher",
+  "other"
+];
+
+const catalogGroupDefinitions = {
+  basic: {
+    title: "基礎科目",
+    subgroups: [
+      { key: "basicRequired", title: "基礎教育必修", className: "tree-section-basic-required", match: (course) => course.category === "basicRequired" },
+      { key: "basicElective", title: "基礎教育選択", className: "tree-section-basic-elective", match: (course) => course.category === "basicElective" }
+    ]
+  },
+  common: {
+    title: "専門共通科目",
+    subgroups: [
+      { key: "commonRequired", title: "コース共通", className: "tree-section-common", match: (course) => course.category === "commonRequired" }
+    ]
+  },
+  course: {
+    title: "各コース",
+    subgroups: [
+      { key: "情報システム", title: "情報システムコース", className: "tree-section-system", match: (course) => course.category === "courseRequired" && course.course === "情報システム" },
+      { key: "サウンド制作", title: "サウンド制作コース", className: "tree-section-sound", match: (course) => course.category === "courseRequired" && course.course === "サウンド制作" },
+      { key: "メディアデザイン", title: "メディアデザインコース", className: "tree-section-design", match: (course) => course.category === "courseRequired" && course.course === "メディアデザイン" },
+      { key: "映像メディア", title: "映像メディアコース", className: "tree-section-movie", match: (course) => course.category === "courseRequired" && course.course === "映像メディア" },
+      { key: "specializedElective", title: "専門選択", className: "tree-section-specialized", match: (course) => course.category === "specializedElective" }
+    ]
+  },
+  teacher: {
+    title: "教職課程",
+    subgroups: [
+      { key: "teacher", title: "教職課程に関する科目", className: "tree-section-teacher", match: (course) => course.category === "teacher" }
+    ]
+  },
+  other: {
+    title: "他学科履修",
+    subgroups: [
+      { key: "otherDept", title: "他学科履修", className: "tree-section-other", match: (course) => course.category === "otherDept" }
+    ]
+  }
+};
+
+function buildCatalogCard(course, prereqIssues) {
+  const card = document.createElement("article");
+  card.className = `course-card${state.planned.has(course.id) ? " is-planned" : ""}${treeMissingRequiredClass(course)}${treePrereqMissingClass(course, prereqIssues)}${animatedCourseClass(course.id)}${filterRevealClass(course.id)}`;
+  card.dataset.courseId = course.id;
+  const fxStyle = `${animatedCourseStyle(course.id)}${filterRevealStyle(course.id)}`;
+  if (fxStyle) card.setAttribute("style", fxStyle);
+
+  const main = document.createElement("div");
+  main.className = "course-main";
+
+  const info = document.createElement("div");
+  info.className = "course-info";
+
+  const title = document.createElement("div");
+  title.className = "course-title";
+  title.innerHTML = `<span>${course.name}</span><small>${course.credits}単位</small>`;
+
+  validatePlannedCourse(course);
+
+  const tags = document.createElement("div");
+  tags.className = "tags";
+  const termTag = courseTermTag(course);
+  const tagTexts = [categoryLabels[course.category], course.course, termTag].filter(Boolean);
+  tagTexts.forEach((text, index) => {
+    const tag = document.createElement("span");
+    tag.className = "tag";
+    tag.textContent = text;
+    if (index === 0) tag.title = categoryTitle(course.category);
+    if (text === "履修/資格") tag.title = "科目履修 / 資格取得";
+    tags.appendChild(tag);
+  });
+  if (course.teacherRequired) {
+    const tag = document.createElement("span");
+    tag.className = "tag teacher";
+    tag.textContent = "教職必修";
+    tags.appendChild(tag);
+  }
+  if (course.intensive) {
+    const tag = document.createElement("span");
+    tag.className = "tag qualification";
+    tag.textContent = "集中講義";
+    tags.appendChild(tag);
+  }
+  if (course.qualificationEligible) {
+    const tag = document.createElement("span");
+    tag.className = "tag qualification";
+    tag.textContent = "上限外";
+    tags.appendChild(tag);
+  }
+  const actions = document.createElement("div");
+  actions.className = "course-actions";
+  const select = document.createElement("select");
+  select.setAttribute("aria-label", `${course.name}の配置`);
+  select.innerHTML = optionMarkupForCourse(course);
+  select.value = state.planned.get(course.id) || "none";
+  select.addEventListener("change", (event) => setPlanned(course.id, event.target.value, { source: select }));
+
+  const opening = document.createElement("button");
+  opening.type = "button";
+  opening.textContent = state.planned.has(course.id) ? plannedButtonLabel(course) : "履修";
+  opening.className = "plan-button";
+  opening.setAttribute("aria-expanded", state.openCourseId === course.id ? "true" : "false");
+  opening.setAttribute("aria-label", `${course.name}の履修時期を選択${state.planned.has(course.id) ? `: ${plannedLabel(course)}` : ""}`);
+  opening.addEventListener("click", () => {
+    state.openCourseId = state.openCourseId === course.id ? null : course.id;
+    triggerArcadeFeedback("switch", opening);
+    render();
+  });
+
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.className = "remove-button";
+  remove.textContent = "×";
+  remove.setAttribute("aria-label", `${course.name}を外す`);
+  remove.addEventListener("click", () => setPlanned(course.id, "none", { source: remove }));
+
+  actions.append(opening, remove);
+  info.append(title, tags);
+  main.append(info, actions);
+  card.append(main);
+  if (state.openCourseId === course.id) {
+    const menu = document.createElement("div");
+    menu.className = "course-menu";
+    menu.appendChild(select);
+    card.append(menu);
+  }
+  return card;
+}
+
+function renderCatalogGroup(list, title, subgroups, prereqIssues) {
+  if (!subgroups.some((subgroup) => subgroup.courses.length)) return null;
+  const group = document.createElement("section");
+  group.className = "catalog-group";
+
+  const head = document.createElement("div");
+  head.className = "catalog-group-title";
+  head.textContent = title;
+  group.appendChild(head);
+
+  subgroups.forEach((subgroup) => {
+    if (!subgroup.courses.length) return;
+    const block = document.createElement("section");
+    block.className = `catalog-subgroup ${subgroup.className}`;
+    const label = document.createElement("div");
+    label.className = `catalog-subgroup-title ${subgroup.className}`;
+    label.textContent = subgroup.title;
+    block.appendChild(label);
+    const body = document.createElement("div");
+    body.className = "catalog-subgroup-body";
+    subgroup.courses.forEach((course) => {
+      body.appendChild(buildCatalogCard(course, prereqIssues));
+    });
+    block.appendChild(body);
+    group.appendChild(block);
+  });
+
+  list.appendChild(group);
+  return group;
+}
+
 function renderCatalog() {
   const catalog = document.querySelector("#catalogList");
   catalog.innerHTML = "";
   const prereqIssues = prerequisiteIssuesByCourse();
-  visibleCourses().forEach((course) => {
-    const card = document.createElement("article");
-    card.className = `course-card${state.planned.has(course.id) ? " is-planned" : ""}${treeMissingRequiredClass(course)}${treePrereqMissingClass(course, prereqIssues)}${animatedCourseClass(course.id)}${filterRevealClass(course.id)}`;
-    card.dataset.courseId = course.id;
-    const fxStyle = `${animatedCourseStyle(course.id)}${filterRevealStyle(course.id)}`;
-    if (fxStyle) card.setAttribute("style", fxStyle);
-
-    const main = document.createElement("div");
-    main.className = "course-main";
-
-    const info = document.createElement("div");
-    info.className = "course-info";
-
-    const title = document.createElement("div");
-    title.className = "course-title";
-    title.innerHTML = `<span>${course.name}</span><small>${course.credits}単位</small>`;
-
-    validatePlannedCourse(course);
-
-    const tags = document.createElement("div");
-    tags.className = "tags";
-    const termTag = courseTermTag(course);
-    const tagTexts = [categoryLabels[course.category], course.course, termTag].filter(Boolean);
-    tagTexts.forEach((text, index) => {
-      const tag = document.createElement("span");
-      tag.className = "tag";
-      tag.textContent = text;
-      if (index === 0) tag.title = categoryTitle(course.category);
-      if (text === "履修/資格") tag.title = "科目履修 / 資格取得";
-      tags.appendChild(tag);
-    });
-    if (course.teacherRequired) {
-      const tag = document.createElement("span");
-      tag.className = "tag teacher";
-      tag.textContent = "教職必修";
-      tags.appendChild(tag);
-    }
-    if (course.intensive) {
-      const tag = document.createElement("span");
-      tag.className = "tag qualification";
-      tag.textContent = "集中講義";
-      tags.appendChild(tag);
-    }
-    if (course.qualificationEligible) {
-      const tag = document.createElement("span");
-      tag.className = "tag qualification";
-      tag.textContent = "上限外";
-      tags.appendChild(tag);
-    }
-    const actions = document.createElement("div");
-    actions.className = "course-actions";
-    const select = document.createElement("select");
-    select.setAttribute("aria-label", `${course.name}の配置`);
-    select.innerHTML = optionMarkupForCourse(course);
-    select.value = state.planned.get(course.id) || "none";
-    select.addEventListener("change", (event) => setPlanned(course.id, event.target.value, { source: select }));
-
-    const opening = document.createElement("button");
-    opening.type = "button";
-    opening.textContent = state.planned.has(course.id) ? plannedButtonLabel(course) : "履修";
-    opening.className = "plan-button";
-    opening.setAttribute("aria-expanded", state.openCourseId === course.id ? "true" : "false");
-    opening.setAttribute("aria-label", `${course.name}の履修時期を選択${state.planned.has(course.id) ? `: ${plannedLabel(course)}` : ""}`);
-    opening.addEventListener("click", () => {
-      state.openCourseId = state.openCourseId === course.id ? null : course.id;
-      triggerArcadeFeedback("switch", opening);
-      render();
-    });
-
-    const remove = document.createElement("button");
-    remove.type = "button";
-    remove.className = "remove-button";
-    remove.textContent = "×";
-    remove.setAttribute("aria-label", `${course.name}を外す`);
-    remove.addEventListener("click", () => setPlanned(course.id, "none", { source: remove }));
-
-    actions.append(opening, remove);
-    info.append(title, tags);
-    main.append(info, actions);
-    card.append(main);
-    if (state.openCourseId === course.id) {
-      const menu = document.createElement("div");
-      menu.className = "course-menu";
-      menu.appendChild(select);
-      card.append(menu);
-    }
-    catalog.appendChild(card);
+  const visible = visibleCourses();
+  catalogGroupOrder.forEach((groupKey) => {
+    const groupDef = catalogGroupDefinitions[groupKey];
+    if (!groupDef) return;
+    const subgroups = groupDef.subgroups.map((subgroup) => ({
+      ...subgroup,
+      courses: visible.filter((course) => subgroup.match(course))
+    }));
+    renderCatalogGroup(catalog, groupDef.title, subgroups, prereqIssues);
   });
 }
 
@@ -3536,9 +3639,12 @@ function renderViewMode() {
 function renderCourseMenu() {
   const menu = document.querySelector("#courseMenu");
   if (!menu) return;
-  const rows = COURSES.filter((course) => course !== NO_COURSE).map((course) => `
-    <div class="course-menu-row">
-      <span>${course}</span>
+  const rows = TREE_COURSE_ORDER.map((course) => `
+    <div class="course-menu-row ${TREE_COURSE_CLASSES[course] || ""}" style="--tree-accent:${TREE_COURSE_ACCENTS[course] || "var(--brand)"}">
+      <span class="course-menu-course-label">
+        <span class="course-menu-swatch" aria-hidden="true"></span>
+        <span>${course}</span>
+      </span>
       <div class="course-menu-actions">
         <button type="button" data-course-action="add" data-course="${course}" title="${course}に変更し、現在の履修を残してコース必修を追加">コース変更＋必修追加</button>
         <button type="button" data-course-action="reset" data-course="${course}" title="${course}に変更し、他コース科目を解除">コース変更＋他コース解除</button>
@@ -3546,7 +3652,7 @@ function renderCourseMenu() {
     </div>
   `);
   menu.innerHTML = [
-    `<button type="button" class="course-menu-unselected" data-course-action="add" data-course="${NO_COURSE}" title="コースを未選択に変更">${NO_COURSE}</button>`,
+    `<button type="button" class="course-menu-unselected ${TREE_COURSE_CLASSES[NO_COURSE] || ""}" style="--tree-accent:${TREE_COURSE_ACCENTS[NO_COURSE] || "var(--brand)"}" data-course-action="add" data-course="${NO_COURSE}" title="コースを未選択に変更"><span class="course-menu-swatch" aria-hidden="true"></span><span>${NO_COURSE}</span></button>`,
     ...rows
   ].join("");
 }
@@ -3677,16 +3783,20 @@ function formatCredits(value) {
 function professionalBreakdownDetail(stats) {
   const breakdown = stats.professionalSubjectByCourse;
   const parts = [
-    ["共通", breakdown.common],
-    ["情報", breakdown.情報システム],
-    ["映像", breakdown.映像メディア],
-    ["音響", breakdown.サウンド制作],
-    ["デザイン", breakdown.メディアデザイン]
+    ["コース共通", breakdown.common, "tree-section-common"],
+    ["情報システム", breakdown.情報システム, TREE_COURSE_CLASSES.情報システム],
+    ["サウンド制作", breakdown.サウンド制作, TREE_COURSE_CLASSES.サウンド制作],
+    ["メディアデザイン", breakdown.メディアデザイン, TREE_COURSE_CLASSES.メディアデザイン],
+    ["映像メディア", breakdown.映像メディア, TREE_COURSE_CLASSES.映像メディア]
   ]
     .filter(([, value]) => value > 0)
-    .map(([label, value]) => `${label} ${formatCredits(value)}`);
-  const detail = parts.length ? parts.join(" / ") : "未登録";
-  return `専門科目計 ${formatCredits(stats.professionalSubjectTotal)}単位: ${detail}`;
+    .map(([label, value, className]) => `<span class="professional-breakdown-chip ${className}">${label} ${formatCredits(value)}</span>`);
+  const detail = parts.length ? parts.join("") : '<span class="professional-breakdown-empty">未登録</span>';
+  return `
+    <span class="professional-breakdown-title">専門科目計 ${formatCredits(stats.professionalSubjectTotal)}単位</span>
+    <span class="professional-breakdown-separator">:</span>
+    <span class="professional-breakdown-parts">${detail}</span>
+  `;
 }
 
 function renderSummary(stats) {
@@ -3694,7 +3804,7 @@ function renderSummary(stats) {
   document.querySelector("#totalDetail").textContent = `要件外 ${stats.requirementOutside}単位 / 履修計 ${stats.attemptedTotal}単位`;
   document.querySelector("#basicCredits").textContent = `${stats.basic} / 36`;
   document.querySelector("#professionalCredits").textContent = `${stats.professional} / 36`;
-  document.querySelector("#professionalDetail").textContent = professionalBreakdownDetail(stats);
+  document.querySelector("#professionalDetail").innerHTML = professionalBreakdownDetail(stats);
   document.querySelector("#otherCredits").textContent = `${stats.other} / 52`;
   setMeterSegments("totalMeter", [
     { label: "基礎教育", value: stats.basic, className: "meter-segment-basic" },
@@ -3708,9 +3818,9 @@ function renderSummary(stats) {
   setMeterSegments("professionalMeter", [
     { label: "コース共通", value: stats.professionalSubjectByCourse.common, className: "meter-segment-common" },
     { label: "情報システム", value: stats.professionalSubjectByCourse.情報システム, className: "meter-segment-system" },
-    { label: "映像メディア", value: stats.professionalSubjectByCourse.映像メディア, className: "meter-segment-movie" },
     { label: "サウンド制作", value: stats.professionalSubjectByCourse.サウンド制作, className: "meter-segment-sound" },
-    { label: "メディアデザイン", value: stats.professionalSubjectByCourse.メディアデザイン, className: "meter-segment-design" }
+    { label: "メディアデザイン", value: stats.professionalSubjectByCourse.メディアデザイン, className: "meter-segment-design" },
+    { label: "映像メディア", value: stats.professionalSubjectByCourse.映像メディア, className: "meter-segment-movie" }
   ], Math.max(36, stats.professionalSubjectTotal));
   setMeter("otherMeter", stats.other, 52);
 }

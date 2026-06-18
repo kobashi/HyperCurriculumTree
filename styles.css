@@ -976,6 +976,46 @@ input {
   transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
 }
 
+.course-card.tree-section-common {
+  border-left: 6px solid #7c878b;
+}
+
+.course-card.tree-section-basic-required {
+  border-left: 6px solid #4a91bd;
+}
+
+.course-card.tree-section-basic-elective {
+  border-left: 6px solid #9cae42;
+}
+
+.course-card.tree-section-system {
+  border-left: 6px solid #26947b;
+}
+
+.course-card.tree-section-movie {
+  border-left: 6px solid #8dbd3d;
+}
+
+.course-card.tree-section-sound {
+  border-left: 6px solid #e1b72c;
+}
+
+.course-card.tree-section-design {
+  border-left: 6px solid #d69332;
+}
+
+.course-card.tree-section-specialized {
+  border-left: 6px solid #7364b8;
+}
+
+.course-card.tree-section-other {
+  border-left: 6px solid #7281cf;
+}
+
+.course-card.tree-section-teacher {
+  border-left: 6px solid #8a61c6;
+}
+
 .course-card:hover {
   transform: translateY(-1px);
   box-shadow: 0 10px 22px rgba(23, 33, 37, 0.12);
@@ -1071,6 +1111,56 @@ input {
   color: var(--muted);
   font-size: 11px;
   font-weight: 700;
+}
+
+.tag.tree-section-common {
+  background: #eef0f1;
+  color: #5c666a;
+}
+
+.tag.tree-section-basic-required {
+  background: #e9f3fb;
+  color: #245c82;
+}
+
+.tag.tree-section-basic-elective {
+  background: #f2f6df;
+  color: #66741c;
+}
+
+.tag.tree-section-system {
+  background: #e3f4ef;
+  color: #1e6958;
+}
+
+.tag.tree-section-movie {
+  background: #edf7d9;
+  color: #55751f;
+}
+
+.tag.tree-section-sound {
+  background: #fff8bd;
+  color: #8f7012;
+}
+
+.tag.tree-section-design {
+  background: #fde8c7;
+  color: #8e5c17;
+}
+
+.tag.tree-section-specialized {
+  background: #ece8f7;
+  color: #6254a0;
+}
+
+.tag.tree-section-other {
+  background: #edf0fa;
+  color: #5864a8;
+}
+
+.tag.tree-section-teacher {
+  background: #f0e8ff;
+  color: #6b4e9e;
 }
 
 .tag.teacher {

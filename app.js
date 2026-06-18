@@ -1964,6 +1964,20 @@ function plannedCategoryClass(course) {
   return "tree-section-common";
 }
 
+function catalogCategoryClass(course) {
+  if (course.category === "basicRequired") return "tree-section-basic-required";
+  if (course.category === "basicElective") return "tree-section-basic-elective";
+  if (course.category === "commonRequired") return "tree-section-common";
+  if (course.category === "courseRequired" && course.course === "情報システム") return "tree-section-system";
+  if (course.category === "courseRequired" && course.course === "映像メディア") return "tree-section-movie";
+  if (course.category === "courseRequired" && course.course === "サウンド制作") return "tree-section-sound";
+  if (course.category === "courseRequired" && course.course === "メディアデザイン") return "tree-section-design";
+  if (course.category === "specializedElective") return "tree-section-specialized";
+  if (course.category === "otherDept") return "tree-section-other";
+  if (course.category === "teacher") return "tree-section-teacher";
+  return "tree-section-common";
+}
+
 const capExcludedCourseNames = new Set([
   "アウトドアスポーツⅠ",
   "アウトドアスポーツⅡ",
@@ -3086,7 +3100,7 @@ function promotionStatus(stats) {
 
 function buildCatalogCard(course, prereqIssues) {
   const card = document.createElement("article");
-  card.className = `course-card${state.planned.has(course.id) ? " is-planned" : ""}${treeMissingRequiredClass(course)}${treePrereqMissingClass(course, prereqIssues)}${animatedCourseClass(course.id)}${filterRevealClass(course.id)}`;
+  card.className = `course-card ${catalogCategoryClass(course)}${state.planned.has(course.id) ? " is-planned" : ""}${treeMissingRequiredClass(course)}${treePrereqMissingClass(course, prereqIssues)}${animatedCourseClass(course.id)}${filterRevealClass(course.id)}`;
   card.dataset.courseId = course.id;
   const fxStyle = `${animatedCourseStyle(course.id)}${filterRevealStyle(course.id)}`;
   if (fxStyle) card.setAttribute("style", fxStyle);
@@ -3109,7 +3123,7 @@ function buildCatalogCard(course, prereqIssues) {
   const tagTexts = [categoryLabels[course.category], course.course, termTag].filter(Boolean);
   tagTexts.forEach((text, index) => {
     const tag = document.createElement("span");
-    tag.className = "tag";
+    tag.className = `tag ${index === 0 ? catalogCategoryClass(course) : ""}`;
     tag.textContent = text;
     if (index === 0) tag.title = categoryTitle(course.category);
     if (text === "履修/資格") tag.title = "科目履修 / 資格取得";

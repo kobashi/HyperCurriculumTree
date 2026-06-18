@@ -1887,88 +1887,90 @@ input {
 }
 
 .planned-course {
+  --planned-course-bg: var(--surface-strong);
+  --planned-course-border: var(--brand);
   display: grid;
   gap: 3px;
   padding: 7px;
-  border-left: 3px solid var(--brand);
+  border-left: 3px solid var(--planned-course-border);
   border-radius: 5px;
-  background: var(--surface-strong);
+  background: var(--planned-course-bg);
   font-size: 12px;
 }
 
 .planned-course.tree-section-common {
-  border-left-color: #7c878b;
-  background: #eef3f2;
+  --planned-course-border: #7c878b;
+  --planned-course-bg: #eef3f2;
 }
 
 .planned-course.tree-section-basic-required {
-  border-left-color: #4a91bd;
-  background: #edf6fc;
+  --planned-course-border: #4a91bd;
+  --planned-course-bg: #edf6fc;
 }
 
 .planned-course.tree-section-basic-elective {
-  border-left-color: #9cae42;
-  background: #f4f8e9;
+  --planned-course-border: #9cae42;
+  --planned-course-bg: #f4f8e9;
 }
 
 .planned-course.tree-section-system {
-  border-left-color: #26947b;
-  background: #edf8f4;
+  --planned-course-border: #26947b;
+  --planned-course-bg: #edf8f4;
 }
 
 .planned-course.tree-section-movie {
-  border-left-color: #8dbd3d;
-  background: #f4f9e7;
+  --planned-course-border: #8dbd3d;
+  --planned-course-bg: #f4f9e7;
 }
 
 .planned-course.tree-section-sound {
-  border-left-color: #e1b72c;
-  background: #fffbe9;
+  --planned-course-border: #e1b72c;
+  --planned-course-bg: #fffbe9;
 }
 
 .planned-course.tree-section-design {
-  border-left-color: #d69332;
-  background: #fff6e8;
+  --planned-course-border: #d69332;
+  --planned-course-bg: #fff6e8;
 }
 
 .planned-course.tree-section-specialized {
-  border-left-color: #7364b8;
-  background: #f1eefb;
+  --planned-course-border: #7364b8;
+  --planned-course-bg: #f1eefb;
 }
 
 .planned-course.tree-section-common-soft {
-  border-left-color: #a9b2b5;
-  background: #f4f7f6;
+  --planned-course-border: #a9b2b5;
+  --planned-course-bg: #f4f7f6;
 }
 
 .planned-course.tree-section-system-soft {
-  border-left-color: #77b7a6;
-  background: #edf8f4;
+  --planned-course-border: #77b7a6;
+  --planned-course-bg: #edf8f4;
 }
 
 .planned-course.tree-section-movie-soft {
-  border-left-color: #b9d97f;
-  background: #f4f9e7;
+  --planned-course-border: #b9d97f;
+  --planned-course-bg: #f4f9e7;
 }
 
 .planned-course.tree-section-sound-soft {
-  border-left-color: #edd46c;
-  background: #fffbe9;
+  --planned-course-border: #edd46c;
+  --planned-course-bg: #fffbe9;
 }
 
 .planned-course.tree-section-design-soft {
-  border-left-color: #e4b77c;
-  background: #fff6e8;
+  --planned-course-border: #e4b77c;
+  --planned-course-bg: #fff6e8;
 }
 
 .planned-course.tree-section-other {
-  border-left-color: #7281cf;
-  background: #eef1fb;
+  --planned-course-border: #7281cf;
+  --planned-course-bg: #eef1fb;
 }
 
 .planned-course.tree-section-teacher {
-  border-left-color: #8a61c6;
-  background: #f2ebff;
+  --planned-course-border: #8a61c6;
+  --planned-course-bg: #f2ebff;
 }
 
 .planned-course.fx-activate {
@@ -1984,12 +1986,16 @@ input {
 
 .planned-course.cap-excluded {
   border-left-color: #8a9a9a;
-  background: #f3f6f5;
+  background:
+    linear-gradient(180deg, rgba(243, 246, 245, 0.4), rgba(243, 246, 245, 0.4)),
+    var(--planned-course-bg);
 }
 
 .planned-course.qualification-recognition {
   border-left-color: #3f5f99;
-  background: #f3f6ff;
+  background:
+    linear-gradient(180deg, rgba(243, 246, 255, 0.28), rgba(243, 246, 255, 0.28)),
+    var(--planned-course-bg);
 }
 
 .qualification-box {

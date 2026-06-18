@@ -2928,26 +2928,21 @@ function removeTeacherPlanCourses() {
 function autoFill(options = {}) {
   cancelPendingPlanClear();
   const beforePlan = snapshotPlanned();
-  state.planned.clear();
-  state.teacherAdded.clear();
   state.openCourseId = null;
   state.openTreeNodeId = null;
-  resetCatalogFilters();
+  let added = 0;
   allCourses.forEach((course) => {
     if (course.category === "courseRequired" && (state.course === NO_COURSE || course.course !== state.course)) return;
-    if (course.category === "teacher" && !state.teacher) return;
-    if (["basicRequired", "commonRequired", "courseRequired"].includes(course.category)) {
-      state.planned.set(course.id, openingTermForCourse(course));
-    }
+    if (!["basicRequired", "commonRequired", "courseRequired"].includes(course.category)) return;
+    if (state.planned.has(course.id)) return;
+    state.planned.set(course.id, openingTermForCourse(course));
+    added += 1;
   });
-  if (state.teacher) {
-    addTeacherPlanCourses({ silent: true });
-  }
   if (!options.silent) {
     queuePlanTransition(beforePlan, snapshotPlanned(), { baseDelay: 0, step: 22, cellStep: 56 });
     syncArcadeAudio();
     render();
-    triggerArcadeFeedback("boost");
+    triggerArcadeFeedback(added > 0 ? "boost" : "switch");
     return;
   }
   syncArcadeAudio();

@@ -1972,10 +1972,28 @@ function catalogCategoryClass(course) {
   if (course.category === "courseRequired" && course.course === "映像メディア") return "tree-section-movie";
   if (course.category === "courseRequired" && course.course === "サウンド制作") return "tree-section-sound";
   if (course.category === "courseRequired" && course.course === "メディアデザイン") return "tree-section-design";
-  if (course.category === "specializedElective") return "tree-section-specialized";
+  if (course.category === "specializedElective") {
+    const affinity = catalogSpecializedAffinity(course);
+    if (affinity === "情報システム") return "tree-section-system-soft";
+    if (affinity === "映像メディア") return "tree-section-movie-soft";
+    if (affinity === "サウンド制作") return "tree-section-sound-soft";
+    if (affinity === "メディアデザイン") return "tree-section-design-soft";
+    return "tree-section-common-soft";
+  }
   if (course.category === "otherDept") return "tree-section-other";
   if (course.category === "teacher") return "tree-section-teacher";
   return "tree-section-common";
+}
+
+function catalogSpecializedAffinity(course) {
+  if (course.category !== "specializedElective") return null;
+  const affiliations = professionalSubjectAffiliations(course);
+  const orderedAffiliations = affiliations.filter((affiliation) => affiliation !== "common");
+  if (orderedAffiliations.length) {
+    return catalogCourseOrder.find((name) => orderedAffiliations.includes(name)) || orderedAffiliations[0];
+  }
+  if (affiliations.includes("common")) return "common";
+  return null;
 }
 
 const capExcludedCourseNames = new Set([
@@ -3191,8 +3209,6 @@ const catalogCategoryOrder = {
   basicRequired: 0,
   basicElective: 1,
   commonRequired: 2,
-  courseRequired: 3,
-  specializedElective: 4,
   teacher: 5,
   otherDept: 6
 };
@@ -3201,13 +3217,21 @@ const catalogCourseOrder = ["情報システム", "サウンド制作", "メデ�
 
 function catalogSortValue(course) {
   const categoryOrder = catalogCategoryOrder[course.category] ?? 99;
-  const courseOrder = course.category === "courseRequired" && course.course
-    ? catalogCourseOrder.indexOf(course.course)
-    : -1;
-  const typeOrder = course.category === "courseRequired" ? courseOrder : 0;
+  if (course.category === "courseRequired") {
+    const courseOrder = catalogCourseOrder.indexOf(course.course);
+    return [3, courseOrder < 0 ? 99 : courseOrder, 0, Number.isFinite(course.year) ? course.year : 99, course.term === "前" ? 0 : course.term === "後" ? 1 : 2, course.name];
+  }
+  if (course.category === "specializedElective") {
+    const affinity = catalogSpecializedAffinity(course);
+    if (affinity === "common" || !affinity) {
+      return [2.5, 0, 1, Number.isFinite(course.year) ? course.year : 99, course.term === "前" ? 0 : course.term === "後" ? 1 : 2, course.name];
+    }
+    const courseOrder = catalogCourseOrder.indexOf(affinity);
+    return [3, courseOrder < 0 ? 99 : courseOrder, 1, Number.isFinite(course.year) ? course.year : 99, course.term === "前" ? 0 : course.term === "後" ? 1 : 2, course.name];
+  }
   const yearOrder = Number.isFinite(course.year) ? course.year : 99;
   const termOrder = course.term === "前" ? 0 : course.term === "後" ? 1 : 2;
-  return [categoryOrder, typeOrder < 0 ? 99 : typeOrder, yearOrder, termOrder, course.name];
+  return [categoryOrder, 0, 0, yearOrder, termOrder, course.name];
 }
 
 function sortCatalogCourses(courses) {

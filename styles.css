@@ -1008,6 +1008,31 @@ input {
   border-left: 6px solid #7364b8;
 }
 
+.course-card.tree-section-common-soft {
+  border-left: 6px solid #a9b2b5;
+  background: #f4f7f6;
+}
+
+.course-card.tree-section-system-soft {
+  border-left: 6px solid #77b7a6;
+  background: #edf8f4;
+}
+
+.course-card.tree-section-movie-soft {
+  border-left: 6px solid #b9d97f;
+  background: #f4f9e7;
+}
+
+.course-card.tree-section-sound-soft {
+  border-left: 6px solid #edd46c;
+  background: #fffbe9;
+}
+
+.course-card.tree-section-design-soft {
+  border-left: 6px solid #e4b77c;
+  background: #fff6e8;
+}
+
 .course-card.tree-section-other {
   border-left: 6px solid #7281cf;
 }
@@ -1161,6 +1186,31 @@ input {
 .tag.tree-section-teacher {
   background: #f0e8ff;
   color: #6b4e9e;
+}
+
+.tag.tree-section-common-soft {
+  background: #f4f7f6;
+  color: #667074;
+}
+
+.tag.tree-section-system-soft {
+  background: #edf8f4;
+  color: #2c786a;
+}
+
+.tag.tree-section-movie-soft {
+  background: #f4f9e7;
+  color: #6a8a38;
+}
+
+.tag.tree-section-sound-soft {
+  background: #fffbe9;
+  color: #8d7420;
+}
+
+.tag.tree-section-design-soft {
+  background: #fff6e8;
+  color: #9a6b22;
 }
 
 .tag.teacher {

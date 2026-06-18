@@ -1787,7 +1787,89 @@ input {
 }
 
 .planned-course small {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
   color: var(--muted);
+  line-height: 1.25;
+}
+
+.planned-course-category,
+.planned-course-credit,
+.planned-course-method,
+.planned-course-flag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 0 7px;
+  border: 1px solid var(--line);
+  border-left: 5px solid transparent;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.planned-course-category {
+  color: var(--ink);
+}
+
+.planned-course-credit,
+.planned-course-method,
+.planned-course-flag {
+  background: #f7faf8;
+  color: var(--muted);
+}
+
+.planned-course-category.tree-section-common {
+  background: #eef0f1;
+  border-left-color: #7c878b;
+}
+
+.planned-course-category.tree-section-basic-required {
+  background: #e9f3fb;
+  border-left-color: #4a91bd;
+}
+
+.planned-course-category.tree-section-basic-elective {
+  background: #f2f6df;
+  border-left-color: #9cae42;
+}
+
+.planned-course-category.tree-section-system {
+  background: #e3f4ef;
+  border-left-color: #26947b;
+}
+
+.planned-course-category.tree-section-movie {
+  background: #edf7d9;
+  border-left-color: #8dbd3d;
+}
+
+.planned-course-category.tree-section-sound {
+  background: #fff8bd;
+  border-left-color: #e1b72c;
+}
+
+.planned-course-category.tree-section-design {
+  background: #fde8c7;
+  border-left-color: #d69332;
+}
+
+.planned-course-category.tree-section-specialized {
+  background: #ece8f7;
+  border-left-color: #7364b8;
+}
+
+.planned-course-category.tree-section-other {
+  background: #edf0fa;
+  border-left-color: #7281cf;
+}
+
+.planned-course-category.tree-section-teacher {
+  background: #f0e8ff;
+  border-left-color: #8a61c6;
 }
 
 .status-panel h2 {

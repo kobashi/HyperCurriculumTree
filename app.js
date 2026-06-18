@@ -1950,6 +1950,20 @@ function categoryTitle(category) {
   return categoryFormalLabels[category] || categoryLabels[category] || "";
 }
 
+function plannedCategoryClass(course) {
+  if (course.category === "basicRequired") return "tree-section-basic-required";
+  if (course.category === "basicElective") return "tree-section-basic-elective";
+  if (course.category === "commonRequired") return "tree-section-common";
+  if (course.category === "courseRequired" && course.course === "情報システム") return "tree-section-system";
+  if (course.category === "courseRequired" && course.course === "映像メディア") return "tree-section-movie";
+  if (course.category === "courseRequired" && course.course === "サウンド制作") return "tree-section-sound";
+  if (course.category === "courseRequired" && course.course === "メディアデザイン") return "tree-section-design";
+  if (course.category === "specializedElective") return "tree-section-specialized";
+  if (course.category === "otherDept") return "tree-section-other";
+  if (course.category === "teacher") return "tree-section-teacher";
+  return "tree-section-common";
+}
+
 const capExcludedCourseNames = new Set([
   "アウトドアスポーツⅠ",
   "アウトドアスポーツⅡ",
@@ -3290,7 +3304,7 @@ function renderPlan() {
             return `
             <div class="planned-course${isCapExcludedInPlan(course) ? " cap-excluded" : ""}${planTransitionClass(course.id)}" data-course-id="${course.id}" style="--fx-delay:${delay}ms;">
               <span>${course.name}</span>
-              <small title="${categoryTitle(course.category)}">${categoryLabels[course.category]} / ${course.credits}単位${isRecognitionPlanned(course) ? ` / ${recognitionMethodLabel(course)}` : ""}${course.category === "teacher" ? " / 要件外" : ""}${isCapExcludedInPlan(course) ? " / 上限外" : ""}</small>
+              <small title="${categoryTitle(course.category)}"><span class="planned-course-category ${plannedCategoryClass(course)}">${categoryLabels[course.category]}</span><span class="planned-course-credit">${course.credits}単位</span>${isRecognitionPlanned(course) ? `<span class="planned-course-method">${recognitionMethodLabel(course)}</span>` : ""}${course.category === "teacher" ? `<span class="planned-course-flag">要件外</span>` : ""}${isCapExcludedInPlan(course) ? `<span class="planned-course-flag">上限外</span>` : ""}</small>
             </div>
           `;
           }).join("")}

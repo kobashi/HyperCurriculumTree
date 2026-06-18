@@ -3003,7 +3003,14 @@ function prerequisiteIssuesByCourse() {
       const prereqCourses = allCourses.filter((item) => item.key === normalizeName(requiredName));
       if (prereqCourses.some((item) => state.planned.has(item.id))) return;
       prereqCourses.forEach((prereqCourse) => {
-        if (prereqCourse.category !== "basicElective" && prereqCourse.category !== "specializedElective") return;
+        if (
+          prereqCourse.category !== "basicElective" &&
+          prereqCourse.category !== "specializedElective" &&
+          prereqCourse.category !== "courseRequired"
+        ) {
+          return;
+        }
+        if (prereqCourse.category === "courseRequired" && prereqCourse.course === state.course) return;
         issues.add(prereqCourse.id);
       });
     });

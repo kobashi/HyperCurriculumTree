@@ -3981,7 +3981,7 @@ const requirementTermTitles = {
   "基礎振替": "基礎教育選択の超過分から、その他の卒業要件52単位へ算入した単位です。",
   "他学科": "他学科履修として卒業要件に算入した単位です。",
   "単位認定": "資格取得などにより認定された単位です。",
-  "その他認定": "手入力で加えた認定単位です。主に他大学科目など、個別に認定された単位を想定しています。",
+  "その他認定": "手入力で加えた認定単位です。主に他大学科目や学科特別科目など、個別に認定された単位を想定しています。",
   "基礎選択超過": "基礎教育選択14単位を超え、振替上限を超えたため要件外になった単位です。",
   "他学科超過": "他学科履修12単位の上限を超えたため要件外になった単位です。"
 };
@@ -4012,7 +4012,7 @@ function renderRequirements(stats) {
     requirement("専門共通必修", stats.common >= 20, `${stats.common}単位 / 20単位`),
     requirement("コース必修", stats.courseSpecific >= 16, `${stats.courseSpecific}単位 / 16単位`),
     requirement("専門教育計", stats.professional >= 36, `${stats.professional}単位 / 36単位以上`),
-    requirement("その他", stats.other >= 52, `${stats.other}単位 / 52単位以上、専門選択 ${stats.specialized}単位、単位認定 ${stats.qualification}単位、基礎振替 ${stats.basicElectiveTransfer}単位、他学科 ${stats.otherDeptCounted}単位、その他認定 ${stats.manualOther}単位`),
+    requirement("その他", stats.other >= 52, `${stats.other}単位 / 52単位以上、専門選択 ${stats.specialized}単位、単位認定 ${stats.qualification}単位、基礎振替 ${stats.basicElectiveTransfer}単位、他学科 ${stats.otherDeptCounted}単位、他大学・学科特別認定 ${stats.manualOther}単位`),
     infoRequirement("要件外内訳", `教職課程科目 ${stats.teacher}単位、基礎選択超過 ${stats.basicElectiveOutside}単位、他学科超過 ${stats.otherDeptOutside}単位`),
     requirement("3年次進級", promotion.ok, `${promotion.credits}単位 / 50単位、GPA条件 ${promotion.gpaOk ? "達成" : "未達"}`)
   ];

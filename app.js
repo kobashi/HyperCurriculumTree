@@ -3036,7 +3036,7 @@ function totals() {
       .map((courseName) => [courseName, sum((course) => course.category === "courseRequired" && course.course === courseName)])
   );
   const qualification = sum((course) => isQualificationPlanned(course));
-  const specialized = sum((course) => course.category === "specializedElective" && !isQualificationPlanned(course));
+  const specialized = sum((course) => course.category === "specializedElective");
   const otherDeptRaw = sum((course) => course.category === "otherDept");
   const otherDeptCounted = Math.min(otherDeptRaw, 12);
   const otherDeptOutside = Math.max(0, otherDeptRaw - otherDeptCounted);
@@ -3044,9 +3044,11 @@ function totals() {
   const professional = common + courseSpecific;
   const professionalSubjectByCourse = professionalSubjectBreakdown(selected);
   const professionalSubjectTotal = Object.values(professionalSubjectByCourse).reduce((total, credits) => total + credits, 0);
-  const manualOther = Number(state.manualOther);
-  const other = manualOther + basicElectiveTransfer + otherDeptCounted + specialized + qualification;
-  const requirementOutside = teacher + otherDeptOutside + basicElectiveOutside;
+  const otherUniversityRaw = Number(state.manualOther);
+  const otherUniversityCounted = Math.min(otherUniversityRaw, 30);
+  const otherUniversityOutside = Math.max(0, otherUniversityRaw - otherUniversityCounted);
+  const other = basicElectiveTransfer + specialized + otherDeptCounted + otherUniversityCounted;
+  const requirementOutside = teacher + otherDeptOutside + basicElectiveOutside + otherUniversityOutside;
   const attemptedTotal = basic + professional + other + requirementOutside;
   const total = basic + professional + other;
   return {
@@ -3069,7 +3071,9 @@ function totals() {
     otherDeptOutside,
     qualification,
     teacher,
-    manualOther,
+    otherUniversityRaw,
+    otherUniversityCounted,
+    otherUniversityOutside,
     other,
     requirementOutside,
     attemptedTotal,
@@ -3964,7 +3968,12 @@ function renderSummary(stats) {
     { label: "メディアデザイン", value: stats.professionalSubjectByCourse.メディアデザイン, className: "meter-segment-design" },
     { label: "映像メディア", value: stats.professionalSubjectByCourse.映像メディア, className: "meter-segment-movie" }
   ], Math.max(36, stats.professionalSubjectTotal));
-  setMeter("otherMeter", stats.other, 52);
+  setMeterSegments("otherMeter", [
+    { label: "基礎振替", value: stats.basicElectiveTransfer, className: "meter-segment-basic-elective" },
+    { label: "専門教育", value: stats.specialized, className: "meter-segment-professional" },
+    { label: "他学科", value: stats.otherDeptCounted, className: "meter-segment-other" },
+    { label: "他大学認定", value: stats.otherUniversityCounted, className: "meter-segment-other" }
+  ], 52);
 }
 
 function requirement(title, ok, detail) {
@@ -3981,9 +3990,10 @@ const requirementTermTitles = {
   "基礎振替": "基礎教育選択の超過分から、その他の卒業要件52単位へ算入した単位です。",
   "他学科": "他学科履修として卒業要件に算入した単位です。",
   "単位認定": "資格取得などにより認定された単位です。",
-  "その他認定": "手入力で加えた認定単位です。主に他大学科目や学科特別科目など、個別に認定された単位を想定しています。",
+  "他大学認定": "手入力で加えた認定単位です。主に他大学科目など、個別に認定された単位を想定しています。",
   "基礎選択超過": "基礎教育選択14単位を超え、振替上限を超えたため要件外になった単位です。",
-  "他学科超過": "他学科履修12単位の上限を超えたため要件外になった単位です。"
+  "専門教育・他学科超過": "専門教育・他学科の12単位上限を超えたため要件外になった単位です。",
+  "他大学認定超過": "他大学認定30単位の上限を超えたため要件外になった単位です。"
 };
 
 function escapeRegExp(text) {
@@ -4012,8 +4022,8 @@ function renderRequirements(stats) {
     requirement("専門共通必修", stats.common >= 20, `${stats.common}単位 / 20単位`),
     requirement("コース必修", stats.courseSpecific >= 16, `${stats.courseSpecific}単位 / 16単位`),
     requirement("専門教育計", stats.professional >= 36, `${stats.professional}単位 / 36単位以上`),
-    requirement("その他", stats.other >= 52, `${stats.other}単位 / 52単位以上、専門選択 ${stats.specialized}単位、単位認定 ${stats.qualification}単位、基礎振替 ${stats.basicElectiveTransfer}単位、他学科 ${stats.otherDeptCounted}単位、他大学・学科特別認定 ${stats.manualOther}単位`),
-    infoRequirement("要件外内訳", `教職課程科目 ${stats.teacher}単位、基礎選択超過 ${stats.basicElectiveOutside}単位、他学科超過 ${stats.otherDeptOutside}単位`),
+    requirement("その他", stats.other >= 52, `${stats.other}単位 / 52単位以上、基礎振替 ${stats.basicElectiveTransfer}単位、専門教育 ${stats.specialized}単位、他学科 ${stats.otherDeptCounted}単位、他大学認定 ${stats.otherUniversityCounted}単位`),
+    infoRequirement("要件外内訳", `教職課程科目 ${stats.teacher}単位、基礎選択超過 ${stats.basicElectiveOutside}単位、他学科超過 ${stats.otherDeptOutside}単位、他大学認定超過 ${stats.otherUniversityOutside}単位`),
     requirement("3年次進級", promotion.ok, `${promotion.credits}単位 / 50単位、GPA条件 ${promotion.gpaOk ? "達成" : "未達"}`)
   ];
   if (state.teacher) {
@@ -4055,8 +4065,8 @@ function renderAlerts(stats) {
   if (state.teacherNotice) {
     alerts.push(["info", state.teacherNotice]);
   }
-  if (stats.otherDeptRaw > 12) {
-    alerts.push(["warn", `他学科履修は${stats.otherDeptRaw}単位中、卒業算入は12単位までです。`]);
+  if (stats.otherUniversityRaw > 30) {
+    alerts.push(["warn", `他大学認定は${stats.otherUniversityRaw}単位中、卒業算入は30単位までです。`]);
   }
   if (stats.basicElectiveOutside > 0) {
     alerts.push(["warn", `基礎教育選択は14単位超過分のうち10単位までその他枠へ振替、残り${stats.basicElectiveOutside}単位は卒業要件外です。`]);

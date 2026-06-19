@@ -766,7 +766,8 @@ const arcadeAudio = {
   bgmStep: 0,
   bgmStateKey: "",
   arrangementCacheKey: "",
-  arrangementCache: null
+  arrangementCache: null,
+  stepPlanCache: new Map()
 };
 
 const fxSequence = {
@@ -789,6 +790,13 @@ const planFx = {
   cleanupTimer: null,
   clearTimer: null,
   queuedDelays: new Map()
+};
+
+const fxDomIndex = {
+  courseElements: new Map(),
+  planRows: new Map(),
+  treeNodeButtons: new Map(),
+  treeEdgeDrawScheduled: false
 };
 
 const arcadeBgmProfiles = {
@@ -1299,10 +1307,36 @@ function bgmNoiseSeed(profile, arrangement, step, voice) {
   return hashString(`${profile.key}|${arrangement.key}|${step}|${voice}`);
 }
 
-function playBgmRhythm(ctx, profile, step, dynamics, arrangement) {
+const bgmStepPlanCacheLimit = 128;
+
+function bgmLoopStep(profile, step) {
+  const bars = Math.max(1, (profile.progression || [0]).length);
+  const loopSteps = bars * 16;
+  return ((step % loopSteps) + loopSteps) % loopSteps;
+}
+
+function bgmStepPlanCacheKey(profile, arrangement, step) {
+  return `${profile.key}|${arrangement.key}|${bgmLoopStep(profile, step)}`;
+}
+
+function trimBgmStepPlanCache() {
+  while (arcadeAudio.stepPlanCache.size > bgmStepPlanCacheLimit) {
+    arcadeAudio.stepPlanCache.delete(arcadeAudio.stepPlanCache.keys().next().value);
+  }
+}
+
+function addBgmToneEvent(events, options) {
+  events.push({ kind: "tone", options });
+}
+
+function addBgmNoiseEvent(events, options, voice) {
+  events.push({ kind: "noise", options, voice });
+}
+
+function collectBgmRhythmEvents(events, profile, step, dynamics) {
   const drumGain = profile.drumGain || 0.016;
   if (patternHit(profile.kick, step)) {
-    tone(ctx, {
+    addBgmToneEvent(events, {
       freq: Math.max(48, profile.root / 4),
       duration: 0.075,
       type: "sine",
@@ -1313,30 +1347,28 @@ function playBgmRhythm(ctx, profile, step, dynamics, arrangement) {
     });
   }
   if (patternHit(profile.snare, step)) {
-    noiseHit(ctx, {
+    addBgmNoiseEvent(events, {
       duration: 0.055,
       gain: drumGain * 1.35 * dynamics,
       filter: 1800,
       filterType: "bandpass",
-      bus: "bgm",
-      seed: bgmNoiseSeed(profile, arrangement, step, "snare")
-    });
+      bus: "bgm"
+    }, "snare");
   }
   if (patternHit(profile.hat, step)) {
-    noiseHit(ctx, {
+    addBgmNoiseEvent(events, {
       duration: 0.025,
       gain: drumGain * 0.75 * dynamics,
       filter: 5400,
       filterType: "highpass",
-      bus: "bgm",
-      seed: bgmNoiseSeed(profile, arrangement, step, "hat")
-    });
+      bus: "bgm"
+    }, "hat");
   }
 }
 
-function playBgmChord(ctx, profile, chordRoot, dynamics, voicing = null) {
+function collectBgmChordEvents(events, profile, chordRoot, dynamics, voicing = null) {
   (voicing || profile.chordVoicing || [0, 4, 7]).forEach((offset, index) => {
-    tone(ctx, {
+    addBgmToneEvent(events, {
       freq: midiToFreq(profile.root, chordRoot + offset),
       duration: profile.chordDuration || 0.2,
       type: profile.chordType || "triangle",
@@ -1355,12 +1387,12 @@ function playBgmChord(ctx, profile, chordRoot, dynamics, voicing = null) {
   });
 }
 
-function playBgmContextAccents(ctx, profile, step, analysis, arrangement) {
+function collectBgmContextAccentEvents(events, profile, step, analysis, arrangement) {
   const slot = analysis.mutationSlot;
   const cleanArrangement = slot.prereq === 0 && slot.missing === 0;
   if (cleanArrangement && analysis.ownCourseAccent) {
     const octaveBoost = (step + slot.seed) % 4 === 0 ? 12 : 7;
-    tone(ctx, {
+    addBgmToneEvent(events, {
       freq: midiToFreq(profile.root, analysis.harmony.root + octaveBoost + (profile.leadOctave || 12)),
       duration: 0.07,
       type: profile.leadType || "square",
@@ -1379,7 +1411,7 @@ function playBgmContextAccents(ctx, profile, step, analysis, arrangement) {
     });
   }
   if (cleanArrangement && analysis.commonCourseAccent) {
-    tone(ctx, {
+    addBgmToneEvent(events, {
       freq: midiToFreq(profile.root, analysis.harmony.root + 19),
       duration: 0.095,
       type: "sine",
@@ -1397,7 +1429,7 @@ function playBgmContextAccents(ctx, profile, step, analysis, arrangement) {
   if (cleanArrangement && analysis.foreignCourseAccent) {
     const foreignProfile = bgmForeignCourseProfile(slot);
     const flavorOffset = bgmForeignFlavorOffset(slot, step, 3);
-    tone(ctx, {
+    addBgmToneEvent(events, {
       freq: midiToFreq(profile.root, analysis.harmony.root + flavorOffset + (foreignProfile?.leadOctave || profile.leadOctave || 12)),
       duration: foreignProfile?.leadDuration || 0.075,
       type: foreignProfile?.leadType || "triangle",
@@ -1418,7 +1450,7 @@ function playBgmContextAccents(ctx, profile, step, analysis, arrangement) {
   if (analysis.teacherAccent) {
     const bellRoot = analysis.harmony.root + (step % 8 === 0 ? 24 : 19);
     [0, 7].forEach((offset, index) => {
-      tone(ctx, {
+      addBgmToneEvent(events, {
         freq: midiToFreq(profile.root, bellRoot + offset),
         duration: 0.16,
         type: "sine",
@@ -1436,7 +1468,7 @@ function playBgmContextAccents(ctx, profile, step, analysis, arrangement) {
   }
   if (analysis.otherDeptAccent) {
     const direction = bgmMutationDirection(analysis.mutationSlot);
-    tone(ctx, {
+    addBgmToneEvent(events, {
       freq: midiToFreq(profile.root, analysis.harmony.root + (direction > 0 ? 13 : 10) + (profile.leadOctave || 12)),
       duration: 0.052,
       type: "triangle",
@@ -1452,16 +1484,145 @@ function playBgmContextAccents(ctx, profile, step, analysis, arrangement) {
       delayFeedback: 0.18,
       bus: "bgm"
     });
-    noiseHit(ctx, {
+    addBgmNoiseEvent(events, {
       duration: 0.026,
       gain: (profile.drumGain || 0.016) * analysis.dynamics * 0.34,
       filter: 3600 + ((analysis.mutationSlot.seed % 5) * 480),
       filterType: "bandpass",
       delay: 0.006,
-      bus: "bgm",
-      seed: bgmNoiseSeed(profile, arrangement, step, "other-dept")
+      bus: "bgm"
+    }, "other-dept");
+  }
+}
+
+function buildBgmStepPlan(profile, arrangement, step) {
+  const loopStep = bgmLoopStep(profile, step);
+  const cacheKey = bgmStepPlanCacheKey(profile, arrangement, loopStep);
+  const cached = arcadeAudio.stepPlanCache.get(cacheKey);
+  if (cached) return cached;
+
+  const analysis = bgmStepAnalysis(profile, arrangement, loopStep);
+  const events = [];
+  collectBgmRhythmEvents(events, profile, loopStep, analysis.dynamics);
+  collectBgmContextAccentEvents(events, profile, loopStep, analysis, arrangement);
+  if (analysis.arrangeNoise) {
+    addBgmNoiseEvent(events, {
+      duration: 0.018,
+      gain: (profile.drumGain || 0.016) * 0.42 * arrangement.intensity,
+      filter: 6800,
+      filterType: "highpass",
+      bus: "bgm"
+    }, "arrange-hat");
+  }
+  if (analysis.radicalNoise) {
+    Array.from({ length: analysis.radicalLayers }).forEach((_, index) => {
+      addBgmNoiseEvent(events, {
+        duration: 0.035 + (index * 0.006),
+        gain: (profile.drumGain || 0.016) * (0.42 + (index * 0.12)) * arrangement.radical,
+        filter: Math.max(900, 3000 - (index * 280)),
+        filterType: index % 2 === 0 ? "bandpass" : "highpass",
+        delay: index * 0.018,
+        bus: "bgm"
+      }, `radical-${index}`);
     });
   }
+  if (analysis.bassOffset !== null && analysis.bassOffset !== undefined) {
+    addBgmToneEvent(events, {
+      freq: midiToFreq(profile.root / 2, analysis.harmony.root + analysis.bassOffset),
+      duration: profile.bassDuration || 0.14,
+      type: profile.bassType || "triangle",
+      gain: (profile.bassGain || 0.012) * analysis.dynamics,
+      slide: -profile.detune,
+      delay: 0.006,
+      filter: Math.max(800, profile.filter * 0.42),
+      filterType: profile.bassFilterType || "lowpass",
+      q: profile.bassQ || 0.8,
+      fuzz: profile.bassFuzz || 0,
+      bitDepth: profile.bassBitDepth || 0,
+      delayMix: profile.bassDelayMix || 0,
+      delayTime: profile.bassDelayTime || 0.16,
+      delayFeedback: profile.bassDelayFeedback || 0.18,
+      bus: "bgm"
+    });
+  }
+  if (analysis.chordHit) {
+    collectBgmChordEvents(events, profile, analysis.harmony.root, analysis.dynamics, analysis.harmony.voicing);
+  }
+  analysis.harmony.outsideTones.forEach((outsideTone, index) => {
+    addBgmToneEvent(events, {
+      freq: midiToFreq(profile.root, outsideTone + (profile.leadOctave || 12)),
+      duration: 0.045,
+      type: "sawtooth",
+      gain: (profile.leadGain || 0.012) * analysis.dynamics * 0.72,
+      delay: index * 0.018,
+      filter: Math.max(1100, profile.filter * 0.58),
+      filterType: profile.leadFilterType || "lowpass",
+      q: profile.leadQ || 0.8,
+      fuzz: profile.leadFuzz || 0,
+      bitDepth: profile.leadBitDepth || 0,
+      delayMix: profile.leadDelayMix || 0,
+      delayTime: profile.leadDelayTime || 0.18,
+      delayFeedback: profile.leadDelayFeedback || 0.22,
+      bus: "bgm"
+    });
+  });
+  if (analysis.melodyOffset !== null) {
+    const radicalMelody = analysis.radicalNoise && analysis.melodyChanged;
+    addBgmToneEvent(events, {
+      freq: midiToFreq(profile.root, analysis.harmony.root + analysis.melodyOffset + (profile.leadOctave || 12)),
+      duration: radicalMelody ? 0.055 : profile.leadDuration || 0.09,
+      type: radicalMelody ? "sawtooth" : profile.leadType || "square",
+      gain: (profile.leadGain || 0.012) * analysis.dynamics,
+      slide: radicalMelody ? (analysis.melodyOffset > analysis.baseMelodyOffset ? 22 : -22) : profile.detune,
+      filter: radicalMelody ? Math.max(1200, profile.filter * 0.62) : profile.filter,
+      filterType: radicalMelody ? "bandpass" : profile.leadFilterType || "lowpass",
+      q: radicalMelody ? 3.5 : profile.leadQ || 0.8,
+      fuzz: radicalMelody ? 0.3 : profile.leadFuzz || 0,
+      bitDepth: radicalMelody ? 0 : profile.leadBitDepth || 0,
+      delayMix: radicalMelody ? 0.04 : profile.leadDelayMix || 0,
+      delayTime: profile.leadDelayTime || 0.18,
+      delayFeedback: profile.leadDelayFeedback || 0.22,
+      bus: "bgm"
+    });
+    if (!radicalMelody && profile.leadLayer > 0) {
+      addBgmToneEvent(events, {
+        freq: midiToFreq(profile.root, analysis.harmony.root + analysis.melodyOffset + (profile.leadOctave || 12) + 12),
+        duration: (profile.leadDuration || 0.09) * 0.72,
+        type: profile.chordType || "triangle",
+        gain: (profile.leadGain || 0.012) * analysis.dynamics * profile.leadLayer,
+        slide: profile.detune * -0.5,
+        delay: 0.012,
+        filter: Math.max(1200, profile.filter * 1.08),
+        filterType: profile.leadFilterType || "lowpass",
+        q: profile.leadQ || 0.8,
+        fuzz: (profile.leadFuzz || 0) * 0.5,
+        bitDepth: profile.leadBitDepth || 0,
+        delayMix: (profile.leadDelayMix || 0) * 0.55,
+        delayTime: profile.leadDelayTime || 0.18,
+        delayFeedback: profile.leadDelayFeedback || 0.22,
+        bus: "bgm"
+      });
+    }
+  }
+  const swing = loopStep % 2 === 0 ? 0.92 : 1.08;
+  const mutationSwing = analysis.mutationHit ? 1 + (analysis.mutationSlot.depth * 0.03) + (analysis.mutationSlot.missing > 0 ? 0.04 : 0) : 1;
+  const plan = { events, nextDelay: bgmStepMs(profile) * swing * mutationSwing };
+  arcadeAudio.stepPlanCache.set(cacheKey, plan);
+  trimBgmStepPlanCache();
+  return plan;
+}
+
+function playBgmStepPlan(ctx, profile, arrangement, step, plan) {
+  plan.events.forEach((event) => {
+    if (event.kind === "noise") {
+      noiseHit(ctx, {
+        ...event.options,
+        seed: bgmNoiseSeed(profile, arrangement, step, event.voice)
+      });
+      return;
+    }
+    tone(ctx, event.options);
+  });
 }
 
 function fxLayer() {
@@ -2002,121 +2163,12 @@ function startArcadeBgm() {
       try {
         const arrangement = bgmArrangementState();
         const step = arcadeAudio.bgmStep;
-        const analysis = bgmStepAnalysis(profile, arrangement, step);
-
-        playBgmRhythm(ctx, profile, step, analysis.dynamics, arrangement);
-        playBgmContextAccents(ctx, profile, step, analysis, arrangement);
-        if (analysis.arrangeNoise) {
-          noiseHit(ctx, {
-            duration: 0.018,
-            gain: (profile.drumGain || 0.016) * 0.42 * arrangement.intensity,
-            filter: 6800,
-            filterType: "highpass",
-            bus: "bgm",
-            seed: bgmNoiseSeed(profile, arrangement, step, "arrange-hat")
-          });
-        }
-        if (analysis.radicalNoise) {
-          Array.from({ length: analysis.radicalLayers }).forEach((_, index) => {
-            noiseHit(ctx, {
-              duration: 0.035 + (index * 0.006),
-              gain: (profile.drumGain || 0.016) * (0.42 + (index * 0.12)) * arrangement.radical,
-              filter: Math.max(900, 3000 - (index * 280)),
-              filterType: index % 2 === 0 ? "bandpass" : "highpass",
-              delay: index * 0.018,
-              bus: "bgm",
-              seed: bgmNoiseSeed(profile, arrangement, step, `radical-${index}`)
-            });
-          });
-        }
-
-        if (analysis.bassOffset !== null && analysis.bassOffset !== undefined) {
-          tone(ctx, {
-            freq: midiToFreq(profile.root / 2, analysis.harmony.root + analysis.bassOffset),
-            duration: profile.bassDuration || 0.14,
-            type: profile.bassType || "triangle",
-            gain: (profile.bassGain || 0.012) * analysis.dynamics,
-            slide: -profile.detune,
-            delay: 0.006,
-            filter: Math.max(800, profile.filter * 0.42),
-            filterType: profile.bassFilterType || "lowpass",
-            q: profile.bassQ || 0.8,
-            fuzz: profile.bassFuzz || 0,
-            bitDepth: profile.bassBitDepth || 0,
-            delayMix: profile.bassDelayMix || 0,
-            delayTime: profile.bassDelayTime || 0.16,
-            delayFeedback: profile.bassDelayFeedback || 0.18,
-            bus: "bgm"
-          });
-        }
-
-        if (analysis.chordHit) {
-          playBgmChord(ctx, profile, analysis.harmony.root, analysis.dynamics, analysis.harmony.voicing);
-        }
-
-        analysis.harmony.outsideTones.forEach((outsideTone, index) => {
-          tone(ctx, {
-            freq: midiToFreq(profile.root, outsideTone + (profile.leadOctave || 12)),
-            duration: 0.045,
-            type: "sawtooth",
-            gain: (profile.leadGain || 0.012) * analysis.dynamics * 0.72,
-            delay: index * 0.018,
-            filter: Math.max(1100, profile.filter * 0.58),
-            filterType: profile.leadFilterType || "lowpass",
-            q: profile.leadQ || 0.8,
-            fuzz: profile.leadFuzz || 0,
-            bitDepth: profile.leadBitDepth || 0,
-            delayMix: profile.leadDelayMix || 0,
-            delayTime: profile.leadDelayTime || 0.18,
-            delayFeedback: profile.leadDelayFeedback || 0.22,
-            bus: "bgm"
-          });
-        });
-
-        if (analysis.melodyOffset !== null) {
-          const radicalMelody = analysis.radicalNoise && analysis.melodyChanged;
-          tone(ctx, {
-            freq: midiToFreq(profile.root, analysis.harmony.root + analysis.melodyOffset + (profile.leadOctave || 12)),
-            duration: radicalMelody ? 0.055 : profile.leadDuration || 0.09,
-            type: radicalMelody ? "sawtooth" : profile.leadType || "square",
-            gain: (profile.leadGain || 0.012) * analysis.dynamics,
-            slide: radicalMelody ? (analysis.melodyOffset > analysis.baseMelodyOffset ? 22 : -22) : profile.detune,
-            filter: radicalMelody ? Math.max(1200, profile.filter * 0.62) : profile.filter,
-            filterType: radicalMelody ? "bandpass" : profile.leadFilterType || "lowpass",
-            q: radicalMelody ? 3.5 : profile.leadQ || 0.8,
-            fuzz: radicalMelody ? 0.3 : profile.leadFuzz || 0,
-            bitDepth: radicalMelody ? 0 : profile.leadBitDepth || 0,
-            delayMix: radicalMelody ? 0.04 : profile.leadDelayMix || 0,
-            delayTime: profile.leadDelayTime || 0.18,
-            delayFeedback: profile.leadDelayFeedback || 0.22,
-            bus: "bgm"
-          });
-          if (!radicalMelody && profile.leadLayer > 0) {
-            tone(ctx, {
-              freq: midiToFreq(profile.root, analysis.harmony.root + analysis.melodyOffset + (profile.leadOctave || 12) + 12),
-              duration: (profile.leadDuration || 0.09) * 0.72,
-              type: profile.chordType || "triangle",
-              gain: (profile.leadGain || 0.012) * analysis.dynamics * profile.leadLayer,
-              slide: profile.detune * -0.5,
-              delay: 0.012,
-              filter: Math.max(1200, profile.filter * 1.08),
-              filterType: profile.leadFilterType || "lowpass",
-              q: profile.leadQ || 0.8,
-              fuzz: (profile.leadFuzz || 0) * 0.5,
-              bitDepth: profile.leadBitDepth || 0,
-              delayMix: (profile.leadDelayMix || 0) * 0.55,
-              delayTime: profile.leadDelayTime || 0.18,
-              delayFeedback: profile.leadDelayFeedback || 0.22,
-              bus: "bgm"
-            });
-          }
-        }
+        const plan = buildBgmStepPlan(profile, arrangement, step);
+        playBgmStepPlan(ctx, profile, arrangement, step, plan);
 
         arcadeAudio.bgmStep += 1;
         advanced = true;
-        const swing = step % 2 === 0 ? 0.92 : 1.08;
-        const mutationSwing = analysis.mutationHit ? 1 + (analysis.mutationSlot.depth * 0.03) + (analysis.mutationSlot.missing > 0 ? 0.04 : 0) : 1;
-        nextDelay = bgmStepMs(profile) * swing * mutationSwing;
+        nextDelay = plan.nextDelay;
       } catch (error) {
         if (!advanced) arcadeAudio.bgmStep += 1;
         console.warn("BGM step skipped", error);
@@ -2926,9 +2978,43 @@ function animatedCourseStyle(courseId) {
   return item ? `--fx-delay:${item.delay}ms;` : "";
 }
 
+function appendIndexedElement(index, key, element) {
+  if (!key) return;
+  const items = index.get(key);
+  if (items) {
+    items.push(element);
+  } else {
+    index.set(key, [element]);
+  }
+}
+
+function connectedIndexedElements(index, key) {
+  const items = index.get(key);
+  if (!items) return [];
+  return items.filter((element) => element.isConnected);
+}
+
+function rebuildFxDomIndex() {
+  fxDomIndex.courseElements.clear();
+  fxDomIndex.planRows.clear();
+  fxDomIndex.treeNodeButtons.clear();
+  document.querySelectorAll("#catalogList [data-course-id], #treeView [data-course-id]").forEach((element) => {
+    appendIndexedElement(fxDomIndex.courseElements, element.dataset.courseId, element);
+  });
+  document.querySelectorAll("#planGrid .planned-course[data-course-id]").forEach((element) => {
+    appendIndexedElement(fxDomIndex.planRows, element.dataset.courseId, element);
+  });
+  document.querySelectorAll("#treeView [data-node-id] .tree-node-button").forEach((button) => {
+    const item = button.closest("[data-node-id]");
+    appendIndexedElement(fxDomIndex.treeNodeButtons, item?.dataset.nodeId, button);
+  });
+}
+
 function currentVisibleCourseIdSet() {
-  return new Set([...document.querySelectorAll("#catalogList [data-course-id], #treeView [data-course-id]")]
-    .map((element) => element.dataset.courseId));
+  if (!fxDomIndex.courseElements.size) {
+    rebuildFxDomIndex();
+  }
+  return new Set([...fxDomIndex.courseElements.keys()]);
 }
 
 function queueFilterReveal(beforeIds, afterCourses, options = {}) {
@@ -2959,8 +3045,17 @@ function filterRevealStyle(courseId) {
 }
 
 function courseElementsForAnimation(courseId) {
+  const indexed = connectedIndexedElements(fxDomIndex.courseElements, courseId);
+  if (indexed.length) return indexed;
   const escaped = cssAttributeValue(courseId);
   return [...document.querySelectorAll(`#catalogList [data-course-id="${escaped}"], #treeView [data-course-id="${escaped}"]`)];
+}
+
+function planRowsForAnimation(courseId) {
+  const indexed = connectedIndexedElements(fxDomIndex.planRows, courseId);
+  if (indexed.length) return indexed;
+  const escaped = cssAttributeValue(courseId);
+  return [...document.querySelectorAll(`#planGrid .planned-course[data-course-id="${escaped}"]`)];
 }
 
 function animateExistingCourseElements(courseIds, className, options = {}) {
@@ -2980,8 +3075,7 @@ function animateExistingPlanRows(courseIds, className, options = {}) {
   const ids = [...courseIds].slice(0, options.limit || 120);
   const step = options.step || 18;
   ids.forEach((courseId, index) => {
-    const escaped = cssAttributeValue(courseId);
-    document.querySelectorAll(`#planGrid .planned-course[data-course-id="${escaped}"]`).forEach((element) => {
+    planRowsForAnimation(courseId).forEach((element) => {
       element.classList.remove("fx-clear-release");
       element.classList.add(className);
       element.style.setProperty("--fx-exit-delay", `${index * step}ms`);
@@ -4001,7 +4095,16 @@ function renderTree() {
   svg.classList.add("tree-edges");
   svg.setAttribute("aria-hidden", "true");
   tree.appendChild(svg);
-  requestAnimationFrame(drawTreeEdges);
+  scheduleTreeEdgesDraw();
+}
+
+function scheduleTreeEdgesDraw() {
+  if (fxDomIndex.treeEdgeDrawScheduled) return;
+  fxDomIndex.treeEdgeDrawScheduled = true;
+  requestAnimationFrame(() => {
+    fxDomIndex.treeEdgeDrawScheduled = false;
+    drawTreeEdges();
+  });
 }
 
 function drawTreeEdges() {
@@ -4014,7 +4117,17 @@ function drawTreeEdges() {
   svg.setAttribute("width", tree.scrollWidth);
   svg.setAttribute("height", tree.scrollHeight);
   const nodes = visibleTreeNodes();
-  const connectionCounts = treeConnectionCounts(nodes);
+  const edges = visibleTreeEdges(nodes);
+  if (!fxDomIndex.treeNodeButtons.size) rebuildFxDomIndex();
+  const buttonByNode = new Map();
+  edges.forEach((edge) => {
+    [edge.from, edge.to].forEach((nodeId) => {
+      if (buttonByNode.has(nodeId)) return;
+      const button = connectedIndexedElements(fxDomIndex.treeNodeButtons, nodeId)[0];
+      if (button) buttonByNode.set(nodeId, button);
+    });
+  });
+  const rectByNode = new Map([...buttonByNode].map(([nodeId, button]) => [nodeId, button.getBoundingClientRect()]));
   const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
   defs.innerHTML = `
     <marker id="tree-edge-arrow" viewBox="0 0 10 10" refX="8.2" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
@@ -4022,6 +4135,7 @@ function drawTreeEdges() {
     </marker>
   `;
   svg.appendChild(defs);
+  const paths = document.createDocumentFragment();
   const leftAnchorPoint = (fromRect, toRect) => {
     const fromCenter = fromRect.top + (fromRect.height / 2);
     const toCenter = toRect.top + (toRect.height / 2);
@@ -4033,12 +4147,10 @@ function drawTreeEdges() {
       y: toRect.top + (toRect.height * ratio) - treeRect.top + tree.scrollTop
     };
   };
-  visibleTreeEdges(nodes).forEach((edge) => {
-    const from = tree.querySelector(`[data-node-id="${edge.from}"] .tree-node-button`);
-    const to = tree.querySelector(`[data-node-id="${edge.to}"] .tree-node-button`);
-    if (!from || !to) return;
-    const a = from.getBoundingClientRect();
-    const b = to.getBoundingClientRect();
+  edges.forEach((edge) => {
+    const a = rectByNode.get(edge.from);
+    const b = rectByNode.get(edge.to);
+    if (!a || !b) return;
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
     const sameColumn = Math.abs(a.left - b.left) < 12;
     let x1;
@@ -4078,8 +4190,9 @@ function drawTreeEdges() {
     path.setAttribute("d", d);
     path.setAttribute("class", "tree-edge");
     path.setAttribute("marker-end", "url(#tree-edge-arrow)");
-    svg.appendChild(path);
+    paths.appendChild(path);
   });
+  svg.appendChild(paths);
 }
 
 function updateTreeMenuPlacement() {
@@ -4142,7 +4255,7 @@ function renderViewMode() {
   viewModeToggle.setAttribute("aria-label", `ツリー表示 ${isTree ? "ON" : "OFF"}`);
   viewModeValue.textContent = isTree ? "ON" : "OFF";
   if (isTree) {
-    drawTreeEdges();
+    scheduleTreeEdgesDraw();
     requestAnimationFrame(updateTreeMenuPlacement);
   }
 }
@@ -4476,6 +4589,7 @@ function render() {
   renderTree();
   renderCourseMenu();
   renderViewMode();
+  rebuildFxDomIndex();
   requestAnimationFrame(scheduleQueuedNodeFeedback);
 }
 
@@ -4603,7 +4717,7 @@ function init() {
   window.addEventListener("resize", () => {
     requestAnimationFrame(updateCatalogColumnCount);
     if (state.viewMode !== "tree") return;
-    requestAnimationFrame(drawTreeEdges);
+    scheduleTreeEdgesDraw();
     requestAnimationFrame(updateTreeMenuPlacement);
   });
   syncArcadeToggleLabels();

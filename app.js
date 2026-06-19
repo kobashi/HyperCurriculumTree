@@ -2802,14 +2802,49 @@ function treeTerms(nodes) {
   return TERMS;
 }
 
-function optionMarkupForCourse(course) {
+function plannedOptionsForCourse(course) {
   const validTerms = validTermsForCourse(course);
-  const termOptions = course.qualificationEligible
-    ? RECOGNITION_METHODS.flatMap((method) =>
-      recognitionTermsForMethod(course, method.id).map((term) => `<option value="${recognitionValue(method.id, term.id)}">${method.label} ${term.label}</option>`)
-    ).join("")
-    : validTerms.map((term) => `<option value="${term.id}">${term.label}</option>`).join("");
-  return `<option value="none">未配置</option>${termOptions}`;
+  const options = [{ value: "none", label: "未配置" }];
+  if (course.qualificationEligible) {
+    RECOGNITION_METHODS.forEach((method) => {
+      recognitionTermsForMethod(course, method.id).forEach((term) => {
+        options.push({
+          value: recognitionValue(method.id, term.id),
+          label: `${method.label} ${term.label}`
+        });
+      });
+    });
+  } else {
+    validTerms.forEach((term) => {
+      options.push({ value: term.id, label: term.label });
+    });
+  }
+  return options;
+}
+
+function buildPlannedOptionMenu(course, options = {}) {
+  const menu = document.createElement("div");
+  menu.className = options.className || "course-menu planned-option-menu";
+  menu.setAttribute("role", "menu");
+  menu.setAttribute("aria-label", `${course.name}の配置`);
+  menu.addEventListener("click", (event) => event.stopPropagation());
+  menu.addEventListener("keydown", (event) => event.stopPropagation());
+  const currentValue = state.planned.get(course.id) || "none";
+  plannedOptionsForCourse(course).forEach((item) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "planned-option-button";
+    button.textContent = item.label;
+    button.dataset.planValue = item.value;
+    button.setAttribute("role", "menuitemradio");
+    button.setAttribute("aria-checked", String(item.value === currentValue));
+    if (item.value === currentValue) button.classList.add("is-selected");
+    button.addEventListener("click", () => {
+      setPlanned(course.id, item.value, { source: button, affinity: options.affinity });
+    });
+    menu.appendChild(button);
+  });
+  return menu;
 }
 
 function validatePlannedCourse(course) {
@@ -3718,12 +3753,6 @@ function buildCatalogCard(course, prereqIssues) {
   }
   const actions = document.createElement("div");
   actions.className = "course-actions";
-  const select = document.createElement("select");
-  select.setAttribute("aria-label", `${course.name}の配置`);
-  select.innerHTML = optionMarkupForCourse(course);
-  select.value = state.planned.get(course.id) || "none";
-  select.addEventListener("change", (event) => setPlanned(course.id, event.target.value, { source: select }));
-
   const opening = document.createElement("button");
   opening.type = "button";
   opening.textContent = state.planned.has(course.id) ? plannedButtonLabel(course) : "履修";
@@ -3735,23 +3764,12 @@ function buildCatalogCard(course, prereqIssues) {
     triggerArcadeFeedback("switch", opening);
     render();
   });
-
-  const remove = document.createElement("button");
-  remove.type = "button";
-  remove.className = "remove-button";
-  remove.textContent = "×";
-  remove.setAttribute("aria-label", `${course.name}を外す`);
-  remove.addEventListener("click", () => setPlanned(course.id, "none", { source: remove }));
-
-  actions.append(opening, remove);
+  actions.append(opening);
   info.append(title, tags);
   main.append(info, actions);
   card.append(main);
   if (state.openCourseId === course.id) {
-    const menu = document.createElement("div");
-    menu.className = "course-menu";
-    menu.appendChild(select);
-    card.append(menu);
+    card.append(buildPlannedOptionMenu(course));
   }
   return card;
 }
@@ -3856,12 +3874,7 @@ function renderPlan() {
               <span>${course.name}</span>
               <small title="${categoryTitle(course.category)}">${categoryLabels[course.category]} / <span class="planned-course-credit">${course.credits}単位</span>${isRecognitionPlanned(course) ? ` / ${recognitionMethodLabel(course)}` : ""}${course.category === "teacher" ? " / 要件外" : ""}${isCapExcludedInPlan(course) ? " / 上限外" : ""}</small>
               ${isOpen ? `
-              <div class="course-menu planned-course-menu">
-                <select aria-label="${course.name}の配置">
-                  ${optionMarkupForCourse(course)}
-                </select>
-                <button type="button" class="remove-button" aria-label="${course.name}を外す">×</button>
-              </div>
+              <div class="course-menu planned-course-menu" data-planned-options="${course.id}"></div>
               ` : ""}
             </div>
           `;
@@ -3893,16 +3906,7 @@ function renderPlan() {
     });
     const menu = item.querySelector(".planned-course-menu");
     if (!menu) return;
-    menu.addEventListener("click", (event) => event.stopPropagation());
-    const select = menu.querySelector("select");
-    const remove = menu.querySelector(".remove-button");
-    if (select) {
-      select.value = state.planned.get(course.id) || "none";
-      select.addEventListener("change", (event) => setPlanned(course.id, event.target.value, { source: select }));
-    }
-    if (remove) {
-      remove.addEventListener("click", () => setPlanned(course.id, "none", { source: remove }));
-    }
+    menu.replaceWith(buildPlannedOptionMenu(course, { className: "course-menu planned-course-menu" }));
   });
 }
 
@@ -3957,9 +3961,7 @@ function visibleTreeEdges(nodes = visibleTreeNodes()) {
     requiredNames.forEach((requiredName) => {
       const fromNodes = nodesByCourseKey.get(normalizeName(requiredName)) || [];
       toNodes.forEach((toNode) => {
-        const sectionMatched = fromNodes.filter((fromNode) => fromNode.section === toNode.section);
-        const sourceNodes = sectionMatched.length ? sectionMatched : fromNodes;
-        sourceNodes.forEach((fromNode) => {
+        fromNodes.forEach((fromNode) => {
           edges.push({ from: fromNode.id, to: toNode.id });
         });
       });
@@ -4064,21 +4066,10 @@ function renderTree() {
                 render();
               });
               if (state.openTreeNodeId === node.id) {
-                const menu = document.createElement("div");
-                menu.className = "tree-node-menu";
-                const select = document.createElement("select");
-                select.setAttribute("aria-label", `${course.name}の配置`);
-                select.innerHTML = optionMarkupForCourse(course);
-                select.value = state.planned.get(course.id) || "none";
-                select.addEventListener("change", (event) => setPlanned(course.id, event.target.value, { source: select, affinity: treeSectionAffiliation(node.section) }));
-                const remove = document.createElement("button");
-                remove.type = "button";
-                remove.className = "remove-button";
-                remove.textContent = "×";
-                remove.setAttribute("aria-label", `${course.name}を外す`);
-                remove.addEventListener("click", () => setPlanned(course.id, "none", { source: remove, affinity: treeSectionAffiliation(node.section) }));
-                menu.append(select, remove);
-                item.appendChild(menu);
+                item.appendChild(buildPlannedOptionMenu(course, {
+                  className: "tree-node-menu",
+                  affinity: treeSectionAffiliation(node.section)
+                }));
               }
               slot.appendChild(item);
             });
@@ -4596,6 +4587,8 @@ function render() {
 function init() {
   document.querySelector("#courseMenuToggle").addEventListener("click", (event) => {
     state.courseMenuOpen = !state.courseMenuOpen;
+    state.openCourseId = null;
+    state.openTreeNodeId = null;
     if (state.courseMenuOpen) {
       state.gpaMenuOpen = false;
       state.effectsOpen = false;
@@ -4610,6 +4603,8 @@ function init() {
   });
   document.querySelector("#effectsToggle").addEventListener("click", (event) => {
     state.effectsOpen = !state.effectsOpen;
+    state.openCourseId = null;
+    state.openTreeNodeId = null;
     if (state.effectsOpen) {
       state.courseMenuOpen = false;
       state.gpaMenuOpen = false;
@@ -4619,6 +4614,8 @@ function init() {
   });
   document.querySelector("#gpaMenuToggle").addEventListener("click", (event) => {
     state.gpaMenuOpen = !state.gpaMenuOpen;
+    state.openCourseId = null;
+    state.openTreeNodeId = null;
     if (state.gpaMenuOpen) {
       state.courseMenuOpen = false;
       state.effectsOpen = false;
@@ -4688,17 +4685,20 @@ function init() {
   });
   document.querySelector("#fxToggle").addEventListener("change", (event) => {
     state.soundFx = event.target.checked;
+    state.effectsOpen = false;
     if (state.soundFx) triggerArcadeFeedback("switch", event.currentTarget);
     render();
   });
   document.querySelector("#bgmToggle").addEventListener("change", (event) => {
     state.soundBgm = event.target.checked;
+    state.effectsOpen = false;
     triggerArcadeFeedback(state.soundBgm ? "boost" : "remove", event.currentTarget);
     syncArcadeAudio(true);
     render();
   });
   document.querySelector("#bgmRollToggle").addEventListener("change", (event) => {
     state.showBgmRoll = event.target.checked;
+    state.effectsOpen = false;
     triggerArcadeFeedback("switch", event.currentTarget);
     render();
   });

@@ -1224,19 +1224,29 @@ input {
   font-weight: 800;
 }
 
-.course-actions .remove-button {
-  width: 32px;
-  padding: 0;
-  color: var(--bad);
-}
-
 .course-menu {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+  gap: 5px;
   padding-top: 2px;
 }
 
-.course-menu select {
-  width: 100%;
+.planned-option-button {
+  min-height: 30px;
+  padding: 0 8px;
+  border-color: rgba(20, 108, 104, 0.2);
+  background: #f8fbfa;
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.planned-option-button.is-selected {
+  border-color: rgba(20, 108, 104, 0.55);
+  background: linear-gradient(180deg, #d9f5f1, #c8ece7);
+  color: var(--brand-dark);
+  box-shadow: 0 0 0 1px rgba(20, 108, 104, 0.12) inset;
 }
 
 .plan-panel {
@@ -1805,15 +1815,49 @@ input {
   color: #a02d9a;
 }
 
+@supports (-webkit-touch-callout: none) {
+  .course-selection-menu {
+    min-width: 620px;
+  }
+
+  .course-menu-row {
+    grid-template-columns: minmax(96px, 0.58fr) minmax(0, 2fr);
+  }
+
+  .course-menu-row button,
+  .course-menu-unselected {
+    padding: 0 6px;
+    font-size: 10px;
+    line-height: 1.05;
+    overflow-wrap: normal;
+    white-space: nowrap;
+    word-break: keep-all;
+  }
+
+  .catalog-panel .tree-view {
+    min-width: 1480px;
+  }
+
+  .tree-node-button {
+    gap: 3px 6px;
+    padding-inline: 7px;
+  }
+
+  .tree-node-name {
+    font-size: max(6.6px, calc(var(--tree-name-size, 10.5px) - 0.8px));
+    line-height: 1.16;
+  }
+}
+
 .tree-node-menu {
   position: absolute;
   z-index: 6;
   top: calc(100% + 4px);
   left: 0;
   display: grid;
-  grid-template-columns: minmax(170px, 1fr) 30px;
+  grid-template-columns: repeat(2, minmax(92px, 1fr));
   gap: 5px;
-  min-width: 230px;
+  min-width: 260px;
   padding: 6px;
   border: 1px solid var(--line);
   border-radius: 7px;
@@ -1826,10 +1870,9 @@ input {
   bottom: calc(100% + 4px);
 }
 
-.tree-node-menu select,
 .tree-node-menu button {
   min-height: 32px;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .tree-node.is-disabled {
@@ -2076,15 +2119,14 @@ input {
 
 .planned-course-menu {
   display: grid;
-  grid-template-columns: minmax(170px, 1fr) 30px;
+  grid-template-columns: repeat(2, minmax(82px, 1fr));
   gap: 5px;
   margin-top: 2px;
 }
 
-.planned-course-menu select,
 .planned-course-menu button {
   min-height: 32px;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .planned-course.fx-activate {
@@ -2390,6 +2432,34 @@ input {
       "plan"
       "status";
     grid-template-columns: 1fr;
+  }
+}
+
+@supports (-webkit-touch-callout: none) {
+  @media (max-width: 900px) {
+    .course-selection-menu {
+      min-width: min(620px, calc(100vw - 24px));
+    }
+
+    .course-menu-row {
+      grid-template-columns: minmax(82px, 0.52fr) minmax(0, 2fr);
+    }
+
+    .course-menu-row button,
+    .course-menu-unselected {
+      padding: 0 5px;
+      font-size: 9.5px;
+      white-space: nowrap;
+    }
+
+    .catalog-panel .tree-view,
+    .tree-view {
+      min-width: 1320px;
+    }
+
+    .tree-node-name {
+      font-size: max(6.3px, calc(var(--tree-name-size, 9.5px) - 0.9px));
+    }
   }
 }
 

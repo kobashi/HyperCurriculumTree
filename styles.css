@@ -151,7 +151,7 @@ h2 {
 
 .controls {
   display: grid;
-  grid-template-columns: minmax(190px, 260px) 92px 92px auto auto;
+  grid-template-columns: minmax(190px, 260px) minmax(92px, 108px) minmax(116px, 128px) minmax(72px, auto);
   gap: 10px;
   align-items: end;
 }
@@ -336,6 +336,7 @@ input {
   display: flex;
   align-items: center;
   gap: 8px;
+  justify-content: center;
   min-height: 36px;
   padding: 0 10px;
   border: 1px solid var(--line);
@@ -344,6 +345,10 @@ input {
   color: var(--ink);
   box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
   transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.switch span {
+  white-space: nowrap;
 }
 
 .switch:hover {
@@ -362,6 +367,7 @@ input {
 }
 
 .switch input {
+  flex: 0 0 auto;
   min-height: auto;
 }
 
@@ -1558,10 +1564,10 @@ input {
 .tree-node-button {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 3px 8px;
+  gap: 3px 6px;
   width: 100%;
   min-height: 0;
-  padding: 5px 9px;
+  padding: 5px 7px;
   border: 1.5px solid var(--tree-node-border);
   border-color: var(--tree-node-border);
   border-radius: 6px;
@@ -1774,11 +1780,13 @@ input {
 }
 
 .tree-node-name {
+  --tree-name-render-size: var(--tree-name-size, 10.5px);
   min-width: 0;
   overflow: hidden;
-  font-size: var(--tree-name-size, 10.5px);
+  font-size: var(--tree-name-fit-size, var(--tree-name-render-size));
   font-weight: 700;
   line-height: 1.22;
+  letter-spacing: -0.02em;
   white-space: nowrap;
   -webkit-text-size-adjust: 100%;
 }
@@ -1844,7 +1852,7 @@ input {
   }
 
   .tree-node-name {
-    font-size: max(6.6px, calc(var(--tree-name-size, 10.5px) - 0.8px));
+    --tree-name-render-size: max(7.2px, calc(var(--tree-name-size, 10.5px) - 0.25px));
     line-height: 1.16;
   }
 }
@@ -2419,11 +2427,11 @@ input {
   }
 
   .tree-node-button {
-    padding: 4px 8px;
+    padding: 4px 7px;
   }
 
   .tree-node-name {
-    font-size: var(--tree-name-size, 9.5px);
+    --tree-name-render-size: max(7.1px, calc(var(--tree-name-size, 9.5px) - 0.2px));
   }
 
   .workspace.catalog-tree-mode {
@@ -2458,7 +2466,7 @@ input {
     }
 
     .tree-node-name {
-      font-size: max(6.3px, calc(var(--tree-name-size, 9.5px) - 0.9px));
+      --tree-name-render-size: max(6.9px, calc(var(--tree-name-size, 9.5px) - 0.35px));
     }
   }
 }

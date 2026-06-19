@@ -796,7 +796,8 @@ const fxDomIndex = {
   courseElements: new Map(),
   planRows: new Map(),
   treeNodeButtons: new Map(),
-  treeEdgeDrawScheduled: false
+  treeEdgeDrawScheduled: false,
+  treeNameFitScheduled: false
 };
 
 const arcadeBgmProfiles = {
@@ -2663,10 +2664,10 @@ function treeDisplayName(name) {
 
 function treeNameFontSize(name) {
   const length = Array.from((name || "").normalize("NFKC")).length;
-  if (/^プラクティカル・イングリッシュ[ⅠⅡⅢⅣ]$/.test(name || "")) return 7.3;
-  if (length >= 16) return 7.7;
-  if (length >= 13) return 8.3;
-  return 9.6;
+  if (/^プラクティカル・イングリッシュ[ⅠⅡⅢⅣ]$/.test(name || "")) return 8.3;
+  if (length >= 16) return 8.7;
+  if (length >= 13) return 9.2;
+  return 9.1;
 }
 
 const treeSectionOrder = [
@@ -4086,7 +4087,35 @@ function renderTree() {
   svg.classList.add("tree-edges");
   svg.setAttribute("aria-hidden", "true");
   tree.appendChild(svg);
+  scheduleTreeNameFit();
   scheduleTreeEdgesDraw();
+}
+
+function scheduleTreeNameFit() {
+  if (fxDomIndex.treeNameFitScheduled) return;
+  fxDomIndex.treeNameFitScheduled = true;
+  requestAnimationFrame(() => {
+    fxDomIndex.treeNameFitScheduled = false;
+    fitTreeNodeNames();
+  });
+}
+
+function fitTreeNodeNames() {
+  const tree = document.querySelector("#treeView");
+  if (!tree || tree.hidden) return;
+  const names = Array.from(tree.querySelectorAll(".tree-node-name"));
+  names.forEach((name) => name.style.removeProperty("--tree-name-fit-size"));
+  names.forEach((name) => {
+    const available = name.clientWidth;
+    const required = name.scrollWidth;
+    if (!available || required <= available + 1) return;
+    const baseSize = Number.parseFloat(getComputedStyle(name).fontSize);
+    if (!Number.isFinite(baseSize)) return;
+    const fittedSize = Math.max(6.8, Math.min(baseSize, (baseSize * available) / required - 0.1));
+    if (fittedSize < baseSize) {
+      name.style.setProperty("--tree-name-fit-size", `${fittedSize.toFixed(2)}px`);
+    }
+  });
 }
 
 function scheduleTreeEdgesDraw() {
@@ -4499,10 +4528,8 @@ function renderRequirements(stats) {
     requirement("卒業要件単位", stats.total >= 124, `${stats.total}単位 / 124単位以上、要件外 ${stats.requirementOutside}単位`),
     requirement("基礎教育必修", stats.basicRequiredCredits >= 22, `${stats.basicRequiredCredits}単位 / 22単位`),
     requirement("基礎教育選択", stats.basicElectiveCredits >= 14, `${stats.basicElectiveCredits}単位 / 14単位、振替 ${stats.basicElectiveTransfer}単位、要件外 ${stats.basicElectiveOutside}単位`),
-    requirement("基礎教育計", stats.basic >= 36, `${stats.basic}単位 / 36単位以上`),
     requirement("専門共通必修", stats.common >= 20, `${stats.commonRaw}単位 / 20単位`),
     requirement("コース必修", stats.courseSpecific >= 16, `${stats.selectedCourseRequiredRaw}単位 / 16単位`),
-    requirement("専門教育計", stats.professional >= 36, `${stats.professional}単位 / 36単位以上`),
     requirement("その他", stats.other >= 52, `${stats.other}単位 / 52単位以上、基礎振替 ${stats.basicElectiveTransfer}単位、選択コースの選択科目 ${stats.selectedCourseElective}単位、専門共通の選択科目 ${stats.commonElective}単位、他コースの科目 ${stats.otherCourseSubjects}単位、単位認定 ${stats.qualification}単位、他学科 ${stats.otherDeptCounted}単位、他大学認定 ${stats.otherUniversityCounted}単位`),
     infoRequirement("要件外内訳", `教職課程科目 ${stats.teacher}単位、基礎選択超過 ${stats.basicElectiveOutside}単位、他学科超過 ${stats.otherDeptOutside}単位、他大学認定超過 ${stats.otherUniversityOutside}単位`),
     requirement("3年次進級", promotion.ok, `${promotion.credits}単位 / 50単位、GPA条件 ${promotion.gpaOk ? "達成" : "未達"}`)

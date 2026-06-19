@@ -749,6 +749,7 @@ const state = {
   teacherNotice: "",
   openCourseId: null,
   openTreeNodeId: null,
+  focusedLayer: null,
   planned: new Map(),
   plannedCourseAffinities: new Map(),
   teacherAdded: new Set()
@@ -797,7 +798,8 @@ const fxDomIndex = {
   planRows: new Map(),
   treeNodeButtons: new Map(),
   treeEdgeDrawScheduled: false,
-  treeNameFitScheduled: false
+  treeNameFitScheduled: false,
+  layerOverlapScheduled: false
 };
 
 const arcadeBgmProfiles = {
@@ -2623,7 +2625,7 @@ function isCourseRequiredForTreeNode(course, node) {
 }
 
 function treeRequiredClass(course, node) {
-  if (isRecommendedTreeNode(node)) return " recommended-movie";
+  if (isRecommendedTreeNode(node)) return " recommended-design";
   if (course.category === "basicRequired") return " required-basic";
   if (course.category === "commonRequired") return " required-common";
   if (isCourseRequiredForTreeNode(course, node)) {
@@ -3219,7 +3221,7 @@ function cssAttributeValue(value) {
 
 function firstVisibleCourseElement(courseId) {
   const selector = `[data-course-id="${cssAttributeValue(courseId)}"]`;
-  const preferred = state.viewMode === "tree"
+  const preferred = state.viewMode !== "list"
     ? document.querySelector(`#treeView ${selector} .tree-node-button`)
     : document.querySelector(`#catalogList ${selector}`);
   return preferred || document.querySelector(`${selector} .tree-node-button`) || document.querySelector(selector);
@@ -3931,17 +3933,24 @@ function visibleTreeNodes() {
   const visibleCourseIds = new Set(courses.map((course) => course.id));
   const usedCourseIds = new Set();
   const nodes = [];
+  const withPlannedTerm = (node, course) => {
+    const planned = state.planned.has(course.id) ? plannedTerm(course) : null;
+    if (planned && TERMS.some((term) => term.id === planned)) {
+      return { ...node, term: planned };
+    }
+    return node;
+  };
 
   officialTreeNodes.forEach((node) => {
     const course = courseForTreeNode(node);
     if (!course || !visibleCourseIds.has(course.id)) return;
     usedCourseIds.add(course.id);
-    nodes.push({ ...node, row: treeRowByNodeId.get(node.id) || node.row || 1 });
+    nodes.push(withPlannedTerm({ ...node, row: treeRowByNodeId.get(node.id) || node.row || 1 }, course));
   });
 
   courses.forEach((course) => {
     if (usedCourseIds.has(course.id)) return;
-    nodes.push(syntheticTreeNodeForCourse(course));
+    nodes.push(withPlannedTerm(syntheticTreeNodeForCourse(course), course));
   });
 
   return nodes;
@@ -3986,9 +3995,256 @@ function treeConnectionCounts(nodes = visibleTreeNodes()) {
   return counts;
 }
 
+function layerDepthForSection(section) {
+  if (section === "他学科履修") return -1;
+  if (section === "教職課程に関する科目") return 8;
+  if (section === "コース共通") return 2;
+  if (section === "基礎教育科目" || section === "基礎教育必修") return 0;
+  if (section === "基礎教育選択") return 1;
+  if (section === "情報システムコース") return 3;
+  if (section === "サウンド制作コース") return 4;
+  if (section === "メディアデザインコース") return 5;
+  if (section === "映像メディアコース") return 6;
+  if (section === "専門選択") return 7;
+  return 2;
+}
+
+function layerSortValue(section) {
+  const depth = layerDepthForSection(section);
+  const fallbackIndex = treeSectionOrder.indexOf(section);
+  return [depth, fallbackIndex === -1 ? 999 : fallbackIndex, section];
+}
+
+function sortLayerSections(sections) {
+  return [...sections].sort((a, b) => {
+    const aValue = layerSortValue(a);
+    const bValue = layerSortValue(b);
+    for (let index = 0; index < aValue.length; index += 1) {
+      if (aValue[index] < bValue[index]) return -1;
+      if (aValue[index] > bValue[index]) return 1;
+    }
+    return 0;
+  });
+}
+
 function renderTree() {
+  if (state.viewMode === "layer") {
+    renderLayerTree();
+    return;
+  }
+  renderGridTree();
+}
+
+function buildTreeNodeElement(node, course, context) {
+  const {
+    connectionCounts,
+    prereqIssues,
+    displayTerms,
+    sectionIndex,
+    laneIndex,
+    extraClass = ""
+  } = context;
+  const treeName = treeDisplayName(node.displayName);
+  const tooltip = treeNodeTooltip(course, node, treeName);
+  validatePlannedCourse(course);
+  const disabled = course.category === "teacher" && !state.teacher;
+  const counts = connectionCounts.get(node.id) || { incoming: 0, outgoing: 0 };
+  const item = document.createElement("article");
+  item.className = `tree-node ${extraClass} ${treeNodeCategoryClass(course, node)} level-${node.level || "none"}${treeRequiredClass(course, node)}${treeMissingRequiredClass(course)}${treePrereqMissingClass(course, prereqIssues)}${tooltip ? " has-tooltip" : ""}${state.planned.has(course.id) ? " is-planned" : ""}${disabled ? " is-disabled" : ""}${state.openTreeNodeId === node.id ? " is-open" : ""}${state.showTreeMeta ? " has-meta" : ""}${state.showTreeCodes ? " has-code" : ""}${fxSequence.treeReveal ? " is-tree-reveal" : ""}${animatedCourseClass(course.id)}${filterRevealClass(course.id)}`;
+  item.dataset.nodeId = node.id;
+  item.dataset.courseId = course.id;
+  item.dataset.incoming = counts.incoming;
+  item.dataset.outgoing = counts.outgoing;
+  const fxStyle = `${animatedCourseStyle(course.id)}${filterRevealStyle(course.id)}`;
+  const revealStyle = fxSequence.treeReveal ? `--tree-reveal-delay:${treeRevealDelay(node, sectionIndex, laneIndex, displayTerms)}ms;` : "";
+  if (fxStyle || revealStyle) item.setAttribute("style", `${fxStyle}${revealStyle}`);
+  item.innerHTML = `
+    <button type="button" class="tree-node-button" ${disabled ? "disabled" : ""} aria-expanded="${state.openTreeNodeId === node.id ? "true" : "false"}"${tooltip ? ` title="${tooltip}"` : ""}>
+      ${state.showTreeCodes ? `<span class="tree-node-code">${node.courseNumber}</span>` : ""}
+      <span class="tree-node-name" style="--tree-name-size:${treeNameFontSize(treeName)}px">${treeName}</span>
+      ${state.showTreeMeta ? `<span class="tree-node-meta">${node.level || categoryLabels[course.category]}${state.planned.has(course.id) ? ` / ${plannedButtonLabel(course)}` : ""}${course.category !== "teacher" && (course.teacherRequired || node.teacherRequired) ? " / 教職必修" : ""}</span>` : ""}
+    </button>
+  `;
+  const button = item.querySelector(".tree-node-button");
+  button.addEventListener("click", () => {
+    state.openTreeNodeId = state.openTreeNodeId === node.id ? null : node.id;
+    state.openCourseId = null;
+    triggerArcadeFeedback("switch", button);
+    render();
+  });
+  if (state.openTreeNodeId === node.id) {
+    item.appendChild(buildPlannedOptionMenu(course, {
+      className: "tree-node-menu",
+      affinity: treeSectionAffiliation(node.section)
+    }));
+  }
+  return item;
+}
+
+function renderLayerTree() {
   const tree = document.querySelector("#treeView");
   tree.innerHTML = "";
+  const nodes = visibleTreeNodes();
+  const displayTerms = treeTerms(nodes);
+  const connectionCounts = treeConnectionCounts(nodes);
+  const prereqIssues = prerequisiteIssuesByCourse();
+  const sections = sortLayerSections([...new Set(nodes.map((node) => node.section))]);
+  if (state.focusedLayer && !sections.includes(state.focusedLayer)) state.focusedLayer = null;
+  const maxDepth = Math.max(...sections.map(layerDepthForSection), 0);
+  const focusedDepth = state.focusedLayer ? layerDepthForSection(state.focusedLayer) : null;
+
+  tree.classList.toggle("is-revealing", fxSequence.treeReveal);
+  tree.style.setProperty("--layer-count", String(sections.length));
+  tree.style.setProperty("--layer-max-depth", String(maxDepth));
+
+  const stage = document.createElement("div");
+  stage.className = "tree-layer-stage";
+  stage.classList.toggle("has-focused-layer", Boolean(state.focusedLayer));
+  stage.style.setProperty("--layer-term-count", String(displayTerms.length));
+
+  sections.forEach((section, sectionIndex) => {
+    const depth = layerDepthForSection(section);
+    const sectionNodes = nodes.filter((node) => node.section === section);
+    const lanes = sortTreeLanes(section, [...new Set(sectionNodes.map((node) => node.lane))]);
+    const plannedCount = sectionNodes.filter((node) => {
+      const course = courseForTreeNode(node);
+      return course && state.planned.has(course.id);
+    }).length;
+    const layer = document.createElement("section");
+    const isFocused = state.focusedLayer === section;
+    const isOccludingFocused = focusedDepth !== null && depth > focusedDepth;
+    const hasOpenNode = sectionNodes.some((node) => node.id === state.openTreeNodeId);
+    layer.className = `tree-layer tree-section-${sectionClass(section)}${isFocused ? " is-focused-layer" : ""}${isOccludingFocused ? " is-occluding-focused" : ""}${hasOpenNode ? " has-open-node" : ""}`;
+    layer.dataset.layerSection = section;
+    layer.dataset.layerDepth = String(depth);
+    layer.tabIndex = 0;
+    layer.setAttribute("role", "group");
+    layer.style.setProperty("--layer-index", String(sectionIndex));
+    layer.style.setProperty("--layer-depth", String(depth));
+    layer.style.setProperty("--layer-front", String(maxDepth - depth));
+    layer.setAttribute("aria-label", `${section} レイヤーを${isFocused ? "選択解除" : "選択"}`);
+    const sectionTitle = treeSectionTitle(section);
+    layer.innerHTML = `
+      <div class="tree-layer-head">
+        <div>
+          <h3${sectionTitle ? ` title="${sectionTitle}"` : ""}>${section}</h3>
+        </div>
+        <span>${plannedCount} / ${sectionNodes.length}</span>
+      </div>
+    `;
+    const selectLayer = () => {
+      state.focusedLayer = state.focusedLayer === section ? null : section;
+      triggerArcadeFeedback("switch", layer);
+      render();
+    };
+    layer.addEventListener("click", (event) => {
+      if (isOccludingFocused) {
+        event.preventDefault();
+        event.stopPropagation();
+        selectLayer();
+        return;
+      }
+      if (event.target.closest(".tree-node")) return;
+      selectLayer();
+    }, true);
+    layer.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      selectLayer();
+    });
+
+    const grid = document.createElement("div");
+    grid.className = "tree-layer-grid";
+    grid.style.setProperty("--layer-term-count", String(displayTerms.length));
+    displayTerms.forEach((term) => {
+      const column = document.createElement("div");
+      column.className = "tree-layer-column";
+      column.innerHTML = `<div class="tree-layer-term">${term.label}</div>`;
+      const termNodes = sectionNodes
+        .filter((node) => node.term === term.id)
+        .sort((a, b) => {
+          const laneDelta = lanes.indexOf(a.lane) - lanes.indexOf(b.lane);
+          if (laneDelta !== 0) return laneDelta;
+          return (a.row || 1) - (b.row || 1);
+        });
+      if (termNodes.some((node) => node.id === state.openTreeNodeId)) {
+        column.classList.add("has-open-node");
+      }
+      let previousLane = null;
+      termNodes.forEach((node) => {
+        const course = courseForTreeNode(node);
+        if (!course) return;
+        if (state.showTreeMeta && previousLane !== node.lane) {
+          const lane = document.createElement("div");
+          lane.className = "tree-layer-lane";
+          lane.textContent = node.lane;
+          column.appendChild(lane);
+          previousLane = node.lane;
+        }
+        const laneIndex = lanes.indexOf(node.lane);
+        column.appendChild(buildTreeNodeElement(node, course, {
+          connectionCounts,
+          prereqIssues,
+          displayTerms,
+          sectionIndex,
+          laneIndex,
+          extraClass: "tree-layer-node"
+        }));
+      });
+      grid.appendChild(column);
+    });
+    layer.appendChild(grid);
+    stage.appendChild(layer);
+  });
+
+  tree.appendChild(stage);
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.classList.add("tree-edges");
+  svg.setAttribute("aria-hidden", "true");
+  tree.appendChild(svg);
+  scheduleLayerOverlap();
+  scheduleTreeNameFit();
+}
+
+function scheduleLayerOverlap() {
+  if (fxDomIndex.layerOverlapScheduled) return;
+  fxDomIndex.layerOverlapScheduled = true;
+  requestAnimationFrame(() => {
+    fxDomIndex.layerOverlapScheduled = false;
+    updateLayerOverlap();
+  });
+}
+
+function updateLayerOverlap() {
+  const tree = document.querySelector("#treeView");
+  if (!tree || tree.hidden || state.viewMode !== "layer") return;
+  const stage = tree.querySelector(".tree-layer-stage");
+  const layers = Array.from(tree.querySelectorAll(".tree-layer"));
+  layers.forEach((layer, index) => {
+    if (index === 0) {
+      layer.style.setProperty("--layer-overlap-offset", "0px");
+      return;
+    }
+    const previousLayer = layers[index - 1];
+    const previousHead = previousLayer.querySelector(".tree-layer-head");
+    const visibleHead = Math.ceil(previousHead?.getBoundingClientRect().height || 36);
+    const previousHeight = Math.ceil(previousLayer.getBoundingClientRect().height);
+    const overlap = Math.max(0, previousHeight - visibleHead - 18);
+    layer.style.setProperty("--layer-overlap-offset", `${overlap * -1}px`);
+  });
+  if (!stage || !layers.length) return;
+  const stageRect = stage.getBoundingClientRect();
+  const requiredBottom = Math.max(...layers.map((layer) => layer.getBoundingClientRect().bottom));
+  const paddingBottom = 120;
+  const requiredHeight = Math.ceil(requiredBottom - stageRect.top + paddingBottom);
+  stage.style.setProperty("--layer-stage-height", `${requiredHeight}px`);
+  scheduleTreeEdgesDraw();
+}
+
+function renderGridTree() {
+  const tree = document.querySelector("#treeView");
+  tree.innerHTML = "";
+  tree.style.removeProperty("--layer-stage-height");
   const nodes = visibleTreeNodes();
   const displayTerms = treeTerms(nodes);
   tree.style.setProperty("--tree-grid-template", `136px repeat(${displayTerms.length}, minmax(0, 1fr))`);
@@ -4038,40 +4294,13 @@ function renderTree() {
             .forEach((node) => {
               const course = courseForTreeNode(node);
               if (!course) return;
-              const treeName = treeDisplayName(node.displayName);
-              const tooltip = treeNodeTooltip(course, node, treeName);
-              validatePlannedCourse(course);
-              const disabled = course.category === "teacher" && !state.teacher;
-              const counts = connectionCounts.get(node.id) || { incoming: 0, outgoing: 0 };
-              const item = document.createElement("article");
-              item.className = `tree-node ${treeNodeCategoryClass(course, node)} level-${node.level || "none"}${treeRequiredClass(course, node)}${treeMissingRequiredClass(course)}${treePrereqMissingClass(course, prereqIssues)}${tooltip ? " has-tooltip" : ""}${state.planned.has(course.id) ? " is-planned" : ""}${disabled ? " is-disabled" : ""}${state.openTreeNodeId === node.id ? " is-open" : ""}${state.showTreeMeta ? " has-meta" : ""}${state.showTreeCodes ? " has-code" : ""}${fxSequence.treeReveal ? " is-tree-reveal" : ""}${animatedCourseClass(course.id)}${filterRevealClass(course.id)}`;
-              item.dataset.nodeId = node.id;
-              item.dataset.courseId = course.id;
-              item.dataset.incoming = counts.incoming;
-              item.dataset.outgoing = counts.outgoing;
-              const fxStyle = `${animatedCourseStyle(course.id)}${filterRevealStyle(course.id)}`;
-              const revealStyle = fxSequence.treeReveal ? `--tree-reveal-delay:${treeRevealDelay(node, sectionIndex, laneIndex, displayTerms)}ms;` : "";
-              if (fxStyle || revealStyle) item.setAttribute("style", `${fxStyle}${revealStyle}`);
-              item.innerHTML = `
-                <button type="button" class="tree-node-button" ${disabled ? "disabled" : ""} aria-expanded="${state.openTreeNodeId === node.id ? "true" : "false"}"${tooltip ? ` title="${tooltip}"` : ""}>
-                  ${state.showTreeCodes ? `<span class="tree-node-code">${node.courseNumber}</span>` : ""}
-                  <span class="tree-node-name" style="--tree-name-size:${treeNameFontSize(treeName)}px">${treeName}</span>
-                  ${state.showTreeMeta ? `<span class="tree-node-meta">${node.level || categoryLabels[course.category]}${state.planned.has(course.id) ? ` / ${plannedButtonLabel(course)}` : ""}${course.category !== "teacher" && (course.teacherRequired || node.teacherRequired) ? " / 教職必修" : ""}</span>` : ""}
-                </button>
-              `;
-              const button = item.querySelector(".tree-node-button");
-              button.addEventListener("click", () => {
-                state.openTreeNodeId = state.openTreeNodeId === node.id ? null : node.id;
-                state.openCourseId = null;
-                triggerArcadeFeedback("switch", button);
-                render();
+              const item = buildTreeNodeElement(node, course, {
+                connectionCounts,
+                prereqIssues,
+                displayTerms,
+                sectionIndex,
+                laneIndex
               });
-              if (state.openTreeNodeId === node.id) {
-                item.appendChild(buildPlannedOptionMenu(course, {
-                  className: "tree-node-menu",
-                  affinity: treeSectionAffiliation(node.section)
-                }));
-              }
               slot.appendChild(item);
             });
           cell.appendChild(slot);
@@ -4137,7 +4366,17 @@ function drawTreeEdges() {
   svg.setAttribute("width", tree.scrollWidth);
   svg.setAttribute("height", tree.scrollHeight);
   const nodes = visibleTreeNodes();
-  const edges = visibleTreeEdges(nodes);
+  let edges = visibleTreeEdges(nodes);
+  if (state.viewMode === "layer") {
+    if (!state.focusedLayer) {
+      edges = [];
+    } else {
+      const activeNodeIds = new Set(nodes
+        .filter((node) => node.section === state.focusedLayer)
+        .map((node) => node.id));
+      edges = edges.filter((edge) => activeNodeIds.has(edge.from) || activeNodeIds.has(edge.to));
+    }
+  }
   if (!fxDomIndex.treeNodeButtons.size) rebuildFxDomIndex();
   const buttonByNode = new Map();
   edges.forEach((edge) => {
@@ -4250,11 +4489,15 @@ function renderViewMode() {
   const fxToggle = document.querySelector("#fxToggle");
   const bgmToggle = document.querySelector("#bgmToggle");
   const isTree = state.viewMode === "tree";
-  catalog.hidden = isTree;
-  tree.hidden = !isTree;
-  treeCodeToggleWrap.hidden = !isTree;
+  const isLayer = state.viewMode === "layer";
+  const isTreeLike = isTree || isLayer;
+  catalog.hidden = isTreeLike;
+  tree.hidden = !isTreeLike;
+  tree.classList.toggle("layer-tree", isLayer);
+  tree.classList.toggle("grid-tree", isTree);
+  treeCodeToggleWrap.hidden = !isTreeLike;
   treeCodeToggle.checked = state.showTreeCodes;
-  treeMetaToggleWrap.hidden = !isTree;
+  treeMetaToggleWrap.hidden = !isTreeLike;
   treeMetaToggle.checked = state.showTreeMeta;
   fxToggle.checked = state.soundFx;
   bgmToggle.checked = state.soundBgm;
@@ -4268,14 +4511,17 @@ function renderViewMode() {
   gpaMenuToggle.setAttribute("aria-expanded", String(state.gpaMenuOpen));
   effectsMenu.hidden = !state.effectsOpen;
   effectsToggle.setAttribute("aria-expanded", String(state.effectsOpen));
-  workspace.classList.toggle("catalog-tree-mode", isTree);
-  const viewModeToggle = document.querySelector("#viewModeToggle");
-  const viewModeValue = document.querySelector("#viewModeValue");
-  viewModeToggle.checked = isTree;
-  viewModeToggle.setAttribute("aria-label", `ツリー表示 ${isTree ? "ON" : "OFF"}`);
-  viewModeValue.textContent = isTree ? "ON" : "OFF";
+  workspace.classList.toggle("catalog-tree-mode", isTreeLike);
+  workspace.classList.toggle("layer-tree-mode", isLayer);
+  document.querySelectorAll("[data-view-mode]").forEach((button) => {
+    const active = button.dataset.viewMode === state.viewMode;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
   if (isTree) {
     scheduleTreeEdgesDraw();
+    requestAnimationFrame(updateTreeMenuPlacement);
+  } else if (isLayer) {
     requestAnimationFrame(updateTreeMenuPlacement);
   }
 }
@@ -4688,17 +4934,22 @@ function init() {
     triggerArcadeFeedback("switch", document.querySelector("#filterToggle"));
     render();
   });
-  document.querySelector("#viewModeToggle").addEventListener("change", (event) => {
-    if (event.target.checked) {
-      state.viewMode = "tree";
-      state.openCourseId = null;
-      startTreeReveal();
-    } else {
-      state.viewMode = "list";
-      state.openTreeNodeId = null;
-    }
-    triggerArcadeFeedback("switch", event.currentTarget);
-    render();
+  document.querySelectorAll("[data-view-mode]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      const nextMode = event.currentTarget.dataset.viewMode;
+      if (state.viewMode === nextMode) return;
+      state.viewMode = nextMode;
+      if (nextMode === "list") {
+        state.openTreeNodeId = null;
+        state.focusedLayer = null;
+      } else {
+        state.openCourseId = null;
+        if (nextMode !== "layer") state.focusedLayer = null;
+        startTreeReveal();
+      }
+      triggerArcadeFeedback("switch", event.currentTarget);
+      render();
+    });
   });
   document.querySelector("#treeCodeToggle").addEventListener("change", (event) => {
     state.showTreeCodes = event.target.checked;
@@ -4743,9 +4994,12 @@ function init() {
   });
   window.addEventListener("resize", () => {
     requestAnimationFrame(updateCatalogColumnCount);
-    if (state.viewMode !== "tree") return;
-    scheduleTreeEdgesDraw();
-    requestAnimationFrame(updateTreeMenuPlacement);
+    if (state.viewMode === "tree") scheduleTreeEdgesDraw();
+    if (state.viewMode !== "list") {
+      if (state.viewMode === "layer") scheduleLayerOverlap();
+      scheduleTreeNameFit();
+      requestAnimationFrame(updateTreeMenuPlacement);
+    }
   });
   syncArcadeToggleLabels();
   autoFill({ silent: true });

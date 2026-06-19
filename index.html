@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>超履修計画2026</title>
-    <link rel="stylesheet" href="styles.css?v=1.03.13-ui-fit-20260619">
+    <link rel="stylesheet" href="styles.css?v=1.04-major-layer-20260619">
   </head>
   <body>
     <div id="fxLayer" aria-hidden="true"></div>
@@ -127,14 +127,11 @@
           <div class="panel-head">
             <h2>科目</h2>
             <div class="catalog-tools">
-              <label class="view-mode-switch" for="viewModeToggle">
-                <span class="view-mode-switch-label">ツリー</span>
-                <input id="viewModeToggle" class="view-mode-switch-input" type="checkbox" aria-label="ツリー表示">
-                <span class="view-mode-switch-track" aria-hidden="true">
-                  <span class="view-mode-switch-thumb"></span>
-                </span>
-                <span id="viewModeValue" class="view-mode-switch-value">OFF</span>
-              </label>
+              <div class="view-mode-tabs" role="group" aria-label="表示モード">
+                <button class="view-mode-tab" type="button" data-view-mode="list">一覧</button>
+                <button class="view-mode-tab" type="button" data-view-mode="tree">ツリー</button>
+                <button class="view-mode-tab" type="button" data-view-mode="layer">レイヤー</button>
+              </div>
               <button id="filterToggle" class="tree-option filter-toggle" type="button" aria-expanded="false" aria-controls="catalogFilters">絞込</button>
               <label id="treeCodeToggleWrap" class="tree-option" hidden>
                 <input id="treeCodeToggle" type="checkbox">
@@ -187,6 +184,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=1.03.13-ui-fit-20260619"></script>
+    <script src="app.js?v=1.04-major-layer-20260619"></script>
   </body>
 </html>

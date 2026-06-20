@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>超履修計画2026</title>
-    <link rel="stylesheet" href="styles.css?v=1.04-major-layer-20260619">
+    <link rel="stylesheet" href="styles.css?v=1.05-audio-effects-release-20260620">
   </head>
   <body>
     <div id="fxLayer" aria-hidden="true"></div>
@@ -59,6 +59,10 @@
                 <span>SE</span>
               </label>
               <label class="switch audio-switch">
+                <input id="animationToggle" type="checkbox" checked>
+                <span>アニメ</span>
+              </label>
+              <label class="switch audio-switch">
                 <input id="bgmToggle" type="checkbox" checked>
                 <span>BGM</span>
               </label>
@@ -80,6 +84,23 @@
             <span id="bgmRollArrange">微調整 0</span>
             <span id="bgmRollRadical">外れ値 0</span>
           </div>
+        </div>
+        <div class="bgm-roll-controls" aria-label="BGM生成設定">
+          <label>
+            <span>Arrange</span>
+            <input id="bgmSeedInput" type="number" min="0" max="999999" step="1" value="0">
+            <button id="bgmSeedRandomButton" type="button" title="アレンジSeedをランダムに設定">乱数</button>
+          </label>
+          <label>
+            <span>Melody</span>
+            <input id="bgmMelodySeedInput" type="number" min="0" max="999999" step="1" value="0">
+            <button id="bgmMelodySeedRandomButton" type="button" title="メロディSeedをランダムに設定">乱数</button>
+          </label>
+          <label>
+            <span>BPM</span>
+            <input id="bgmBpmInput" type="range" min="70" max="170" step="1" value="112">
+            <output id="bgmBpmOutput">112</output>
+          </label>
         </div>
         <div class="bgm-roll-legend" aria-hidden="true">
           <span class="legend-base">通常</span>
@@ -184,6 +205,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=1.04-major-layer-20260619"></script>
+    <script src="app.js?v=1.05-audio-effects-release-20260620"></script>
   </body>
 </html>

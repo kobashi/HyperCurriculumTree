@@ -744,8 +744,12 @@ const state = {
   showTreeCodes: false,
   showTreeMeta: false,
   soundFx: true,
+  animationFx: true,
   soundBgm: true,
   showBgmRoll: false,
+  bgmSeed: 0,
+  bgmMelodySeed: 0,
+  bgmBpmScale: 1,
   teacherNotice: "",
   openCourseId: null,
   openTreeNodeId: null,
@@ -765,6 +769,8 @@ const arcadeAudio = {
   limiter: null,
   bgmTimer: null,
   bgmStep: 0,
+  bgmNextTime: 0,
+  bgmSources: new Set(),
   bgmStateKey: "",
   arrangementCacheKey: "",
   arrangementCache: null,
@@ -791,6 +797,10 @@ const planFx = {
   cleanupTimer: null,
   clearTimer: null,
   queuedDelays: new Map()
+};
+
+const meterFx = {
+  previousWidths: new Map()
 };
 
 const fxDomIndex = {
@@ -1018,24 +1028,24 @@ function ensureArcadeAudio() {
     arcadeAudio.limiter = arcadeAudio.context.createDynamicsCompressor();
     arcadeAudio.master.gain.value = 1.08;
     arcadeAudio.bgmBus.gain.value = 1.08;
-    arcadeAudio.sfxBus.gain.value = 0.62;
+    arcadeAudio.sfxBus.gain.value = 0.48;
     arcadeAudio.bgmFilter.type = "lowpass";
     arcadeAudio.bgmFilter.frequency.value = 9200;
     arcadeAudio.bgmFilter.Q.value = 0.35;
     arcadeAudio.sfxFilter.type = "lowpass";
     arcadeAudio.sfxFilter.frequency.value = 9800;
     arcadeAudio.sfxFilter.Q.value = 0.3;
-    arcadeAudio.limiter.threshold.value = -8;
-    arcadeAudio.limiter.knee.value = 14;
-    arcadeAudio.limiter.ratio.value = 8;
-    arcadeAudio.limiter.attack.value = 0.006;
-    arcadeAudio.limiter.release.value = 0.18;
+    arcadeAudio.limiter.threshold.value = -10;
+    arcadeAudio.limiter.knee.value = 18;
+    arcadeAudio.limiter.ratio.value = 4;
+    arcadeAudio.limiter.attack.value = 0.003;
+    arcadeAudio.limiter.release.value = 0.08;
     arcadeAudio.bgmBus.connect(arcadeAudio.bgmFilter);
     arcadeAudio.sfxBus.connect(arcadeAudio.sfxFilter);
     arcadeAudio.bgmFilter.connect(arcadeAudio.master);
-    arcadeAudio.sfxFilter.connect(arcadeAudio.master);
-    arcadeAudio.master.connect(arcadeAudio.limiter);
-    arcadeAudio.limiter.connect(arcadeAudio.context.destination);
+    arcadeAudio.sfxFilter.connect(arcadeAudio.limiter);
+    arcadeAudio.limiter.connect(arcadeAudio.master);
+    arcadeAudio.master.connect(arcadeAudio.context.destination);
   }
   return arcadeAudio.context;
 }
@@ -1051,9 +1061,27 @@ function withArcadeAudio(run) {
   }
 }
 
-function stopArcadeBgm() {
+function stopScheduledBgmSources() {
+  arcadeAudio.bgmSources.forEach((source) => {
+    try {
+      source.stop(0);
+    } catch (error) {
+      // Already stopped or not started; the cleanup path will disconnect it.
+    }
+    try {
+      source.disconnect();
+    } catch (error) {
+      // Already disconnected.
+    }
+  });
+  arcadeAudio.bgmSources.clear();
+}
+
+function stopArcadeBgm(options = {}) {
   if (arcadeAudio.bgmTimer) clearTimeout(arcadeAudio.bgmTimer);
   arcadeAudio.bgmTimer = null;
+  arcadeAudio.bgmNextTime = 0;
+  if (options.stopSources) stopScheduledBgmSources();
 }
 
 function midiToFreq(root, semitone) {
@@ -1114,6 +1142,7 @@ function scheduleAudioCleanup(ctx, nodes, endTime) {
   const delayMs = Math.max(0, (endTime - ctx.currentTime + 0.08) * 1000);
   window.setTimeout(() => {
     nodes.forEach((node) => {
+      arcadeAudio.bgmSources.delete(node);
       try {
         node.disconnect();
       } catch (error) {
@@ -1162,14 +1191,16 @@ function tone(ctx, {
   delayMix = 0,
   delayTime = 0.18,
   delayFeedback = 0.22,
-  bus = "sfx"
+  bus = "sfx",
+  startAt = null
 }) {
   const osc = ctx.createOscillator();
   const amp = ctx.createGain();
   const lp = ctx.createBiquadFilter();
   const shaper = fuzz > 0 || bitDepth ? ctx.createWaveShaper() : null;
   const destination = bus === "bgm" ? arcadeAudio.bgmBus : arcadeAudio.sfxBus;
-  const start = ctx.currentTime + delay;
+  if (bus === "bgm") arcadeAudio.bgmSources.add(osc);
+  const start = (Number.isFinite(startAt) ? startAt : ctx.currentTime) + delay;
   const end = start + duration;
   const stopAt = end + Math.max(0.05, delayMix > 0 ? delayTime * 2.4 : 0.05);
   const cleanupNodes = [osc, lp, amp];
@@ -1224,7 +1255,8 @@ function noiseHit(ctx, {
   filter = 3600,
   filterType = "highpass",
   bus = "bgm",
-  seed = null
+  seed = null,
+  startAt = null
 }) {
   const length = Math.max(1, Math.floor(ctx.sampleRate * duration));
   let buffer = cachedNoiseBuffer(ctx, duration, seed);
@@ -1239,9 +1271,10 @@ function noiseHit(ctx, {
     }
   }
   const source = ctx.createBufferSource();
+  if (bus === "bgm") arcadeAudio.bgmSources.add(source);
   const amp = ctx.createGain();
   const filterNode = ctx.createBiquadFilter();
-  const start = ctx.currentTime + delay;
+  const start = (Number.isFinite(startAt) ? startAt : ctx.currentTime) + delay;
   const end = start + duration;
   const ramps = audioRampTimes(duration, bus);
   const peakAt = Math.min(end - 0.004, start + ramps.attack);
@@ -1274,8 +1307,37 @@ function scaledTone(profile, degree) {
   return scale[index] + (octave * 12);
 }
 
+function seededMelodyDegree(profile, step) {
+  const melody = profile.melody || [0];
+  const baseDegree = melody[step % melody.length];
+  if (!state.bgmMelodySeed) return baseDegree;
+  const seed = hashString(`${profile.key}|melody:${state.bgmMelodySeed}`);
+  const sourceIndex = (step + (seed % melody.length)) % melody.length;
+  let degree = melody[sourceIndex];
+  const unit = seededUnit(seed, step);
+  if (degree === null || degree === undefined) {
+    if (unit > 0.82) {
+      const fallback = melody.find((item) => item !== null && item !== undefined) ?? 0;
+      degree = fallback + ((seed + step) % 3) - 1;
+    } else {
+      return null;
+    }
+  }
+  const shifts = [-2, -1, 0, 0, 1, 2];
+  const shift = shifts[Math.floor(seededUnit(seed, step + 17) * shifts.length)] || 0;
+  return degree + shift;
+}
+
 function bgmStepMs(profile) {
-  return profile.stepMs || (60000 / ((profile.bpm || 120) * 4));
+  return profile.stepMs || (60000 / (currentBgmBpm(profile) * 4));
+}
+
+function baseBgmBpm(profile = currentArcadeBgmProfile()) {
+  return profile.bpm || 120;
+}
+
+function currentBgmBpm(profile = currentArcadeBgmProfile()) {
+  return Math.max(40, Math.min(220, Math.round(baseBgmBpm(profile) * state.bgmBpmScale)));
 }
 
 function bgmCompositionKey() {
@@ -1287,7 +1349,7 @@ function bgmCompositionKey() {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([id, affinity]) => `${id}:${affinity}`)
     .join(",");
-  return `${state.course}|teacher:${state.teacher ? 1 : 0}|${selectedIds}|aff:${affinities}`;
+  return `${state.course}|teacher:${state.teacher ? 1 : 0}|arrSeed:${state.bgmSeed}|melSeed:${state.bgmMelodySeed}|bpm:${state.bgmBpmScale}|${selectedIds}|aff:${affinities}`;
 }
 
 function bgmArrangementCacheKey() {
@@ -1299,15 +1361,15 @@ function bgmArrangementCacheKey() {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([id, affinity]) => `${id}:${affinity}`)
     .join(",");
-  return `${state.course}|teacher:${state.teacher ? 1 : 0}|${planned}|aff:${affinities}`;
+  return `${state.course}|teacher:${state.teacher ? 1 : 0}|arrSeed:${state.bgmSeed}|${planned}|aff:${affinities}`;
 }
 
 function bgmPlaybackKey() {
-  return state.course;
+  return `${state.course}|bpm:${state.bgmBpmScale}`;
 }
 
 function bgmNoiseSeed(profile, arrangement, step, voice) {
-  return hashString(`${profile.key}|${arrangement.key}|${step}|${voice}`);
+  return hashString(`${profile.key}|arrSeed:${state.bgmSeed}|${arrangement.key}|${step}|${voice}`);
 }
 
 const bgmStepPlanCacheLimit = 128;
@@ -1319,7 +1381,7 @@ function bgmLoopStep(profile, step) {
 }
 
 function bgmStepPlanCacheKey(profile, arrangement, step) {
-  return `${profile.key}|${arrangement.key}|${bgmLoopStep(profile, step)}`;
+  return `${profile.key}|melSeed:${state.bgmMelodySeed}|bpm:${currentBgmBpm(profile)}|${arrangement.key}|${bgmLoopStep(profile, step)}`;
 }
 
 function trimBgmStepPlanCache() {
@@ -1615,16 +1677,17 @@ function buildBgmStepPlan(profile, arrangement, step) {
   return plan;
 }
 
-function playBgmStepPlan(ctx, profile, arrangement, step, plan) {
+function playBgmStepPlan(ctx, profile, arrangement, step, plan, startAt = null) {
   plan.events.forEach((event) => {
     if (event.kind === "noise") {
       noiseHit(ctx, {
         ...event.options,
-        seed: bgmNoiseSeed(profile, arrangement, step, event.voice)
+        seed: bgmNoiseSeed(profile, arrangement, step, event.voice),
+        startAt
       });
       return;
     }
-    tone(ctx, event.options);
+    tone(ctx, { ...event.options, startAt });
   });
 }
 
@@ -1777,10 +1840,11 @@ function bgmArrangementState() {
     .map((id) => allCourses.find((course) => course.id === id))
     .filter(Boolean)
     .sort((a, b) => a.id.localeCompare(b.id));
-  const seed = [...arrangedCourses, ...otherDeptCourses].reduce((total, course, index) => {
+  const arrangementSeedBase = [...arrangedCourses, ...otherDeptCourses].reduce((total, course, index) => {
     const idValue = [...course.id].reduce((sum, char) => sum + char.charCodeAt(0), 0);
     return total + (idValue * (index + 3));
   }, arrangedCourses.length * 17 + otherDeptCourses.length * 23 + teacherCourses.length * 29 + (state.teacher ? 41 : 0) + missingPrereqs.length * 31);
+  const seed = hashString(`${arrangementSeedBase}|user:${state.bgmSeed}`);
   const arrangedDepth = Math.min(4, arrangedCourses.length);
   const missingDepth = Math.min(4, missingRequired.length);
   const prereqDepth = Math.min(4, missingPrereqs.length);
@@ -2103,7 +2167,7 @@ function harmonyForStep(profile, arrangement, step) {
 function bgmStepAnalysis(profile, arrangement, step) {
   const beatStep = step % 16;
   const harmony = harmonyForStep(profile, arrangement, step);
-  const melodyDegree = (profile.melody || [0])[step % (profile.melody || [0]).length];
+  const melodyDegree = seededMelodyDegree(profile, step);
   const baseMelodyOffset = scaledTone(profile, melodyDegree);
   const melodyOffset = arrangedMelodyOffset(profile, baseMelodyOffset, step, arrangement);
   const baseBassOffset = (profile.bassLine || [0])[step % (profile.bassLine || [0]).length];
@@ -2154,6 +2218,8 @@ function startArcadeBgm() {
   if (!state.soundBgm) return;
   withArcadeAudio((ctx) => {
     if (arcadeAudio.bgmTimer) return;
+    const lookaheadSeconds = 0.9;
+    const tickMs = 90;
     const tick = () => {
       arcadeAudio.bgmTimer = null;
       if (!state.soundBgm) return;
@@ -2161,61 +2227,68 @@ function startArcadeBgm() {
         void ctx.resume().catch(() => {});
       }
       const profile = currentArcadeBgmProfile();
-      let nextDelay = bgmStepMs(profile);
-      let advanced = false;
+      if (!arcadeAudio.bgmNextTime || arcadeAudio.bgmNextTime < ctx.currentTime + 0.02) {
+        arcadeAudio.bgmNextTime = ctx.currentTime + 0.025;
+      }
       try {
-        const arrangement = bgmArrangementState();
-        const step = arcadeAudio.bgmStep;
-        const plan = buildBgmStepPlan(profile, arrangement, step);
-        playBgmStepPlan(ctx, profile, arrangement, step, plan);
-
-        arcadeAudio.bgmStep += 1;
-        advanced = true;
-        nextDelay = plan.nextDelay;
+        while (arcadeAudio.bgmNextTime < ctx.currentTime + lookaheadSeconds) {
+          const arrangement = bgmArrangementState();
+          const step = arcadeAudio.bgmStep;
+          const plan = buildBgmStepPlan(profile, arrangement, step);
+          playBgmStepPlan(ctx, profile, arrangement, step, plan, arcadeAudio.bgmNextTime);
+          arcadeAudio.bgmStep += 1;
+          arcadeAudio.bgmNextTime += plan.nextDelay / 1000;
+        }
       } catch (error) {
-        if (!advanced) arcadeAudio.bgmStep += 1;
+        arcadeAudio.bgmStep += 1;
+        arcadeAudio.bgmNextTime += bgmStepMs(profile) / 1000;
         console.warn("BGM step skipped", error);
       } finally {
         if (state.soundBgm && !arcadeAudio.bgmTimer) {
-          arcadeAudio.bgmTimer = window.setTimeout(tick, nextDelay);
+          arcadeAudio.bgmTimer = window.setTimeout(tick, tickMs);
         }
       }
     };
-    stopArcadeBgm();
+    stopArcadeBgm({ stopSources: true });
     arcadeAudio.bgmStep = 0;
+    arcadeAudio.bgmNextTime = ctx.currentTime + 0.025;
     tick();
   });
 }
 
 function syncArcadeAudio(forceRestart = false) {
   const stateKey = bgmPlaybackKey();
-  if (forceRestart || (arcadeAudio.bgmStateKey && arcadeAudio.bgmStateKey !== stateKey)) {
-    stopArcadeBgm();
+  if (forceRestart) {
+    stopArcadeBgm({ stopSources: true });
   }
   arcadeAudio.bgmStateKey = stateKey;
   if (state.soundBgm) {
     startArcadeBgm();
   } else {
-    stopArcadeBgm();
+    stopArcadeBgm({ stopSources: true });
   }
 }
 
 function syncArcadeToggleLabels() {
   const fxToggle = document.querySelector("#fxToggle");
+  const animationToggle = document.querySelector("#animationToggle");
   const bgmToggle = document.querySelector("#bgmToggle");
   if (fxToggle) fxToggle.checked = state.soundFx;
+  if (animationToggle) animationToggle.checked = state.animationFx;
   if (bgmToggle) bgmToggle.checked = state.soundBgm;
 }
 
 function triggerArcadeFeedback(kind, source) {
-  const element = source && source.nodeType === 1 ? source : null;
-  if (element) {
-    burstAtElement(element, kind);
-  } else {
-    burstAtPoint(window.innerWidth / 2, window.innerHeight / 5, kind, 1.05);
+  if (state.animationFx) {
+    const element = source && source.nodeType === 1 ? source : null;
+    if (element) {
+      burstAtElement(element, kind);
+    } else {
+      burstAtPoint(window.innerWidth / 2, window.innerHeight / 5, kind, 1.05);
+    }
+    if (kind === "boost") pulseBody(kind);
   }
   playArcadeSfx(kind);
-  if (kind === "boost") pulseBody(kind);
 }
 
 const standardTermOverrides = {
@@ -2850,6 +2923,18 @@ function buildPlannedOptionMenu(course, options = {}) {
   return menu;
 }
 
+function closeInlinePlanningMenus() {
+  document
+    .querySelectorAll(".planned-option-menu, .planned-course-menu, .tree-node-menu")
+    .forEach((menu) => menu.remove());
+  document
+    .querySelectorAll(".planned-course.is-open, .tree-node.is-open")
+    .forEach((item) => item.classList.remove("is-open"));
+  document
+    .querySelectorAll(".plan-button[aria-expanded='true'], .tree-node-button[aria-expanded='true'], .planned-course[aria-expanded='true']")
+    .forEach((item) => item.setAttribute("aria-expanded", "false"));
+}
+
 function validatePlannedCourse(course) {
   const currentValue = state.planned.get(course.id);
   if (currentValue && !isValidPlannedValue(course, currentValue)) {
@@ -3262,6 +3347,7 @@ function startTreeReveal() {
   }
   const timer = window.setTimeout(() => {
     fxSequence.treeReveal = false;
+    render();
   }, 1900);
   fxSequence.treeTimers.push(timer);
 }
@@ -4122,6 +4208,7 @@ function renderLayerTree() {
     layer.style.setProperty("--layer-index", String(sectionIndex));
     layer.style.setProperty("--layer-depth", String(depth));
     layer.style.setProperty("--layer-front", String(maxDepth - depth));
+    layer.style.setProperty("--layer-reveal-delay", `${sectionIndex * 150}ms`);
     layer.setAttribute("aria-label", `${section} レイヤーを${isFocused ? "選択解除" : "選択"}`);
     const sectionTitle = treeSectionTitle(section);
     layer.innerHTML = `
@@ -4470,7 +4557,8 @@ function updateTreeMenuPlacement() {
   }
 }
 
-function renderViewMode() {
+function renderViewMode(options = {}) {
+  const { scheduleLayout = true } = options;
   const workspace = document.querySelector(".workspace");
   const catalog = document.querySelector("#catalogList");
   const tree = document.querySelector("#treeView");
@@ -4487,6 +4575,7 @@ function renderViewMode() {
   const treeMetaToggleWrap = document.querySelector("#treeMetaToggleWrap");
   const treeMetaToggle = document.querySelector("#treeMetaToggle");
   const fxToggle = document.querySelector("#fxToggle");
+  const animationToggle = document.querySelector("#animationToggle");
   const bgmToggle = document.querySelector("#bgmToggle");
   const isTree = state.viewMode === "tree";
   const isLayer = state.viewMode === "layer";
@@ -4500,7 +4589,9 @@ function renderViewMode() {
   treeMetaToggleWrap.hidden = !isTreeLike;
   treeMetaToggle.checked = state.showTreeMeta;
   fxToggle.checked = state.soundFx;
+  animationToggle.checked = state.animationFx;
   bgmToggle.checked = state.soundBgm;
+  document.body.classList.toggle("is-animation-muted", !state.animationFx);
   filters.hidden = !state.filtersOpen;
   filterToggle.setAttribute("aria-expanded", String(state.filtersOpen));
   courseMenu.hidden = !state.courseMenuOpen;
@@ -4518,6 +4609,7 @@ function renderViewMode() {
     button.classList.toggle("is-active", active);
     button.setAttribute("aria-pressed", String(active));
   });
+  if (!scheduleLayout) return;
   if (isTree) {
     scheduleTreeEdgesDraw();
     requestAnimationFrame(updateTreeMenuPlacement);
@@ -4565,6 +4657,31 @@ function bgmCellClass(analysis, base = "") {
   return classes.join(" ");
 }
 
+function normalizedBgmSeed(value) {
+  const numeric = Math.round(Number(value || 0));
+  return Number.isFinite(numeric) ? Math.max(0, Math.min(999999, numeric)) : 0;
+}
+
+function randomBgmSeed() {
+  return Math.floor(Math.random() * 1000000);
+}
+
+function setBgmArrangeSeed(value) {
+  state.bgmSeed = normalizedBgmSeed(value);
+  arcadeAudio.arrangementCacheKey = "";
+  arcadeAudio.arrangementCache = null;
+  arcadeAudio.stepPlanCache.clear();
+  syncArcadeAudio();
+  renderBgmRoll();
+}
+
+function setBgmMelodySeed(value) {
+  state.bgmMelodySeed = normalizedBgmSeed(value);
+  arcadeAudio.stepPlanCache.clear();
+  syncArcadeAudio();
+  renderBgmRoll();
+}
+
 function appendBgmRollCell(grid, text, className, title = "") {
   const cell = document.createElement("div");
   cell.className = className;
@@ -4582,6 +4699,10 @@ function renderBgmRoll() {
   const panel = document.querySelector("#bgmRollPanel");
   const grid = document.querySelector("#bgmRollGrid");
   const toggle = document.querySelector("#bgmRollToggle");
+  const seedInput = document.querySelector("#bgmSeedInput");
+  const melodySeedInput = document.querySelector("#bgmMelodySeedInput");
+  const bpmInput = document.querySelector("#bgmBpmInput");
+  const bpmOutput = document.querySelector("#bgmBpmOutput");
   if (!panel || !grid) return;
   panel.hidden = !state.showBgmRoll;
   if (toggle) toggle.checked = state.showBgmRoll;
@@ -4592,9 +4713,18 @@ function renderBgmRoll() {
   const profile = currentArcadeBgmProfile();
   const arrangement = bgmArrangementState();
   const analyses = Array.from({ length: 16 }, (_, step) => bgmStepAnalysis(profile, arrangement, step));
+  const bpm = currentBgmBpm(profile);
+  if (seedInput) seedInput.value = String(state.bgmSeed);
+  if (melodySeedInput) melodySeedInput.value = String(state.bgmMelodySeed);
+  if (bpmInput) {
+    bpmInput.min = String(Math.max(40, Math.round(baseBgmBpm(profile) * 0.62)));
+    bpmInput.max = String(Math.min(220, Math.round(baseBgmBpm(profile) * 1.52)));
+    bpmInput.value = String(bpm);
+  }
+  if (bpmOutput) bpmOutput.value = String(bpm);
   document.querySelector("#bgmRollCourse").textContent = state.course;
-  document.querySelector("#bgmRollTempo").textContent = `${profile.bpm || 120} BPM`;
-  document.querySelector("#bgmRollArrange").textContent = `履修 ${arrangement.count} / 自 ${arrangement.ownCourseCount} / 共 ${arrangement.commonCourseCount} / 他 ${arrangement.foreignCourseCount} / 他学科 ${arrangement.otherDeptCount} / 教職 ${arrangement.teacherActive ? "ON" : "OFF"} / 変化 ${arrangement.mutationStepCount}箇所`;
+  document.querySelector("#bgmRollTempo").textContent = `${bpm} BPM`;
+  document.querySelector("#bgmRollArrange").textContent = `履修 ${arrangement.count} / 自 ${arrangement.ownCourseCount} / 共 ${arrangement.commonCourseCount} / 他 ${arrangement.foreignCourseCount} / 他学科 ${arrangement.otherDeptCount} / 教職 ${arrangement.teacherActive ? "ON" : "OFF"} / Arr ${state.bgmSeed} / Mel ${state.bgmMelodySeed} / 変化 ${arrangement.mutationStepCount}箇所`;
   document.querySelector("#bgmRollRadical").textContent = `外れ値 ${arrangement.missingRequired}`;
   grid.innerHTML = "";
   appendBgmRollCell(grid, "", "bgm-roll-label");
@@ -4662,13 +4792,32 @@ function setMeterSegments(id, segments, target) {
     if (value <= 0) return;
     visibleSegments.push({ ...segment, value });
   });
-  visibleSegments.forEach((segment) => {
+  const previousWidths = meterFx.previousWidths.get(id) || new Map();
+  const nextWidths = new Map();
+  visibleSegments.forEach((segment, index) => {
     const part = document.createElement("span");
     part.className = `meter-segment ${segment.className || "meter-segment-default"}`;
-    part.style.width = `${(segment.value / target) * 100}%`;
+    const segmentKey = `${segment.label}|${segment.className || "meter-segment-default"}`;
+    const nextWidth = (segment.value / target) * 100;
+    const previousWidth = previousWidths.get(segmentKey) ?? 0;
+    const changed = Math.abs(nextWidth - previousWidth) > 0.05;
+    nextWidths.set(segmentKey, nextWidth);
+    part.style.width = `${previousWidth}%`;
     part.title = `${segment.label} ${formatCredits(segment.value)}単位`;
     meter.appendChild(part);
+    if (changed) {
+      part.classList.add(nextWidth >= previousWidth ? "is-growing" : "is-shrinking");
+      requestAnimationFrame(() => {
+        part.style.width = `${nextWidth}%`;
+      });
+      window.setTimeout(() => {
+        part.classList.remove("is-growing", "is-shrinking");
+      }, 720);
+    } else {
+      part.style.width = `${nextWidth}%`;
+    }
   });
+  meterFx.previousWidths.set(id, nextWidths);
 }
 
 function formatCredits(value) {
@@ -4862,12 +5011,13 @@ function init() {
     state.courseMenuOpen = !state.courseMenuOpen;
     state.openCourseId = null;
     state.openTreeNodeId = null;
+    closeInlinePlanningMenus();
     if (state.courseMenuOpen) {
       state.gpaMenuOpen = false;
       state.effectsOpen = false;
     }
     triggerArcadeFeedback("switch", event.currentTarget);
-    render();
+    renderViewMode({ scheduleLayout: false });
   });
   document.querySelector("#courseMenu").addEventListener("click", (event) => {
     const button = event.target.closest("[data-course-action]");
@@ -4878,23 +5028,25 @@ function init() {
     state.effectsOpen = !state.effectsOpen;
     state.openCourseId = null;
     state.openTreeNodeId = null;
+    closeInlinePlanningMenus();
     if (state.effectsOpen) {
       state.courseMenuOpen = false;
       state.gpaMenuOpen = false;
     }
     triggerArcadeFeedback("switch", event.currentTarget);
-    render();
+    renderViewMode({ scheduleLayout: false });
   });
   document.querySelector("#gpaMenuToggle").addEventListener("click", (event) => {
     state.gpaMenuOpen = !state.gpaMenuOpen;
     state.openCourseId = null;
     state.openTreeNodeId = null;
+    closeInlinePlanningMenus();
     if (state.gpaMenuOpen) {
       state.courseMenuOpen = false;
       state.effectsOpen = false;
     }
     triggerArcadeFeedback("switch", event.currentTarget);
-    render();
+    renderViewMode({ scheduleLayout: false });
   });
 
   document.querySelector("#teacherToggle").addEventListener("change", (event) => {
@@ -4931,8 +5083,11 @@ function init() {
   });
   document.querySelector("#filterToggle").addEventListener("click", () => {
     state.filtersOpen = !state.filtersOpen;
+    state.openCourseId = null;
+    state.openTreeNodeId = null;
+    closeInlinePlanningMenus();
     triggerArcadeFeedback("switch", document.querySelector("#filterToggle"));
-    render();
+    renderViewMode({ scheduleLayout: false });
   });
   document.querySelectorAll("[data-view-mode]").forEach((button) => {
     button.addEventListener("click", (event) => {
@@ -4967,6 +5122,16 @@ function init() {
     if (state.soundFx) triggerArcadeFeedback("switch", event.currentTarget);
     render();
   });
+  document.querySelector("#animationToggle").addEventListener("change", (event) => {
+    state.animationFx = event.target.checked;
+    state.effectsOpen = false;
+    if (!state.animationFx) {
+      document.querySelectorAll("#fxLayer .fx-particle").forEach((particle) => particle.remove());
+      document.body.classList.remove("fx-shake");
+    }
+    triggerArcadeFeedback(state.animationFx ? "switch" : "remove", event.currentTarget);
+    renderViewMode({ scheduleLayout: false });
+  });
   document.querySelector("#bgmToggle").addEventListener("change", (event) => {
     state.soundBgm = event.target.checked;
     state.effectsOpen = false;
@@ -4980,14 +5145,38 @@ function init() {
     triggerArcadeFeedback("switch", event.currentTarget);
     render();
   });
+  document.querySelector("#bgmSeedInput").addEventListener("input", (event) => {
+    setBgmArrangeSeed(event.target.value);
+  });
+  document.querySelector("#bgmSeedRandomButton").addEventListener("click", (event) => {
+    setBgmArrangeSeed(randomBgmSeed());
+    triggerArcadeFeedback("switch", event.currentTarget);
+  });
+  document.querySelector("#bgmMelodySeedInput").addEventListener("input", (event) => {
+    setBgmMelodySeed(event.target.value);
+  });
+  document.querySelector("#bgmMelodySeedRandomButton").addEventListener("click", (event) => {
+    setBgmMelodySeed(randomBgmSeed());
+    triggerArcadeFeedback("switch", event.currentTarget);
+  });
+  document.querySelector("#bgmBpmInput").addEventListener("input", (event) => {
+    const profile = currentArcadeBgmProfile();
+    const bpm = Math.max(40, Math.min(220, Math.round(Number(event.target.value || baseBgmBpm(profile)))));
+    state.bgmBpmScale = bpm / baseBgmBpm(profile);
+    arcadeAudio.stepPlanCache.clear();
+    const output = document.querySelector("#bgmBpmOutput");
+    if (output) output.value = String(currentBgmBpm(profile));
+    document.querySelector("#bgmRollTempo").textContent = `${currentBgmBpm(profile)} BPM`;
+    syncArcadeAudio(true);
+  });
   window.hctAutoFillButton = handleAutoFillButton;
   window.hctClearButton = handleClearButton;
   bindImmediateButton("#autoFillButton", "autoFillButton", () => autoFill());
   bindImmediateButton("#clearButton", "clearButton", clearPlan);
-  document.addEventListener("pointerdown", syncArcadeAudio, { once: true, capture: true });
+  document.addEventListener("pointerdown", () => syncArcadeAudio(), { once: true, capture: true });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
-      stopArcadeBgm();
+      stopArcadeBgm({ stopSources: true });
     } else {
       syncArcadeAudio();
     }

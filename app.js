@@ -78,6 +78,24 @@ const intensiveCourseNames = new Set([
   "基本情報技術"
 ]);
 
+const aExamExemptionCourseNames = [
+  "ソフトウェア基礎",
+  "アルゴリズムとデータ構造",
+  "情報管理",
+  "メディア情報技術",
+  "コンピュータネットワークⅠ",
+  "基本情報技術"
+];
+const aExamExemptionCourseKeys = new Set(aExamExemptionCourseNames.map(normalizeName));
+const aExamExemptionDefaultTerms = {
+  ソフトウェア基礎: "2前",
+  アルゴリズムとデータ構造: "2前",
+  情報管理: "2前",
+  メディア情報技術: "2後",
+  コンピュータネットワークⅠ: "2後",
+  基本情報技術: recognitionValue(INTENSIVE_TERM, "2後")
+};
+
 const requiredBasic = [
   ["B-REQ-01", "プラクティカル・イングリッシュⅠ", 2, 1, "前", true],
   ["B-REQ-02", "プラクティカル・イングリッシュⅡ", 2, 1, "後", false],
@@ -733,6 +751,7 @@ const prereqs = {
 const state = {
   course: NO_COURSE,
   teacher: false,
+  aExamExemption: false,
   gpa: 1,
   secondYearGpa: 1,
   manualOther: 0,
@@ -751,12 +770,14 @@ const state = {
   bgmMelodySeed: 0,
   bgmBpmScale: 1,
   teacherNotice: "",
+  aExamNotice: "",
   openCourseId: null,
   openTreeNodeId: null,
   focusedLayer: null,
   planned: new Map(),
   plannedCourseAffinities: new Map(),
-  teacherAdded: new Set()
+  teacherAdded: new Set(),
+  aExamAdded: new Set()
 };
 
 const arcadeAudio = {
@@ -2504,6 +2525,7 @@ function makeCourse({ id, name, credits, year, term, category, teacherRequired =
     defaultTerm: year ? termId(year, term) : null,
     category,
     teacherRequired,
+    aExamExemptionRequired: aExamExemptionCourseKeys.has(normalizeName(name)),
     qualificationEligible,
     intensive: intensiveCourseNames.has(name),
     capExcluded: isCapExcludedCourse({ name, category, qualificationEligible }),
@@ -2578,6 +2600,7 @@ function dedupeCourses(courses) {
     }
     const existing = seen.get(key);
     existing.teacherRequired = existing.teacherRequired || course.teacherRequired;
+    existing.aExamExemptionRequired = existing.aExamExemptionRequired || course.aExamExemptionRequired;
     existing.qualificationEligible = existing.qualificationEligible || course.qualificationEligible;
     existing.capExcluded = existing.capExcluded || course.capExcluded;
   });
@@ -2686,6 +2709,7 @@ function treeNodeTooltip(course, node, treeName) {
   if (course.category === "commonRequired") lines.push("コース共通必修");
   if (matchedCourseRequired) lines.push(`${course.course}コース必修`);
   if (course.category !== "teacher" && !mismatchedCourseRequired && (course.teacherRequired || node.teacherRequired)) lines.push("教職必修");
+  if (course.aExamExemptionRequired) lines.push("基本情報技術者A試験免除指定科目");
   return lines.join("\n");
 }
 
@@ -2718,6 +2742,7 @@ function treeMissingRequiredClass(course) {
     return " is-missing-required";
   }
   if (state.teacher && course.teacherRequired) return " is-missing-required";
+  if (state.aExamExemption && course.aExamExemptionRequired && !isAExamRequirementSatisfiedCourse(course)) return " is-missing-required";
   return "";
 }
 
@@ -3379,6 +3404,7 @@ function setPlanned(courseId, term, options = {}) {
       if (!state.planned.delete(item.id)) return count;
       state.plannedCourseAffinities.delete(item.id);
       state.teacherAdded.delete(item.id);
+      state.aExamAdded.delete(item.id);
       return count + 1;
     }, 0);
     if (removed > 0) {
@@ -3465,6 +3491,72 @@ function addTeacherPlanCourses(options = {}) {
   return added;
 }
 
+function aExamCoursePreference(course) {
+  if (course.name === "基本情報技術") return course.qualificationEligible ? 0 : 2;
+  if (course.category === "specializedElective") return 0;
+  if (course.category === "courseRequired") return 1;
+  return 2;
+}
+
+function aExamPlanCourses() {
+  return aExamExemptionCourseNames
+    .map((name) => allCourses
+      .filter((course) => course.key === normalizeName(name))
+      .sort((a, b) => aExamCoursePreference(a) - aExamCoursePreference(b))[0])
+    .filter(Boolean);
+}
+
+function aExamDefaultPlannedValue(course) {
+  return aExamExemptionDefaultTerms[course.name] || openingTermForCourse(course);
+}
+
+function addAExamPlanCourses(options = {}) {
+  const beforePlan = snapshotPlanned();
+  let added = 0;
+  aExamPlanCourses().forEach((course) => {
+    const plannedValue = aExamDefaultPlannedValue(course);
+    if (state.planned.has(course.id)) return;
+    state.planned.set(course.id, plannedValue);
+    const affinity = plannedAffiliationForCourse(course);
+    if (affinity) state.plannedCourseAffinities.set(course.id, affinity);
+    state.aExamAdded.add(course.id);
+    added += 1;
+  });
+  if (!options.silent) queuePlanTransition(beforePlan, snapshotPlanned(), { baseDelay: 0, step: 20, cellStep: 48 });
+  return added;
+}
+
+function aExamExemptionStatus() {
+  const requirements = aExamExemptionCourseNames.map((name) => {
+    const key = normalizeName(name);
+    const candidates = allCourses.filter((course) => course.key === key);
+    const plannedCourse = candidates.find((course) => state.planned.has(course.id) && plannedMethod(course) !== QUALIFICATION_TERM) || null;
+    const qualificationOnly = !plannedCourse && candidates.some((course) => state.planned.has(course.id) && plannedMethod(course) === QUALIFICATION_TERM);
+    const term = plannedCourse ? plannedTerm(plannedCourse) : null;
+    const year = TERMS.find((item) => item.id === term)?.year || null;
+    return { name, key, plannedCourse, term, year, qualificationOnly };
+  });
+  const completed = requirements.filter((item) => item.plannedCourse && item.year);
+  const years = [...new Set(completed.map((item) => item.year))];
+  const completedKeys = new Set(completed.map((item) => item.key));
+  const allPlaced = completed.length === requirements.length;
+  const sameYear = allPlaced && years.length === 1;
+  return {
+    requirements,
+    completedKeys,
+    missing: requirements.filter((item) => !item.plannedCourse),
+    qualificationOnly: requirements.filter((item) => item.qualificationOnly),
+    years,
+    year: sameYear ? years[0] : null,
+    ok: sameYear
+  };
+}
+
+function isAExamRequirementSatisfiedCourse(course) {
+  if (!course?.aExamExemptionRequired) return true;
+  return aExamExemptionStatus().completedKeys.has(course.key);
+}
+
 function removeTeacherPlanCourses() {
   const beforePlan = snapshotPlanned();
   let removed = 0;
@@ -3487,16 +3579,19 @@ function autoFill(options = {}) {
   state.openTreeNodeId = null;
   let added = 0;
   const teacherCourseIds = state.teacher ? new Set(teacherPlanCourses().map((course) => course.id)) : new Set();
+  const aExamCourseIds = state.aExamExemption ? new Set(aExamPlanCourses().map((course) => course.id)) : new Set();
   allCourses.forEach((course) => {
     const isSelectedCourseRequired = course.category === "courseRequired" && state.course !== NO_COURSE && course.course === state.course;
     const isCoreRequired = ["basicRequired", "commonRequired"].includes(course.category) || isSelectedCourseRequired;
     const isTeacherRequired = teacherCourseIds.has(course.id);
-    if (!isCoreRequired && !isTeacherRequired) return;
+    const isAExamRequired = aExamCourseIds.has(course.id);
+    if (!isCoreRequired && !isTeacherRequired && !isAExamRequired) return;
     if (state.planned.has(course.id)) return;
-    state.planned.set(course.id, openingTermForCourse(course));
+    state.planned.set(course.id, isAExamRequired ? aExamDefaultPlannedValue(course) : openingTermForCourse(course));
     const affinity = plannedAffiliationForCourse(course);
     if (affinity) state.plannedCourseAffinities.set(course.id, affinity);
     if (isTeacherRequired) state.teacherAdded.add(course.id);
+    if (isAExamRequired) state.aExamAdded.add(course.id);
     added += 1;
   });
   if (!options.silent) {
@@ -3527,6 +3622,7 @@ function clearPlan() {
     state.planned.clear();
     state.plannedCourseAffinities.clear();
     state.teacherAdded.clear();
+    state.aExamAdded.clear();
     state.openCourseId = null;
     state.openTreeNodeId = null;
     if (planFx.cleanupTimer) {
@@ -3826,6 +3922,13 @@ function buildCatalogCard(course, prereqIssues) {
     const tag = document.createElement("span");
     tag.className = "tag teacher";
     tag.textContent = "教職必修";
+    tags.appendChild(tag);
+  }
+  if (course.aExamExemptionRequired) {
+    const tag = document.createElement("span");
+    tag.className = "tag a-exam";
+    tag.textContent = "A免除";
+    tag.title = "基本情報技術者A試験免除指定科目。同一年度内に6科目すべてを履修する必要があります。";
     tags.appendChild(tag);
   }
   if (course.intensive) {
@@ -4148,7 +4251,7 @@ function buildTreeNodeElement(node, course, context) {
     <button type="button" class="tree-node-button" ${disabled ? "disabled" : ""} aria-expanded="${state.openTreeNodeId === node.id ? "true" : "false"}"${tooltip ? ` title="${tooltip}"` : ""}>
       ${state.showTreeCodes ? `<span class="tree-node-code">${node.courseNumber}</span>` : ""}
       <span class="tree-node-name" style="--tree-name-size:${treeNameFontSize(treeName)}px">${treeName}</span>
-      ${state.showTreeMeta ? `<span class="tree-node-meta">${node.level || categoryLabels[course.category]}${state.planned.has(course.id) ? ` / ${plannedButtonLabel(course)}` : ""}${course.category !== "teacher" && (course.teacherRequired || node.teacherRequired) ? " / 教職必修" : ""}</span>` : ""}
+      ${state.showTreeMeta ? `<span class="tree-node-meta">${node.level || categoryLabels[course.category]}${state.planned.has(course.id) ? ` / ${plannedButtonLabel(course)}` : ""}${course.category !== "teacher" && (course.teacherRequired || node.teacherRequired) ? " / 教職必修" : ""}${course.aExamExemptionRequired ? " / A免除" : ""}</span>` : ""}
     </button>
   `;
   const button = item.querySelector(".tree-node-button");
@@ -4574,6 +4677,8 @@ function renderViewMode(options = {}) {
   const treeCodeToggle = document.querySelector("#treeCodeToggle");
   const treeMetaToggleWrap = document.querySelector("#treeMetaToggleWrap");
   const treeMetaToggle = document.querySelector("#treeMetaToggle");
+  const teacherToggle = document.querySelector("#teacherToggle");
+  const aExamToggle = document.querySelector("#aExamToggle");
   const fxToggle = document.querySelector("#fxToggle");
   const animationToggle = document.querySelector("#animationToggle");
   const bgmToggle = document.querySelector("#bgmToggle");
@@ -4588,6 +4693,8 @@ function renderViewMode(options = {}) {
   treeCodeToggle.checked = state.showTreeCodes;
   treeMetaToggleWrap.hidden = !isTreeLike;
   treeMetaToggle.checked = state.showTreeMeta;
+  teacherToggle.checked = state.teacher;
+  aExamToggle.checked = state.aExamExemption;
   fxToggle.checked = state.soundFx;
   animationToggle.checked = state.animationFx;
   bgmToggle.checked = state.soundBgm;
@@ -4935,6 +5042,15 @@ function renderRequirements(stats) {
   if (state.teacher) {
     html.push(requirement("教職必修", teacherMissing.length === 0, teacherMissing.length ? `${teacherMissing.length}科目が未配置` : "対象科目を配置済み"));
   }
+  if (state.aExamExemption) {
+    const aExam = aExamExemptionStatus();
+    const detail = aExam.ok
+      ? `${aExam.year}年次内に指定6科目を配置済み`
+      : aExam.missing.length
+        ? `指定6科目のうち未配置 ${aExam.missing.length}科目: ${aExam.missing.map((item) => item.name).join("、")}`
+        : `指定6科目は配置済み。同一年度内に揃える必要があります（現在: ${aExam.requirements.map((item) => `${item.name} ${item.year || "未配置"}年次`).join("、")}）`;
+    html.push(requirement("A試験免除", aExam.ok, detail));
+  }
   document.querySelector("#requirementsList").innerHTML = html.join("");
 }
 
@@ -4977,6 +5093,9 @@ function renderAlerts(stats) {
   if (state.teacherNotice) {
     alerts.push(["info", state.teacherNotice]);
   }
+  if (state.aExamNotice) {
+    alerts.push(["info", state.aExamNotice]);
+  }
   if (stats.otherUniversityRaw > 30) {
     alerts.push(["warn", `他大学認定は${stats.otherUniversityRaw}単位中、卒業算入は30単位までです。`]);
   }
@@ -4985,6 +5104,15 @@ function renderAlerts(stats) {
   }
   prereqProblems.forEach((problem) => alerts.push(["bad", problem]));
   caps.forEach((item) => alerts.push(["bad", `${item.term}: 履修上限内の${item.capCounted}単位が上限${item.cap}単位を超えています。上限外は${item.capExcluded}単位です。`]));
+  if (state.aExamExemption) {
+    const aExam = aExamExemptionStatus();
+    aExam.qualificationOnly.forEach((item) => {
+      alerts.push(["warn", `${item.name}: 資格取得ではA試験免除の指定科目履修として扱いません。科目履修で配置してください。`]);
+    });
+    if (!aExam.ok && !aExam.missing.length) {
+      alerts.push(["bad", `A試験免除の指定6科目は、同一年度内にすべて履修する必要があります。`]);
+    }
+  }
   if (alerts.length === 0) alerts.push(["ok", "現在の配置で主要な論理エラーはありません。"]);
   document.querySelector("#alertsList").innerHTML = alerts
     .map(([level, text]) => `<div class="alert ${level}">${text}</div>`)
@@ -5063,6 +5191,21 @@ function init() {
     state.openTreeNodeId = null;
     resetCatalogFilters();
     triggerArcadeFeedback(state.teacher ? "boost" : "switch", event.currentTarget);
+    syncArcadeAudio();
+    render();
+  });
+  document.querySelector("#aExamToggle").addEventListener("change", (event) => {
+    cancelPendingPlanClear();
+    state.aExamExemption = event.target.checked;
+    if (state.aExamExemption) {
+      const added = addAExamPlanCourses();
+      state.aExamNotice = `A試験免除をONにしました。指定6科目を同一年度内の標準配置にしました（新規追加 ${added}科目）。`;
+    } else {
+      state.aExamNotice = "A試験免除をOFFにしました。指定科目の履修状態は残します。";
+    }
+    state.openCourseId = null;
+    state.openTreeNodeId = null;
+    triggerArcadeFeedback(state.aExamExemption ? "boost" : "switch", event.currentTarget);
     syncArcadeAudio();
     render();
   });

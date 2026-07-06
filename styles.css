@@ -1274,6 +1274,7 @@ input {
 }
 
 .tag.teacher,
+.tag.a-exam,
 .tag.qualification {
   background: #e4e9e8;
   color: var(--muted);

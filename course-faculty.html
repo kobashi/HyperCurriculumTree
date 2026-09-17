@@ -21,12 +21,16 @@
     </header>
 
     <main id="main-content">
+      <div class="view-switch" role="group" aria-label="一覧の表示方法">
+        <button type="button" class="is-active" data-view="course" aria-pressed="true">コース別</button>
+        <button type="button" data-view="teacher" aria-pressed="false">担当者別</button>
+      </div>
       <div class="navigator">
         <nav class="course-nav" aria-label="コースへ移動"><a href="#system">情報システム</a><a href="#movie">映像メディア</a><a href="#sound">サウンド制作</a><a href="#design">メディアデザイン</a></nav>
         <label class="search"><span>科目・教員を探す</span><input id="subjectSearch" type="search" placeholder="科目名、担当者名、系列名" autocomplete="off"></label>
       </div>
       <p id="searchStatus" class="search-status" role="status" aria-live="polite"></p>
-      <section class="course-section" id="system" data-course="情報システム">
+      <div id="courseView"><section class="course-section" id="system" data-course="情報システム">
     <header class="section-head">
       <span class="section-number">01 / 04</span>
       <div><p class="section-english">Information Systems</p><h2>情報システム<span>コース</span></h2></div>
@@ -386,14 +390,357 @@
     <h3>メディアデザイン入門</h3>
     <div class="teacher-list"><a class="teacher" href="https://www.nagoya-bunri.ac.jp/faculty/aoyama-taro/" target="_blank" rel="noopener noreferrer" aria-label="青山 太郎の大学公式プロフィール"><img src="https://www.nagoya-bunri.ac.jp/wp/wp-content/uploads/2022/03/2025_480.jpg" alt="青山 太郎の顔写真" loading="lazy" decoding="async" referrerpolicy="no-referrer"><span class="teacher-copy"><strong>青山 太郎</strong><small>2026 前期</small></span><span class="teacher-arrow" aria-hidden="true">↗</span></a></div>
   </article></div>
-  </section>
+  </section></div>
+      <div id="teacherView" hidden>
+        <div class="faculty-intro"><p class="section-english">BY INSTRUCTOR / 2026</p><h2>担当者から探す</h2><p>同じ科目が複数コースにある場合は、担当者の下で一つにまとめています。</p></div>
+        <div class="faculty-grid"><article class="faculty-card" data-search="伊東 宣明 映像制作演習Ⅰ 映像制作系列 映像メディア デジタルアート入門 画像処理・CG系列 プロダクトデザイン系列 映像メディア メディアデザイン グラフィックデザイン メディアデザイン系列 メディアデザイン">
+    <header class="faculty-head"><img src="https://www.nagoya-bunri.ac.jp/wp/wp-content/uploads/2023/03/%E3%82%A2%E3%83%BC%E3%83%86%E3%82%A3%E3%82%B9%E3%83%88%E5%86%99%E7%9C%9F-640x640.jpg" alt="伊東 宣明の顔写真" loading="lazy" decoding="async" referrerpolicy="no-referrer"><div><h2>伊東 宣明</h2><p>3科目を担当</p><a href="https://www.nagoya-bunri.ac.jp/faculty/%e4%bc%8a%e6%9d%b1-%e5%ae%a3%e6%98%8e/" target="_blank" rel="noopener noreferrer">大学公式プロフィール <span aria-hidden="true">↗</span></a></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>映像制作演習Ⅰ</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>映像メディア</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>デジタルアート入門</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>映像メディア</span><span>メディアデザイン</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>グラフィックデザイン</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>メディアデザイン</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="伊藤 英彦 音響実務 音響技術系列 サウンド制作 聴能・音感演習 音響技術系列 サウンド制作 音響制作演習 音響技術系列 サウンド制作 レコーディング演習 音響技術系列 サウンド制作">
+    <header class="faculty-head"><span class="teacher-fallback" aria-hidden="true">伊</span><div><h2>伊藤 英彦</h2><p>4科目を担当</p></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>音響実務</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>サウンド制作</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>聴能・音感演習</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>サウンド制作</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>音響制作演習</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>サウンド制作</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>レコーディング演習</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>サウンド制作</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="伊藤 晶子 色彩学 総合・その他 メディアデザイン系列 映像メディア メディアデザイン Ｗｅｂデザイン Webデザイン系列 メディアデザイン">
+    <header class="faculty-head"><span class="teacher-fallback" aria-hidden="true">伊</span><div><h2>伊藤 晶子</h2><p>2科目を担当</p></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>色彩学</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>映像メディア</span><span>メディアデザイン</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>Ｗｅｂデザイン</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>メディアデザイン</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="伊藤 仁美 映像制作演習Ⅰ 映像制作系列 映像メディア アニメーション 画像処理・CG系列 映像メディア">
+    <header class="faculty-head"><span class="teacher-fallback" aria-hidden="true">伊</span><div><h2>伊藤 仁美</h2><p>2科目を担当</p></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>映像制作演習Ⅰ</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>映像メディア</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>アニメーション</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>映像メディア</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="遠藤 孝則 プログラム演習Ⅲ プログラミング系列 情報システム">
+    <header class="faculty-head"><span class="teacher-fallback" aria-hidden="true">遠</span><div><h2>遠藤 孝則</h2><p>1科目を担当</p></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>プログラム演習Ⅲ</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>情報システム</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="岡川 卓詩 メディア文化論 総合・その他 メディアデザイン">
+    <header class="faculty-head"><span class="teacher-fallback" aria-hidden="true">岡</span><div><h2>岡川 卓詩</h2><p>1科目を担当</p></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>メディア文化論</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>メディアデザイン</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="岡田 ゆき 音楽理論 楽曲制作系列 サウンド制作">
+    <header class="faculty-head"><span class="teacher-fallback" aria-hidden="true">岡</span><div><h2>岡田 ゆき</h2><p>1科目を担当</p></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>音楽理論</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>サウンド制作</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="吉田 友敬 デジタルサウンド入門 音響技術系列 サウンド制作 音響学 音響技術系列 サウンド制作">
+    <header class="faculty-head"><img src="https://www.nagoya-bunri.ac.jp/wp/wp-content/uploads/2022/03/%E9%A1%94%E5%86%99%E7%9C%9F%E5%B9%B3%E6%9C%8D-480x640.jpg" alt="吉田 友敬の顔写真" loading="lazy" decoding="async" referrerpolicy="no-referrer"><div><h2>吉田 友敬</h2><p>2科目を担当</p><a href="https://www.nagoya-bunri.ac.jp/faculty/yoshida-tomoyoshi/" target="_blank" rel="noopener noreferrer">大学公式プロフィール <span aria-hidden="true">↗</span></a></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>デジタルサウンド入門</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>サウンド制作</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>音響学</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>サウンド制作</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="栗林 芳彦 ＣＭ制作 映像制作系列 映像メディア Ｗｅｂ解析 Webデザイン系列 メディアデザイン">
+    <header class="faculty-head"><img src="https://www.nagoya-bunri.ac.jp/wp/wp-content/uploads/2022/03/%E6%A0%97%E6%9E%97%E5%86%99%E7%9C%9F480p-427x640.jpg" alt="栗林 芳彦の顔写真" loading="lazy" decoding="async" referrerpolicy="no-referrer"><div><h2>栗林 芳彦</h2><p>2科目を担当</p><a href="https://www.nagoya-bunri.ac.jp/faculty/kuribayashi-yoshihiko/" target="_blank" rel="noopener noreferrer">大学公式プロフィール <span aria-hidden="true">↗</span></a></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>ＣＭ制作</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>映像メディア</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>Ｗｅｂ解析</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>メディアデザイン</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="御家 雄一 サウンドプログラミング プログラミング系列 総合・その他 情報システム サウンド制作">
+    <header class="faculty-head"><img src="https://www.nagoya-bunri.ac.jp/wp/wp-content/uploads/2024/03/oie-yuichi-512x640.jpg" alt="御家 雄一の顔写真" loading="lazy" decoding="async" referrerpolicy="no-referrer"><div><h2>御家 雄一</h2><p>1科目を担当</p><a href="https://www.nagoya-bunri.ac.jp/faculty/oie/" target="_blank" rel="noopener noreferrer">大学公式プロフィール <span aria-hidden="true">↗</span></a></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>サウンドプログラミング</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>情報システム</span><span>サウンド制作</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="三澤 慎一郎 放送・配信論 映像制作系列 音響技術系列 映像メディア サウンド制作">
+    <header class="faculty-head"><span class="teacher-fallback" aria-hidden="true">三</span><div><h2>三澤 慎一郎</h2><p>1科目を担当</p></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>放送・配信論</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>映像メディア</span><span>サウンド制作</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="市野 昌宏 メディアデザイン演習Ⅱ メディアデザイン系列 メディアデザイン">
+    <header class="faculty-head"><span class="teacher-fallback" aria-hidden="true">市</span><div><h2>市野 昌宏</h2><p>1科目を担当</p></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>メディアデザイン演習Ⅱ</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>メディアデザイン</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="柴山 一幸 ＭＩＤＩ制作演習Ⅰ 楽曲制作系列 サウンド制作 ＭＩＤＩ制作演習Ⅱ 楽曲制作系列 サウンド制作 サウンドクリエーション 楽曲制作系列 サウンド制作">
+    <header class="faculty-head"><img src="https://www.nagoya-bunri.ac.jp/wp/wp-content/uploads/2022/03/Shibayama_Kazuyuki.jpg" alt="柴山 一幸の顔写真" loading="lazy" decoding="async" referrerpolicy="no-referrer"><div><h2>柴山 一幸</h2><p>3科目を担当</p><a href="https://www.nagoya-bunri.ac.jp/faculty/shibayama-kazuyuki/" target="_blank" rel="noopener noreferrer">大学公式プロフィール <span aria-hidden="true">↗</span></a></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>ＭＩＤＩ制作演習Ⅰ</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>サウンド制作</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>ＭＩＤＩ制作演習Ⅱ</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>サウンド制作</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>サウンドクリエーション</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>サウンド制作</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="周 欣欣 ＣＧ基礎 画像処理・CG系列 プロダクトデザイン系列 映像メディア メディアデザイン ＣＧ演習 画像処理・CG系列 映像メディア">
+    <header class="faculty-head"><span class="teacher-fallback" aria-hidden="true">周</span><div><h2>周 欣欣</h2><p>2科目を担当</p></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>ＣＧ基礎</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>映像メディア</span><span>メディアデザイン</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>ＣＧ演習</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>映像メディア</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="小橋 一秀 データベース システム開発系列 情報システム ゲームプログラミング プログラミング系列 情報システム メディアアート 映像制作系列 映像メディア">
+    <header class="faculty-head"><img src="https://www.nagoya-bunri.ac.jp/wp/wp-content/uploads/2022/03/kohashi.jpg" alt="小橋 一秀の顔写真" loading="lazy" decoding="async" referrerpolicy="no-referrer"><div><h2>小橋 一秀</h2><p>3科目を担当</p><a href="https://www.nagoya-bunri.ac.jp/faculty/kobashi-kazuhide/" target="_blank" rel="noopener noreferrer">大学公式プロフィール <span aria-hidden="true">↗</span></a></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>データベース</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>情報システム</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>ゲームプログラミング</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>情報システム</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>メディアアート</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>映像メディア</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="松原 友子 情報システム入門 システム開発系列 情報システム メディア情報技術 システム開発系列 情報システム">
+    <header class="faculty-head"><span class="teacher-fallback" aria-hidden="true">松</span><div><h2>松原 友子</h2><p>2科目を担当</p></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>情報システム入門</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>情報システム</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>メディア情報技術</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>情報システム</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="森 博 プログラム演習Ⅱ プログラミング系列 情報システム">
+    <header class="faculty-head"><span class="teacher-fallback" aria-hidden="true">森</span><div><h2>森 博</h2><p>1科目を担当</p></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>プログラム演習Ⅱ</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>情報システム</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="西尾 秋乃 映像加工技術 映像制作系列 映像メディア">
+    <header class="faculty-head"><span class="teacher-fallback" aria-hidden="true">西</span><div><h2>西尾 秋乃</h2><p>1科目を担当</p></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>映像加工技術</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>映像メディア</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="青山 太郎 映像史とアーカイブ 映像制作系列 映像メディア 映像制作演習Ⅱ 映像制作系列 映像メディア ドキュメンタリー・シナリオ 映像制作系列 総合・その他 映像メディア メディアデザイン ドキュメンタリー演習 映像制作系列 総合・その他 映像メディア メディアデザイン メディアデザイン入門 総合・その他 メディアデザイン">
+    <header class="faculty-head"><img src="https://www.nagoya-bunri.ac.jp/wp/wp-content/uploads/2022/03/2025_480.jpg" alt="青山 太郎の顔写真" loading="lazy" decoding="async" referrerpolicy="no-referrer"><div><h2>青山 太郎</h2><p>5科目を担当</p><a href="https://www.nagoya-bunri.ac.jp/faculty/aoyama-taro/" target="_blank" rel="noopener noreferrer">大学公式プロフィール <span aria-hidden="true">↗</span></a></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>映像史とアーカイブ</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>映像メディア</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>映像制作演習Ⅱ</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>映像メディア</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>ドキュメンタリー・シナリオ</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>映像メディア</span><span>メディアデザイン</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>ドキュメンタリー演習</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>映像メディア</span><span>メディアデザイン</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>メディアデザイン入門</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>メディアデザイン</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="石郷 祐介 プログラム演習Ⅳ プログラミング系列 情報システム">
+    <header class="faculty-head"><img src="https://www.nagoya-bunri.ac.jp/wp/wp-content/uploads/2024/03/ishigo.yusuke.jpg" alt="石郷 祐介の顔写真" loading="lazy" decoding="async" referrerpolicy="no-referrer"><div><h2>石郷 祐介</h2><p>1科目を担当</p><a href="https://www.nagoya-bunri.ac.jp/faculty/ishigo-yusuke/" target="_blank" rel="noopener noreferrer">大学公式プロフィール <span aria-hidden="true">↗</span></a></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>プログラム演習Ⅳ</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>情報システム</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="村山 聡江 システム開発論 システム開発系列 情報システム">
+    <header class="faculty-head"><span class="teacher-fallback" aria-hidden="true">村</span><div><h2>村山 聡江</h2><p>1科目を担当</p></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>システム開発論</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>情報システム</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="大越 円香 マルチメディア 総合・その他 メディアデザイン系列 映像メディア サウンド制作 メディアデザイン">
+    <header class="faculty-head"><span class="teacher-fallback" aria-hidden="true">大</span><div><h2>大越 円香</h2><p>1科目を担当</p></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>マルチメディア</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>映像メディア</span><span>サウンド制作</span><span>メディアデザイン</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="大総 佑馬 Ｗｅｂプログラミング ネットワーク系列 Webデザイン系列 情報システム メディアデザイン">
+    <header class="faculty-head"><span class="teacher-fallback" aria-hidden="true">大</span><div><h2>大総 佑馬</h2><p>1科目を担当</p></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>Ｗｅｂプログラミング</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>情報システム</span><span>メディアデザイン</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="大内 啓之 音響実務 音響技術系列 サウンド制作 照明技術 音響技術系列 サウンド制作 舞台制作 音響技術系列 サウンド制作 サウンドプロダクション 音響技術系列 サウンド制作">
+    <header class="faculty-head"><span class="teacher-fallback" aria-hidden="true">大</span><div><h2>大内 啓之</h2><p>4科目を担当</p></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>音響実務</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>サウンド制作</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>照明技術</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>サウンド制作</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>舞台制作</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>サウンド制作</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>サウンドプロダクション</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>サウンド制作</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="大矢 信吾 写真技術 総合・その他 映像メディア ＣＡＤ プロダクトデザイン系列 メディアデザイン">
+    <header class="faculty-head"><span class="teacher-fallback" aria-hidden="true">大</span><div><h2>大矢 信吾</h2><p>2科目を担当</p></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>写真技術</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>映像メディア</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>ＣＡＤ</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>メディアデザイン</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="池坊 繁屋 情報基礎理論 システム開発系列 情報システム">
+    <header class="faculty-head"><img src="https://www.nagoya-bunri.ac.jp/wp/wp-content/uploads/2023/04/ikebo_photo-493x640.jpg" alt="池坊 繁屋の顔写真" loading="lazy" decoding="async" referrerpolicy="no-referrer"><div><h2>池坊 繁屋</h2><p>1科目を担当</p><a href="https://www.nagoya-bunri.ac.jp/faculty/%e6%b1%a0%e5%9d%8a-%e7%b9%81%e5%b1%8b/" target="_blank" rel="noopener noreferrer">大学公式プロフィール <span aria-hidden="true">↗</span></a></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>情報基礎理論</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>情報システム</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="竹尾 淳 コンピュータネットワークⅠ ネットワーク系列 情報システム コンピュータネットワークⅡ ネットワーク系列 情報システム">
+    <header class="faculty-head"><span class="teacher-fallback" aria-hidden="true">竹</span><div><h2>竹尾 淳</h2><p>2科目を担当</p></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>コンピュータネットワークⅠ</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>情報システム</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>コンピュータネットワークⅡ</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>情報システム</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="田近 一郎 アルゴリズムとデータ構造 プログラミング系列 情報システム 知識情報学 プログラミング系列 情報システム">
+    <header class="faculty-head"><img src="https://www.nagoya-bunri.ac.jp/wp/wp-content/uploads/2022/03/tajika.jpg" alt="田近 一郎の顔写真" loading="lazy" decoding="async" referrerpolicy="no-referrer"><div><h2>田近 一郎</h2><p>2科目を担当</p><a href="https://www.nagoya-bunri.ac.jp/faculty/tajika-ichiro/" target="_blank" rel="noopener noreferrer">大学公式プロフィール <span aria-hidden="true">↗</span></a></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>アルゴリズムとデータ構造</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>情報システム</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>知識情報学</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>情報システム</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="朴 永孝 映像制作演習Ⅱ 映像制作系列 映像メディア メディアデザイン演習Ⅰ メディアデザイン系列 メディアデザイン 暮しとデザイン メディアデザイン系列 メディアデザイン デジタルファブリケーション プロダクトデザイン系列 メディアデザイン">
+    <header class="faculty-head"><img src="https://www.nagoya-bunri.ac.jp/wp/wp-content/uploads/2024/03/portrait-435x640.jpg" alt="朴 永孝の顔写真" loading="lazy" decoding="async" referrerpolicy="no-referrer"><div><h2>朴 永孝</h2><p>4科目を担当</p><a href="https://www.nagoya-bunri.ac.jp/faculty/%e6%9c%b4-%e6%b0%b8%e5%ad%9d/" target="_blank" rel="noopener noreferrer">大学公式プロフィール <span aria-hidden="true">↗</span></a></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>映像制作演習Ⅱ</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>映像メディア</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>メディアデザイン演習Ⅰ</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>メディアデザイン</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>暮しとデザイン</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>メディアデザイン</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>デジタルファブリケーション</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>メディアデザイン</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="本多 一彦 モバイル情報論 ネットワーク系列 情報システム">
+    <header class="faculty-head"><span class="teacher-fallback" aria-hidden="true">本</span><div><h2>本多 一彦</h2><p>1科目を担当</p></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>モバイル情報論</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>情報システム</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="木村 亮介 マルチメディア 総合・その他 メディアデザイン系列 映像メディア サウンド制作 メディアデザイン 暮しとデザイン メディアデザイン系列 メディアデザイン">
+    <header class="faculty-head"><img src="https://www.nagoya-bunri.ac.jp/wp/wp-content/uploads/2022/03/kimura_b_2.jpg" alt="木村 亮介の顔写真" loading="lazy" decoding="async" referrerpolicy="no-referrer"><div><h2>木村 亮介</h2><p>2科目を担当</p><a href="https://www.nagoya-bunri.ac.jp/faculty/kimura-ryosuke/" target="_blank" rel="noopener noreferrer">大学公式プロフィール <span aria-hidden="true">↗</span></a></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>マルチメディア</strong><span>前期</span></div>
+      <div class="faculty-tags"><span>映像メディア</span><span>サウンド制作</span><span>メディアデザイン</span></div>
+    </li>
+<li>
+      <div class="faculty-subject-title"><strong>暮しとデザイン</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>メディアデザイン</span></div>
+    </li></ul>
+  </article>
+<article class="faculty-card" data-search="籾山 勝人 照明技術 音響技術系列 サウンド制作">
+    <header class="faculty-head"><span class="teacher-fallback" aria-hidden="true">籾</span><div><h2>籾山 勝人</h2><p>1科目を担当</p></div></header>
+    <ul class="faculty-subjects"><li>
+      <div class="faculty-subject-title"><strong>照明技術</strong><span>後期</span></div>
+      <div class="faculty-tags"><span>サウンド制作</span></div>
+    </li></ul>
+  </article></div>
+      </div>
       <p id="noResults" class="no-results" hidden>該当する科目が見つかりませんでした。</p>
     </main>
 
     <footer class="source-note">
       <div><p class="eyebrow">SOURCE &amp; NOTES</p><h2>この一覧について</h2></div>
       <div class="source-body">
-        <p>掲載範囲は本アプリの公式カリキュラムツリーにおける4コースの科目群です。コース共通、基礎教育、教職、他学科の科目は含みません。同一科目が複数コースにある場合は、それぞれに掲載しています。</p>
+        <p>掲載範囲は本アプリの公式カリキュラムツリーにおける4コースの科目群です。コース共通、基礎教育、教職、他学科の科目は含みません。同一科目が複数コースにある場合、コース別ではそれぞれに掲載し、担当者別ではコース名を併記して一つにまとめています。</p>
         <p>担当者は<a href="2026前期情報メディア学科-1.pdf">2026年度前期時間割</a>と<a href="2026-2media4.pdf">2026年度後期時間割</a>に基づきます。複数クラスや共同担当の教員は併記しています。氏名・開講情報は年度中に変わることがあります。</p>
         <p>顔写真は<a href="https://www.nagoya-bunri.ac.jp/faculty/" target="_blank" rel="noopener noreferrer">名古屋文理大学の教育スタッフ紹介</a>の画像URLを直接表示しています。写真の掲載がない教員は文字アイコンで示します。画像の著作権は掲載元に帰属します。</p>
       </div>

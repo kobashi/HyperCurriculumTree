@@ -6,7 +6,7 @@
 
 公開URL: https://kobashi.github.io/HyperCurriculumTree/
 
-参考資料: [2026年度 4コースの科目と担当教員](https://kobashi.github.io/HyperCurriculumTree/course-faculty.html)（履修計画とは独立したページ。教員写真は大学公式サイトの画像を直接表示）
+参考資料: [2026年度 4コースの科目と担当教員](https://kobashi.github.io/HyperCurriculumTree/course-faculty.html)（履修計画とは独立したページ。コース別・担当者別に切替可能。教員写真は大学公式サイトの画像を直接表示）
 
 ## 目的
 

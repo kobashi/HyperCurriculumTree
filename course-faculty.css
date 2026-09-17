@@ -62,6 +62,10 @@ h1 em { font-style: normal; color: #d8e894; }
 .facts span { font-size: .74rem; color: #d6e4d9; }
 
 main { padding: 0 clamp(16px, 4vw, 64px) 90px; }
+.view-switch { display: inline-flex; gap: 4px; margin-top: 22px; padding: 4px; border: 1px solid #c6d6cb; background: #e8f0e9; }
+.view-switch button { border: 0; padding: 10px 22px; color: var(--ink); background: transparent; font-weight: 750; cursor: pointer; }
+.view-switch button.is-active { color: white; background: var(--green); }
+.view-switch button:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
 .navigator {
   position: sticky;
   top: 0;
@@ -111,6 +115,26 @@ a.teacher:hover, a.teacher:focus-visible { border-color: var(--green); backgroun
 .unlisted { margin: 0; font-size: .76rem; color: var(--muted); }
 .no-results { padding: 60px 20px; text-align: center; border: 1px dashed var(--line); }
 
+.faculty-intro { margin: 48px 0 26px; border-bottom: 5px solid var(--green); padding-bottom: 20px; }
+.faculty-intro h2 { margin: 8px 0 10px; font: 800 clamp(2rem, 4vw, 3.4rem)/1.25 "Hiragino Mincho ProN", "Yu Mincho", serif; }
+.faculty-intro > p:last-child { margin: 0; color: var(--muted); font-size: .83rem; line-height: 1.7; }
+.faculty-grid { columns: 2; column-gap: 16px; }
+.faculty-card { display: inline-block; width: 100%; margin-bottom: 16px; border: 1px solid #d5ddd6; border-top: 4px solid var(--green); padding: 22px 24px; background: #fffefa; break-inside: avoid; }
+.faculty-head { display: flex; align-items: center; gap: 16px; min-height: 75px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+.faculty-head img, .faculty-head .teacher-fallback { width: 74px; height: 74px; flex: none; object-fit: cover; }
+.faculty-head > div { min-width: 0; }
+.faculty-head h2 { margin: 0 0 3px; font: 800 1.3rem/1.35 "Hiragino Mincho ProN", "Yu Mincho", serif; }
+.faculty-head p { margin: 0 0 5px; color: var(--muted); font-size: .74rem; }
+.faculty-head a { color: var(--green); font-size: .7rem; text-underline-offset: 3px; }
+.faculty-subjects { margin: 0; padding: 0; list-style: none; }
+.faculty-subjects li { padding: 13px 0 12px; border-bottom: 1px solid #e7ebe4; }
+.faculty-subjects li:last-child { border-bottom: 0; padding-bottom: 0; }
+.faculty-subject-title { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.faculty-subject-title strong { min-width: 0; font-size: .88rem; line-height: 1.45; overflow-wrap: anywhere; }
+.faculty-subject-title > span { flex: none; color: var(--muted); font-size: .66rem; white-space: nowrap; }
+.faculty-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.faculty-tags span { padding: 3px 7px; color: #356253; background: #e9f1e8; font-size: .62rem; font-weight: 700; }
+
 .source-note { display: grid; grid-template-columns: minmax(180px, .65fr) minmax(0, 1.35fr); gap: 25px 55px; padding: 52px clamp(22px, 5vw, 80px); color: #e5efe5; background: #213d35; }
 .source-note .eyebrow { color: #c9dd9c; }
 .source-note h2 { margin: 10px 0 0; font-size: clamp(1.7rem, 3vw, 2.4rem); }
@@ -124,6 +148,7 @@ a.teacher:hover, a.teacher:focus-visible { border-color: var(--green); backgroun
   .search { width: 100%; }
   .course-section { scroll-margin-top: 195px; }
   .section-head { grid-template-columns: 70px minmax(0, 1fr) auto; }
+  .faculty-grid { columns: 1; }
 }
 @media (max-width: 680px) {
   .masthead { padding-left: 20px; padding-right: 20px; }
@@ -135,6 +160,8 @@ a.teacher:hover, a.teacher:focus-visible { border-color: var(--green); backgroun
   .facts strong { font-size: 1.55rem; }
   main { padding: 0 16px 60px; }
   .navigator { position: static; }
+  .view-switch { display: flex; }
+  .view-switch button { flex: 1; }
   .course-nav { display: grid; grid-template-columns: repeat(2, 1fr); }
   .course-nav a { text-align: center; font-size: .75rem; }
   .course-section { margin-top: 39px; scroll-margin-top: 20px; }
@@ -144,6 +171,7 @@ a.teacher:hover, a.teacher:focus-visible { border-color: var(--green); backgroun
   .section-count { font-size: 1.55rem; }
   .subject-grid { grid-template-columns: 1fr; }
   .subject-card { min-height: 0; }
+  .faculty-card { padding: 19px 18px; }
   .source-note { grid-template-columns: 1fr; gap: 24px; }
 }
 @media (prefers-reduced-motion: no-preference) {

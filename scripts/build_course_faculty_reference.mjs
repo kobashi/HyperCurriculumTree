@@ -65,6 +65,23 @@ function teachersFor(subject) {
 
 const uniqueTeachers = new Set(subjects.flatMap((subject) => teachersFor(subject).map((teacher) => normalize(teacher.name))));
 const picturedTeachers = new Set([...uniqueTeachers].filter((name) => portraits.has(name)));
+const teacherGroups = new Map();
+for (const subject of subjects) {
+  for (const teacher of teachersFor(subject)) {
+    const key = normalize(teacher.name);
+    if (!teacherGroups.has(key)) teacherGroups.set(key, { name: teacher.name, subjects: new Map() });
+    const group = teacherGroups.get(key);
+    const subjectKey = normalize(subject.name);
+    if (!group.subjects.has(subjectKey)) {
+      group.subjects.set(subjectKey, { name: subject.name, lanes: new Set(), courses: new Set(), semesters: new Set() });
+    }
+    const entry = group.subjects.get(subjectKey);
+    entry.lanes.add(subject.lane);
+    entry.courses.add(subject.course);
+    entry.semesters.add(teacher.semester);
+  }
+}
+const sortedTeachers = [...teacherGroups.values()].sort((a, b) => a.name.localeCompare(b.name, "ja"));
 
 function teacherMarkup(teacher) {
   const source = portraits.get(normalize(teacher.name));
@@ -103,6 +120,26 @@ function courseMarkup(course) {
   </section>`;
 }
 
+function groupedTeacherMarkup(group) {
+  const source = portraits.get(normalize(group.name));
+  const name = escapeHtml(group.name);
+  const avatar = source
+    ? `<img src="${escapeHtml(source.imageUrl)}" alt="${name}の顔写真" loading="lazy" decoding="async" referrerpolicy="no-referrer">`
+    : `<span class="teacher-fallback" aria-hidden="true">${escapeHtml(group.name[0])}</span>`;
+  const profile = source
+    ? `<a href="${escapeHtml(source.profileUrl)}" target="_blank" rel="noopener noreferrer">大学公式プロフィール <span aria-hidden="true">↗</span></a>`
+    : "";
+  const entries = [...group.subjects.values()];
+  const searchText = [group.name, ...entries.flatMap((entry) => [entry.name, ...entry.lanes, ...entry.courses])].join(" ");
+  return `<article class="faculty-card" data-search="${escapeHtml(searchText)}">
+    <header class="faculty-head">${avatar}<div><h2>${name}</h2><p>${entries.length}科目を担当</p>${profile}</div></header>
+    <ul class="faculty-subjects">${entries.map((entry) => `<li>
+      <div class="faculty-subject-title"><strong>${escapeHtml(entry.name)}</strong><span>${escapeHtml([...entry.semesters].join("・"))}</span></div>
+      <div class="faculty-tags">${courses.filter((course) => entry.courses.has(course.name)).map((course) => `<span>${escapeHtml(course.name)}</span>`).join("")}</div>
+    </li>`).join("\n")}</ul>
+  </article>`;
+}
+
 const output = `<!doctype html>
 <html lang="ja">
 <head>
@@ -126,19 +163,27 @@ const output = `<!doctype html>
     </header>
 
     <main id="main-content">
+      <div class="view-switch" role="group" aria-label="一覧の表示方法">
+        <button type="button" class="is-active" data-view="course" aria-pressed="true">コース別</button>
+        <button type="button" data-view="teacher" aria-pressed="false">担当者別</button>
+      </div>
       <div class="navigator">
         <nav class="course-nav" aria-label="コースへ移動">${courses.map((course) => `<a href="#${course.id}">${course.name}</a>`).join("")}</nav>
         <label class="search"><span>科目・教員を探す</span><input id="subjectSearch" type="search" placeholder="科目名、担当者名、系列名" autocomplete="off"></label>
       </div>
       <p id="searchStatus" class="search-status" role="status" aria-live="polite"></p>
-      ${courses.map(courseMarkup).join("\n")}
+      <div id="courseView">${courses.map(courseMarkup).join("\n")}</div>
+      <div id="teacherView" hidden>
+        <div class="faculty-intro"><p class="section-english">BY INSTRUCTOR / 2026</p><h2>担当者から探す</h2><p>同じ科目が複数コースにある場合は、担当者の下で一つにまとめています。</p></div>
+        <div class="faculty-grid">${sortedTeachers.map(groupedTeacherMarkup).join("\n")}</div>
+      </div>
       <p id="noResults" class="no-results" hidden>該当する科目が見つかりませんでした。</p>
     </main>
 
     <footer class="source-note">
       <div><p class="eyebrow">SOURCE &amp; NOTES</p><h2>この一覧について</h2></div>
       <div class="source-body">
-        <p>掲載範囲は本アプリの公式カリキュラムツリーにおける4コースの科目群です。コース共通、基礎教育、教職、他学科の科目は含みません。同一科目が複数コースにある場合は、それぞれに掲載しています。</p>
+        <p>掲載範囲は本アプリの公式カリキュラムツリーにおける4コースの科目群です。コース共通、基礎教育、教職、他学科の科目は含みません。同一科目が複数コースにある場合、コース別ではそれぞれに掲載し、担当者別ではコース名を併記して一つにまとめています。</p>
         <p>担当者は<a href="2026前期情報メディア学科-1.pdf">2026年度前期時間割</a>と<a href="2026-2media4.pdf">2026年度後期時間割</a>に基づきます。複数クラスや共同担当の教員は併記しています。氏名・開講情報は年度中に変わることがあります。</p>
         <p>顔写真は<a href="https://www.nagoya-bunri.ac.jp/faculty/" target="_blank" rel="noopener noreferrer">名古屋文理大学の教育スタッフ紹介</a>の画像URLを直接表示しています。写真の掲載がない教員は文字アイコンで示します。画像の著作権は掲載元に帰属します。</p>
       </div>

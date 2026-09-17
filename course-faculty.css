@@ -105,24 +105,31 @@ main { padding: 0 clamp(16px, 4vw, 64px) 90px; }
 .faculty-intro { margin: 48px 0 26px; border-bottom: 5px solid var(--green); padding-bottom: 20px; }
 .faculty-intro h2 { margin: 8px 0 10px; font: 800 clamp(2rem, 4vw, 3.4rem)/1.25 "Hiragino Mincho ProN", "Yu Mincho", serif; }
 .faculty-intro > p:last-child { margin: 0; color: var(--muted); font-size: .83rem; line-height: 1.7; }
-.faculty-grid { columns: 2; column-gap: 16px; }
-.course-faculty-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 16px; columns: auto; }
-.faculty-card { display: inline-block; width: 100%; margin-bottom: 16px; border: 1px solid #d5ddd6; border-top: 4px solid var(--green); padding: 22px 24px; background: #fffefa; break-inside: avoid; }
-.course-faculty-card { margin-bottom: 0; border-top-color: var(--accent); }
+.faculty-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 16px; }
+.faculty-card { min-width: 0; border: 1px solid #d5ddd6; border-top: 4px solid var(--green); padding: 22px 24px; background: #fffefa; }
+.course-faculty-card { border-top-color: var(--accent); }
 .faculty-head { display: flex; align-items: center; gap: 16px; min-height: 75px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
 .faculty-head img, .faculty-head .teacher-fallback { width: 74px; height: 74px; flex: none; object-fit: cover; }
 .faculty-head > div { min-width: 0; }
+.faculty-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 9px; }
 .faculty-head h2, .faculty-head h3 { margin: 0 0 3px; font: 800 1.3rem/1.35 "Hiragino Mincho ProN", "Yu Mincho", serif; }
+.employment-badge { padding: 2px 6px; background: #e4eee7; color: #2b6755; font-size: .62rem; font-weight: 800; white-space: nowrap; }
+.employment-badge.adjunct { background: #f1ebe1; color: #716355; }
 .faculty-head p { margin: 0 0 5px; color: var(--muted); font-size: .74rem; }
 .faculty-head a { color: var(--green); font-size: .7rem; text-underline-offset: 3px; }
 .faculty-subjects { margin: 0; padding: 0; list-style: none; }
 .faculty-subjects li { padding: 13px 0 12px; border-bottom: 1px solid #e7ebe4; }
+.faculty-subjects li.is-required { padding: 13px 10px 12px 12px; border-left: 3px solid #bf7b26; background: #fff7e4; }
 .faculty-subjects li:last-child { border-bottom: 0; padding-bottom: 0; }
 .faculty-subject-title { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.subject-name { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; min-width: 0; }
 .faculty-subject-title strong { min-width: 0; font-size: .88rem; line-height: 1.45; overflow-wrap: anywhere; }
+.is-required .faculty-subject-title strong { color: #75400e; font-weight: 900; }
+.required-badge { padding: 2px 6px; border: 1px solid #c78a3b; color: #75400e; font-size: .62rem; font-weight: 800; white-space: nowrap; }
 .faculty-subject-title > span { flex: none; color: var(--muted); font-size: .66rem; white-space: nowrap; }
 .faculty-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
 .faculty-tags span { padding: 3px 7px; color: #356253; background: #e9f1e8; font-size: .62rem; font-weight: 700; }
+.faculty-tags span.required-course { color: #75400e; background: #f4e3bc; }
 
 .source-note { display: grid; grid-template-columns: minmax(180px, .65fr) minmax(0, 1.35fr); gap: 25px 55px; padding: 52px clamp(22px, 5vw, 80px); color: #e5efe5; background: #213d35; }
 .source-note .eyebrow { color: #c9dd9c; }
@@ -137,8 +144,7 @@ main { padding: 0 clamp(16px, 4vw, 64px) 90px; }
   .search { width: 100%; }
   .course-section { scroll-margin-top: 195px; }
   .section-head { grid-template-columns: 70px minmax(0, 1fr) auto; }
-  .faculty-grid { columns: 1; }
-  .course-faculty-grid { grid-template-columns: 1fr; }
+  .faculty-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 680px) {
   .masthead { padding-left: 20px; padding-right: 20px; }

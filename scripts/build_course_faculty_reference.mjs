@@ -18,6 +18,16 @@ const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => (
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
 })[character]);
 
+const requiredSource = curriculum.match(/const courseRequired = \{([\s\S]*?)\n\};/);
+if (!requiredSource) throw new Error("Course requirements not found");
+const requiredByCourse = new Map();
+for (const [, course, body] of requiredSource[1].matchAll(/^  (情報システム|映像メディア|サウンド制作|メディアデザイン): \[([\s\S]*?)^  \],?/gm)) {
+  const names = [...body.matchAll(/^    \["([^"]+)",/gm)].map((match) => normalize(match[1]));
+  if (names.length !== 8) throw new Error(`Expected 8 required subjects for ${course}, found ${names.length}`);
+  requiredByCourse.set(course, new Set(names));
+}
+if (requiredByCourse.size !== courses.length) throw new Error("Course requirement sections are incomplete");
+
 const instructorRows = new Map();
 for (const line of timetable.split("\n")) {
   if (!line.startsWith("| ") || line.startsWith("| 科目名") || line.startsWith("| ---")) continue;
@@ -27,6 +37,7 @@ for (const line of timetable.split("\n")) {
 }
 
 const portraits = new Map();
+const listedFaculty = new Set();
 for (const line of portraitList.split("\n")) {
   const match = line.match(/^\| ([^|]+) \| !\[[^\]]+\]\([^)]*\) \| \[教員紹介\]\(([^)]+)\) \| \[画像\]\(([^)]+)\) \|$/);
   if (!match) continue;
@@ -35,6 +46,10 @@ for (const line of portraitList.split("\n")) {
     throw new Error(`Unexpected portrait source for ${name}`);
   }
   portraits.set(normalize(name), { profileUrl, imageUrl });
+  listedFaculty.add(normalize(name));
+}
+for (const [, name] of portraitList.matchAll(/^- (.+): プロフィールに顔写真の掲載なし$/gm)) {
+  listedFaculty.add(normalize(name));
 }
 
 const subjects = [];
@@ -43,9 +58,13 @@ for (const match of curriculum.matchAll(courseNode)) {
   const [, nodeId, name, course, lane] = match;
   const teachers = instructorRows.get(normalize(name));
   if (!teachers) throw new Error(`No timetable record for ${name} (${nodeId})`);
-  subjects.push({ nodeId, name, course, lane, teachers });
+  subjects.push({ nodeId, name, course, lane, teachers, required: requiredByCourse.get(course).has(normalize(name)) });
 }
 if (subjects.length !== 65) throw new Error(`Expected 65 course nodes, found ${subjects.length}`);
+for (const course of courses) {
+  const found = subjects.filter((subject) => subject.course === course.name && subject.required).length;
+  if (found !== 8) throw new Error(`Expected 8 required course nodes for ${course.name}, found ${found}`);
+}
 
 function namesFor(value, semester) {
   if (value === "—" || value === "記載なし") return [];
@@ -75,24 +94,35 @@ function groupByTeacher(entries) {
       const group = groups.get(key);
       const subjectKey = normalize(subject.name);
       if (!group.subjects.has(subjectKey)) {
-        group.subjects.set(subjectKey, { nodeId: subject.nodeId, name: subject.name, lanes: new Set(), courses: new Set(), semesters: new Set() });
+        group.subjects.set(subjectKey, { nodeId: subject.nodeId, name: subject.name, lanes: new Set(), courses: new Set(), requiredCourses: new Set(), semesters: new Set() });
       }
       const entry = group.subjects.get(subjectKey);
       entry.lanes.add(subject.lane);
       entry.courses.add(subject.course);
+      if (subject.required) entry.requiredCourses.add(subject.course);
       if (teacher.semester) entry.semesters.add(teacher.semester);
     }
   }
+  for (const group of groups.values()) {
+    group.requiredCount = [...group.subjects.values()].filter((entry) => entry.requiredCourses.size > 0).length;
+    group.employment = group.name === "担当者未記載" ? "unlisted" : listedFaculty.has(normalize(group.name)) ? "regular" : "adjunct";
+  }
   return groups;
 }
+const employmentRank = { regular: 0, adjunct: 1, unlisted: 2 };
+function compareTeacherGroups(a, b) {
+  return employmentRank[a.employment] - employmentRank[b.employment]
+    || Number(b.requiredCount > 0) - Number(a.requiredCount > 0)
+    || b.subjects.size - a.subjects.size
+    || b.requiredCount - a.requiredCount
+    || a.name.localeCompare(b.name, "ja");
+}
 const teacherGroups = groupByTeacher(subjects);
-const sortedTeachers = [...teacherGroups.values()].sort((a, b) => a.name.localeCompare(b.name, "ja"));
+const sortedTeachers = [...teacherGroups.values()].sort(compareTeacherGroups);
 
 function courseMarkup(course) {
   const entries = subjects.filter((subject) => subject.course === course.name);
-  const grouped = [...groupByTeacher(entries).values()].sort((a, b) =>
-    b.subjects.size - a.subjects.size || a.name.localeCompare(b.name, "ja")
-  );
+  const grouped = [...groupByTeacher(entries).values()].sort(compareTeacherGroups);
   return `<section class="course-section" id="${course.id}" data-course="${escapeHtml(course.name)}">
     <header class="section-head">
       <span class="section-number">${course.number} / 04</span>
@@ -115,13 +145,14 @@ function groupedTeacherMarkup(group, { courseScoped = false } = {}) {
   const entries = [...group.subjects.values()];
   const searchText = [group.name, ...entries.flatMap((entry) => [entry.name, ...entry.lanes, ...entry.courses])].join(" ");
   const heading = courseScoped ? "h3" : "h2";
+  const employmentLabel = group.employment === "regular" ? "常勤" : group.employment === "adjunct" ? "非常勤" : "";
   return `<article class="faculty-card${courseScoped ? " course-faculty-card" : ""}" data-teacher="${escapeHtml(group.name)}" data-search="${escapeHtml(searchText)}">
-    <header class="faculty-head">${avatar}<div><${heading}>${name}</${heading}><p>${entries.length}科目を担当</p>${profile}</div></header>
-    <ul class="faculty-subjects">${entries.map((entry) => `<li data-subject-id="${escapeHtml(entry.nodeId)}" data-search="${escapeHtml([entry.name, ...entry.lanes, ...entry.courses].join(" "))}">
-      <div class="faculty-subject-title"><strong>${escapeHtml(entry.name)}</strong><span>${escapeHtml([...entry.semesters].join("・"))}</span></div>
+    <header class="faculty-head">${avatar}<div><div class="faculty-heading"><${heading}>${name}</${heading}>${employmentLabel ? `<span class="employment-badge ${group.employment}">${employmentLabel}</span>` : ""}</div><p>${entries.length}科目を担当</p>${profile}</div></header>
+    <ul class="faculty-subjects">${entries.map((entry) => `<li class="${entry.requiredCourses.size ? "is-required" : ""}" data-subject-id="${escapeHtml(entry.nodeId)}" data-search="${escapeHtml([entry.name, ...entry.lanes, ...entry.courses].join(" "))}">
+      <div class="faculty-subject-title"><div class="subject-name"><strong>${escapeHtml(entry.name)}</strong>${entry.requiredCourses.size ? `<span class="required-badge">必修</span>` : ""}</div><span>${escapeHtml([...entry.semesters].join("・"))}</span></div>
       <div class="faculty-tags">${courseScoped
         ? [...entry.lanes].map((lane) => `<span>${escapeHtml(lane)}</span>`).join("")
-        : courses.filter((course) => entry.courses.has(course.name)).map((course) => `<span>${escapeHtml(course.name)}</span>`).join("")}</div>
+        : courses.filter((course) => entry.courses.has(course.name)).map((course) => `<span class="${entry.requiredCourses.has(course.name) ? "required-course" : ""}">${escapeHtml(course.name)}${entry.requiredCourses.has(course.name) ? "・必修" : ""}</span>`).join("")}</div>
     </li>`).join("\n")}</ul>
   </article>`;
 }
@@ -169,7 +200,8 @@ const output = `<!doctype html>
     <footer class="source-note">
       <div><p class="eyebrow">SOURCE &amp; NOTES</p><h2>この一覧について</h2></div>
       <div class="source-body">
-        <p>掲載範囲は本アプリの公式カリキュラムツリーにおける4コースの科目群です。コース共通、基礎教育、教職、他学科の科目は含みません。コース別では担当者ごとに科目をまとめ、担当科目数の多い順に掲載します。同一科目が複数コースにある場合、担当者別ではコース名を併記して一つにまとめています。</p>
+        <p>掲載範囲は本アプリの公式カリキュラムツリーにおける4コースの科目群です。コース共通、基礎教育、教職、他学科の科目は含みません。必修表示は本アプリのコース必修定義に基づきます。同一科目が複数コースにある場合、担当者別ではコース名を併記して一つにまとめています。</p>
+        <p>担当者は大学の教育スタッフ紹介への掲載有無で常勤・非常勤を区分しています（2026年9月17日確認）。未掲載の担当者は非常勤として扱い、常勤を先に、その中で必修担当の有無、担当科目数の順に並べています。これは一覧用の分類であり、正式な雇用区分を証明するものではありません。</p>
         <p>担当者は<a href="2026前期情報メディア学科-1.pdf">2026年度前期時間割</a>と<a href="2026-2media4.pdf">2026年度後期時間割</a>に基づきます。複数クラスや共同担当の教員は併記しています。氏名・開講情報は年度中に変わることがあります。</p>
         <p>顔写真は<a href="https://www.nagoya-bunri.ac.jp/faculty/" target="_blank" rel="noopener noreferrer">名古屋文理大学の教育スタッフ紹介</a>の画像URLを直接表示しています。写真の掲載がない教員は文字アイコンで示します。画像の著作権は掲載元に帰属します。</p>
       </div>

@@ -6,6 +6,8 @@
 
 公開URL: https://kobashi.github.io/HyperCurriculumTree/
 
+参考資料: [2026年度 4コースの科目と担当教員](https://kobashi.github.io/HyperCurriculumTree/course-faculty.html)（履修計画とは独立したページ。教員写真は大学公式サイトの画像を直接表示）
+
 ## 目的
 
 4年間の履修計画を作成しながら、卒業要件124単位、基礎教育科目、専門教育科目、その他52単位、CAP上限、資格取得による単位認定などを確認できるようにします。

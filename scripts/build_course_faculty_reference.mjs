@@ -65,62 +65,45 @@ function teachersFor(subject) {
 
 const uniqueTeachers = new Set(subjects.flatMap((subject) => teachersFor(subject).map((teacher) => normalize(teacher.name))));
 const picturedTeachers = new Set([...uniqueTeachers].filter((name) => portraits.has(name)));
-const teacherGroups = new Map();
-for (const subject of subjects) {
-  for (const teacher of teachersFor(subject)) {
-    const key = normalize(teacher.name);
-    if (!teacherGroups.has(key)) teacherGroups.set(key, { name: teacher.name, subjects: new Map() });
-    const group = teacherGroups.get(key);
-    const subjectKey = normalize(subject.name);
-    if (!group.subjects.has(subjectKey)) {
-      group.subjects.set(subjectKey, { name: subject.name, lanes: new Set(), courses: new Set(), semesters: new Set() });
+function groupByTeacher(entries) {
+  const groups = new Map();
+  for (const subject of entries) {
+    const assigned = teachersFor(subject);
+    for (const teacher of assigned.length ? assigned : [{ name: "担当者未記載", semester: "" }]) {
+      const key = normalize(teacher.name);
+      if (!groups.has(key)) groups.set(key, { name: teacher.name, subjects: new Map() });
+      const group = groups.get(key);
+      const subjectKey = normalize(subject.name);
+      if (!group.subjects.has(subjectKey)) {
+        group.subjects.set(subjectKey, { nodeId: subject.nodeId, name: subject.name, lanes: new Set(), courses: new Set(), semesters: new Set() });
+      }
+      const entry = group.subjects.get(subjectKey);
+      entry.lanes.add(subject.lane);
+      entry.courses.add(subject.course);
+      if (teacher.semester) entry.semesters.add(teacher.semester);
     }
-    const entry = group.subjects.get(subjectKey);
-    entry.lanes.add(subject.lane);
-    entry.courses.add(subject.course);
-    entry.semesters.add(teacher.semester);
   }
+  return groups;
 }
+const teacherGroups = groupByTeacher(subjects);
 const sortedTeachers = [...teacherGroups.values()].sort((a, b) => a.name.localeCompare(b.name, "ja"));
-
-function teacherMarkup(teacher) {
-  const source = portraits.get(normalize(teacher.name));
-  const name = escapeHtml(teacher.name);
-  const avatar = source
-    ? `<img src="${escapeHtml(source.imageUrl)}" alt="${name}の顔写真" loading="lazy" decoding="async" referrerpolicy="no-referrer">`
-    : `<span class="teacher-fallback" aria-hidden="true">${escapeHtml(teacher.name[0])}</span>`;
-  const content = `${avatar}<span class="teacher-copy"><strong>${name}</strong><small>2026 ${teacher.semester}</small></span>`;
-  return source
-    ? `<a class="teacher" href="${escapeHtml(source.profileUrl)}" target="_blank" rel="noopener noreferrer" aria-label="${name}の大学公式プロフィール">${content}<span class="teacher-arrow" aria-hidden="true">↗</span></a>`
-    : `<div class="teacher">${content}</div>`;
-}
-
-function subjectMarkup(subject) {
-  const teachers = teachersFor(subject);
-  const searchText = [subject.name, subject.lane, subject.course, ...teachers.map((teacher) => teacher.name)].join(" ");
-  const listed = teachers.length
-    ? teachers.map(teacherMarkup).join("\n")
-    : `<p class="unlisted">2026年度時間割に担当者の記載なし</p>`;
-  return `<article class="subject-card" data-search="${escapeHtml(searchText)}">
-    <div class="subject-meta">${escapeHtml(subject.lane)}</div>
-    <h3>${escapeHtml(subject.name)}</h3>
-    <div class="teacher-list">${listed}</div>
-  </article>`;
-}
 
 function courseMarkup(course) {
   const entries = subjects.filter((subject) => subject.course === course.name);
+  const grouped = [...groupByTeacher(entries).values()].sort((a, b) =>
+    b.subjects.size - a.subjects.size || a.name.localeCompare(b.name, "ja")
+  );
   return `<section class="course-section" id="${course.id}" data-course="${escapeHtml(course.name)}">
     <header class="section-head">
       <span class="section-number">${course.number} / 04</span>
       <div><p class="section-english">${course.english}</p><h2>${course.name}<span>コース</span></h2></div>
       <strong class="section-count">${entries.length}<small>科目</small></strong>
     </header>
-    <div class="subject-grid">${entries.map(subjectMarkup).join("\n")}</div>
+    <div class="faculty-grid course-faculty-grid">${grouped.map((group) => groupedTeacherMarkup(group, { courseScoped: true })).join("\n")}</div>
   </section>`;
 }
 
-function groupedTeacherMarkup(group) {
+function groupedTeacherMarkup(group, { courseScoped = false } = {}) {
   const source = portraits.get(normalize(group.name));
   const name = escapeHtml(group.name);
   const avatar = source
@@ -131,11 +114,14 @@ function groupedTeacherMarkup(group) {
     : "";
   const entries = [...group.subjects.values()];
   const searchText = [group.name, ...entries.flatMap((entry) => [entry.name, ...entry.lanes, ...entry.courses])].join(" ");
-  return `<article class="faculty-card" data-search="${escapeHtml(searchText)}">
-    <header class="faculty-head">${avatar}<div><h2>${name}</h2><p>${entries.length}科目を担当</p>${profile}</div></header>
-    <ul class="faculty-subjects">${entries.map((entry) => `<li>
+  const heading = courseScoped ? "h3" : "h2";
+  return `<article class="faculty-card${courseScoped ? " course-faculty-card" : ""}" data-teacher="${escapeHtml(group.name)}" data-search="${escapeHtml(searchText)}">
+    <header class="faculty-head">${avatar}<div><${heading}>${name}</${heading}><p>${entries.length}科目を担当</p>${profile}</div></header>
+    <ul class="faculty-subjects">${entries.map((entry) => `<li data-subject-id="${escapeHtml(entry.nodeId)}" data-search="${escapeHtml([entry.name, ...entry.lanes, ...entry.courses].join(" "))}">
       <div class="faculty-subject-title"><strong>${escapeHtml(entry.name)}</strong><span>${escapeHtml([...entry.semesters].join("・"))}</span></div>
-      <div class="faculty-tags">${courses.filter((course) => entry.courses.has(course.name)).map((course) => `<span>${escapeHtml(course.name)}</span>`).join("")}</div>
+      <div class="faculty-tags">${courseScoped
+        ? [...entry.lanes].map((lane) => `<span>${escapeHtml(lane)}</span>`).join("")
+        : courses.filter((course) => entry.courses.has(course.name)).map((course) => `<span>${escapeHtml(course.name)}</span>`).join("")}</div>
     </li>`).join("\n")}</ul>
   </article>`;
 }
@@ -175,7 +161,7 @@ const output = `<!doctype html>
       <div id="courseView">${courses.map(courseMarkup).join("\n")}</div>
       <div id="teacherView" hidden>
         <div class="faculty-intro"><p class="section-english">BY INSTRUCTOR / 2026</p><h2>担当者から探す</h2><p>同じ科目が複数コースにある場合は、担当者の下で一つにまとめています。</p></div>
-        <div class="faculty-grid">${sortedTeachers.map(groupedTeacherMarkup).join("\n")}</div>
+        <div class="faculty-grid">${sortedTeachers.map((group) => groupedTeacherMarkup(group)).join("\n")}</div>
       </div>
       <p id="noResults" class="no-results" hidden>該当する科目が見つかりませんでした。</p>
     </main>
@@ -183,7 +169,7 @@ const output = `<!doctype html>
     <footer class="source-note">
       <div><p class="eyebrow">SOURCE &amp; NOTES</p><h2>この一覧について</h2></div>
       <div class="source-body">
-        <p>掲載範囲は本アプリの公式カリキュラムツリーにおける4コースの科目群です。コース共通、基礎教育、教職、他学科の科目は含みません。同一科目が複数コースにある場合、コース別ではそれぞれに掲載し、担当者別ではコース名を併記して一つにまとめています。</p>
+        <p>掲載範囲は本アプリの公式カリキュラムツリーにおける4コースの科目群です。コース共通、基礎教育、教職、他学科の科目は含みません。コース別では担当者ごとに科目をまとめ、担当科目数の多い順に掲載します。同一科目が複数コースにある場合、担当者別ではコース名を併記して一つにまとめています。</p>
         <p>担当者は<a href="2026前期情報メディア学科-1.pdf">2026年度前期時間割</a>と<a href="2026-2media4.pdf">2026年度後期時間割</a>に基づきます。複数クラスや共同担当の教員は併記しています。氏名・開講情報は年度中に変わることがあります。</p>
         <p>顔写真は<a href="https://www.nagoya-bunri.ac.jp/faculty/" target="_blank" rel="noopener noreferrer">名古屋文理大学の教育スタッフ紹介</a>の画像URLを直接表示しています。写真の掲載がない教員は文字アイコンで示します。画像の著作権は掲載元に帰属します。</p>
       </div>

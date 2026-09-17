@@ -1,7 +1,7 @@
 const search = document.querySelector("#subjectSearch");
 const status = document.querySelector("#searchStatus");
 const sections = [...document.querySelectorAll(".course-section")];
-const facultyCards = [...document.querySelectorAll(".faculty-card")];
+const facultyCards = [...document.querySelectorAll("#teacherView .faculty-card")];
 const courseView = document.querySelector("#courseView");
 const teacherView = document.querySelector("#teacherView");
 const courseNav = document.querySelector(".course-nav");
@@ -13,16 +13,27 @@ function updateResults() {
   let visible = 0;
 
   if (currentView === "course") {
+    const visibleSubjects = new Set();
     sections.forEach((section) => {
-      let sectionVisible = 0;
-      section.querySelectorAll(".subject-card").forEach((card) => {
-        const haystack = card.dataset.search.normalize("NFKC").replace(/\s+/g, "").toLowerCase();
-        card.hidden = !haystack.includes(query);
-        if (!card.hidden) sectionVisible += 1;
+      let visibleGroups = 0;
+      const courseMatch = section.dataset.course.normalize("NFKC").replace(/\s+/g, "").toLowerCase().includes(query);
+      section.querySelectorAll(".course-faculty-card").forEach((card) => {
+        const teacherMatch = card.dataset.teacher.normalize("NFKC").replace(/\s+/g, "").toLowerCase().includes(query);
+        let visibleRows = 0;
+        card.querySelectorAll(".faculty-subjects li").forEach((row) => {
+          const rowMatch = row.dataset.search.normalize("NFKC").replace(/\s+/g, "").toLowerCase().includes(query);
+          row.hidden = !(courseMatch || teacherMatch || rowMatch);
+          if (!row.hidden) {
+            visibleRows += 1;
+            visibleSubjects.add(row.dataset.subjectId);
+          }
+        });
+        card.hidden = visibleRows === 0;
+        if (!card.hidden) visibleGroups += 1;
       });
-      section.hidden = sectionVisible === 0;
-      visible += sectionVisible;
+      section.hidden = visibleGroups === 0;
     });
+    visible = visibleSubjects.size;
   } else {
     facultyCards.forEach((card) => {
       const haystack = card.dataset.search.normalize("NFKC").replace(/\s+/g, "").toLowerCase();

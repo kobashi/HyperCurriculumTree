@@ -4,12 +4,12 @@
 
 写真は大学公式サイトのプロフィールに掲載されている画像を直接リンク表示する。確認用にローカルにも取得したが、写真ファイルは公開リポジトリに含めない。氏名が一致しない担当者には写真を割り当てていない。
 時間割の「他」や姓のみの記載からは新たな人物を推定していない。
-取得日: 2026-09-17。公開利用時は大学公式サイトの著作権表示を確認する。
+取得日: 2026-09-17（竹尾 淳の写真は2026-09-18に追加確認）。公開利用時は大学公式サイトの著作権表示を確認する。
 
 - 時間割から抽出した氏名: 72名
 - プロフィールと一致: 39名
-- 写真を確認: 20名
-- プロフィールに写真なし: 19名
+- 写真を確認: 21名
+- プロフィールに写真なし: 18名
 - プロフィールと一致せず: 33名
 
 ## 参考ページでの担当者区分
@@ -39,6 +39,7 @@
 | 渡邉 正樹 | ![渡邉 正樹](https://www.nagoya-bunri.ac.jp/wp/wp-content/uploads/2022/04/watanabe.masaki.jpg) | [教員紹介](https://www.nagoya-bunri.ac.jp/faculty/watanabe-masaki/) | [画像](https://www.nagoya-bunri.ac.jp/wp/wp-content/uploads/2022/04/watanabe.masaki.jpg) |
 | 濱口 輝士 | ![濱口 輝士](https://www.nagoya-bunri.ac.jp/wp/wp-content/uploads/2022/03/profile-jpeg.jpeg) | [教員紹介](https://www.nagoya-bunri.ac.jp/faculty/hamaguchi-koushi/) | [画像](https://www.nagoya-bunri.ac.jp/wp/wp-content/uploads/2022/03/profile-jpeg.jpeg) |
 | 田近 一郎 | ![田近 一郎](https://www.nagoya-bunri.ac.jp/wp/wp-content/uploads/2022/03/tajika.jpg) | [教員紹介](https://www.nagoya-bunri.ac.jp/faculty/tajika-ichiro/) | [画像](https://www.nagoya-bunri.ac.jp/wp/wp-content/uploads/2022/03/tajika.jpg) |
+| 竹尾 淳 | ![竹尾 淳](https://www.nagoya-bunri.ac.jp/wp/wp-content/uploads/2024/08/プロフィール顔写真_竹尾_StarMaker-427x640.jpg) | [教員紹介](https://www.nagoya-bunri.ac.jp/faculty/%e7%ab%b9%e5%b0%be-%e6%b7%b3/) | [画像](https://www.nagoya-bunri.ac.jp/wp/wp-content/uploads/2024/08/プロフィール顔写真_竹尾_StarMaker-427x640.jpg) |
 | 石郷 祐介 | ![石郷 祐介](https://www.nagoya-bunri.ac.jp/wp/wp-content/uploads/2024/03/ishigo.yusuke.jpg) | [教員紹介](https://www.nagoya-bunri.ac.jp/faculty/ishigo-yusuke/) | [画像](https://www.nagoya-bunri.ac.jp/wp/wp-content/uploads/2024/03/ishigo.yusuke.jpg) |
 | 長谷川 聡 | ![長谷川 聡](https://www.nagoya-bunri.ac.jp/wp/wp-content/uploads/2022/03/shase.jpg) | [教員紹介](https://www.nagoya-bunri.ac.jp/faculty/hasegawa-satoshi/) | [画像](https://www.nagoya-bunri.ac.jp/wp/wp-content/uploads/2022/03/shase.jpg) |
 | 青山 太郎 | ![青山 太郎](https://www.nagoya-bunri.ac.jp/wp/wp-content/uploads/2022/03/2025_480.jpg) | [教員紹介](https://www.nagoya-bunri.ac.jp/faculty/aoyama-taro/) | [画像](https://www.nagoya-bunri.ac.jp/wp/wp-content/uploads/2022/03/2025_480.jpg) |
@@ -92,7 +93,6 @@
 - 河木 智規: プロフィールに顔写真の掲載なし
 - 田中 明子: プロフィールに顔写真の掲載なし
 - 竹内 陽介: プロフィールに顔写真の掲載なし
-- 竹尾 淳: プロフィールに顔写真の掲載なし
 - 落合 洋文: プロフィールに顔写真の掲載なし
 - 谷口 泉: プロフィールに顔写真の掲載なし
 - 関 豪: プロフィールに顔写真の掲載なし

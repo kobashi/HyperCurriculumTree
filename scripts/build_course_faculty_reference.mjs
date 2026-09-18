@@ -55,10 +55,10 @@ for (const [, name] of portraitList.matchAll(/^- (.+): プロフィールに顔�
 const subjects = [];
 const courseNode = /^\s*\["([^"]+)", "([^"]+)", "professional", "(情報システム|映像メディア|サウンド制作|メディアデザイン)コース", "([^"]+)", "([1-4][前後])",/gm;
 for (const match of curriculum.matchAll(courseNode)) {
-  const [, nodeId, name, course, lane] = match;
+  const [, nodeId, name, course] = match;
   const teachers = instructorRows.get(normalize(name));
   if (!teachers) throw new Error(`No timetable record for ${name} (${nodeId})`);
-  subjects.push({ nodeId, name, course, lane, teachers, required: requiredByCourse.get(course).has(normalize(name)) });
+  subjects.push({ name, course, teachers, required: requiredByCourse.get(course).has(normalize(name)) });
 }
 if (subjects.length !== 65) throw new Error(`Expected 65 course nodes, found ${subjects.length}`);
 for (const course of courses) {
@@ -66,19 +66,19 @@ for (const course of courses) {
   if (found !== 8) throw new Error(`Expected 8 required course nodes for ${course.name}, found ${found}`);
 }
 
-function namesFor(value, semester) {
+function namesFor(value) {
   if (value === "—" || value === "記載なし") return [];
   const matches = [...value.matchAll(/([^\s（）/、]+)\s+([^\s（）/、]+)/gu)];
   return [...new Map(matches.map((match) => {
     const name = `${match[1]} ${match[2]}`;
-    return [normalize(name), { name, semester }];
+    return [normalize(name), { name }];
   })).values()];
 }
 
 function teachersFor(subject) {
   return [
-    ...namesFor(subject.teachers.first, "前期"),
-    ...namesFor(subject.teachers.second, "後期")
+    ...namesFor(subject.teachers.first),
+    ...namesFor(subject.teachers.second)
   ];
 }
 
@@ -88,19 +88,17 @@ function groupByTeacher(entries) {
   const groups = new Map();
   for (const subject of entries) {
     const assigned = teachersFor(subject);
-    for (const teacher of assigned.length ? assigned : [{ name: "担当者未記載", semester: "" }]) {
+    for (const teacher of assigned.length ? assigned : [{ name: "担当者未記載" }]) {
       const key = normalize(teacher.name);
       if (!groups.has(key)) groups.set(key, { name: teacher.name, subjects: new Map() });
       const group = groups.get(key);
       const subjectKey = normalize(subject.name);
       if (!group.subjects.has(subjectKey)) {
-        group.subjects.set(subjectKey, { nodeId: subject.nodeId, name: subject.name, lanes: new Set(), courses: new Set(), requiredCourses: new Set(), semesters: new Set() });
+        group.subjects.set(subjectKey, { name: subject.name, courses: new Set(), requiredCourses: new Set() });
       }
       const entry = group.subjects.get(subjectKey);
-      entry.lanes.add(subject.lane);
       entry.courses.add(subject.course);
       if (subject.required) entry.requiredCourses.add(subject.course);
-      if (teacher.semester) entry.semesters.add(teacher.semester);
     }
   }
   for (const group of groups.values()) {
@@ -143,16 +141,13 @@ function groupedTeacherMarkup(group, { courseScoped = false } = {}) {
     ? `<a href="${escapeHtml(source.profileUrl)}" target="_blank" rel="noopener noreferrer">大学公式プロフィール <span aria-hidden="true">↗</span></a>`
     : "";
   const entries = [...group.subjects.values()];
-  const searchText = [group.name, ...entries.flatMap((entry) => [entry.name, ...entry.lanes, ...entry.courses])].join(" ");
   const heading = courseScoped ? "h3" : "h2";
   const employmentLabel = group.employment === "regular" ? "常勤" : group.employment === "adjunct" ? "非常勤" : "";
-  return `<article class="faculty-card${courseScoped ? " course-faculty-card" : ""}" data-teacher="${escapeHtml(group.name)}" data-search="${escapeHtml(searchText)}">
-    <header class="faculty-head">${avatar}<div><div class="faculty-heading"><${heading}>${name}</${heading}>${employmentLabel ? `<span class="employment-badge ${group.employment}">${employmentLabel}</span>` : ""}</div><p>${entries.length}科目を担当</p>${profile}</div></header>
-    <ul class="faculty-subjects">${entries.map((entry) => `<li class="${entry.requiredCourses.size ? "is-required" : ""}" data-subject-id="${escapeHtml(entry.nodeId)}" data-search="${escapeHtml([entry.name, ...entry.lanes, ...entry.courses].join(" "))}">
-      <div class="faculty-subject-title"><div class="subject-name"><strong>${escapeHtml(entry.name)}</strong>${entry.requiredCourses.size ? `<span class="required-badge">必修</span>` : ""}</div><span>${escapeHtml([...entry.semesters].join("・"))}</span></div>
-      <div class="faculty-tags">${courseScoped
-        ? [...entry.lanes].map((lane) => `<span>${escapeHtml(lane)}</span>`).join("")
-        : courses.filter((course) => entry.courses.has(course.name)).map((course) => `<span class="${entry.requiredCourses.has(course.name) ? "required-course" : ""}">${escapeHtml(course.name)}${entry.requiredCourses.has(course.name) ? "・必修" : ""}</span>`).join("")}</div>
+  return `<article class="faculty-card${courseScoped ? " course-faculty-card" : ""}">
+    <header class="faculty-head">${avatar}<div class="faculty-identity"><div class="faculty-heading"><${heading}>${name}</${heading}>${employmentLabel ? `<span class="employment-badge ${group.employment}">${employmentLabel}</span>` : ""}</div>${profile}</div></header>
+    <ul class="faculty-subjects">${entries.map((entry) => `<li class="${entry.requiredCourses.size ? "is-required" : ""}">
+      <div class="faculty-subject-title"><div class="subject-name"><strong>${escapeHtml(entry.name)}</strong>${entry.requiredCourses.size ? `<span class="required-badge">必修</span>` : ""}</div></div>${courseScoped ? "" : `
+      <div class="faculty-tags">${courses.filter((course) => entry.courses.has(course.name)).map((course) => `<span class="${entry.requiredCourses.has(course.name) ? "required-course" : ""}">${escapeHtml(course.name)}${entry.requiredCourses.has(course.name) ? "・必修" : ""}</span>`).join("")}</div>`}
     </li>`).join("\n")}</ul>
   </article>`;
 }
@@ -186,15 +181,12 @@ const output = `<!doctype html>
       </div>
       <div class="navigator">
         <nav class="course-nav" aria-label="コースへ移動">${courses.map((course) => `<a href="#${course.id}">${course.name}</a>`).join("")}</nav>
-        <label class="search"><span>科目・教員を探す</span><input id="subjectSearch" type="search" placeholder="科目名、担当者名、系列名" autocomplete="off"></label>
       </div>
-      <p id="searchStatus" class="search-status" role="status" aria-live="polite"></p>
       <div id="courseView">${courses.map(courseMarkup).join("\n")}</div>
       <div id="teacherView" hidden>
-        <div class="faculty-intro"><p class="section-english">BY INSTRUCTOR / 2026</p><h2>担当者から探す</h2><p>同じ科目が複数コースにある場合は、担当者の下で一つにまとめています。</p></div>
+        <div class="faculty-intro"><p class="section-english">BY INSTRUCTOR / 2026</p><h2>担当者別一覧</h2><p>同じ科目が複数コースにある場合は、担当者の下で一つにまとめています。</p></div>
         <div class="faculty-grid">${sortedTeachers.map((group) => groupedTeacherMarkup(group)).join("\n")}</div>
       </div>
-      <p id="noResults" class="no-results" hidden>該当する科目が見つかりませんでした。</p>
     </main>
 
     <footer class="source-note">

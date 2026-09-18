@@ -117,21 +117,46 @@ function compareTeacherGroups(a, b) {
 }
 const teacherGroups = groupByTeacher(subjects);
 const sortedTeachers = [...teacherGroups.values()].sort(compareTeacherGroups);
+const teachersByCourse = new Map(courses.map((course) => [
+  course.id,
+  [...groupByTeacher(subjects.filter((subject) => subject.course === course.name)).values()].sort(compareTeacherGroups)
+]));
+const showcasePeople = courses.flatMap((course) => teachersByCourse.get(course.id).map((group, index) => ({
+  course,
+  group,
+  targetId: `faculty-${course.id}-${index + 1}`
+})));
 
 function courseMarkup(course) {
   const entries = subjects.filter((subject) => subject.course === course.name);
-  const grouped = [...groupByTeacher(entries).values()].sort(compareTeacherGroups);
+  const grouped = teachersByCourse.get(course.id);
   return `<section class="course-section" id="${course.id}" data-course="${escapeHtml(course.name)}">
     <header class="section-head">
       <span class="section-number">${course.number} / 04</span>
       <div><p class="section-english">${course.english}</p><h2>${course.name}<span>コース</span></h2></div>
       <strong class="section-count">${entries.length}<small>科目</small></strong>
     </header>
-    <div class="faculty-grid course-faculty-grid">${grouped.map((group) => groupedTeacherMarkup(group, { courseScoped: true })).join("\n")}</div>
+    <div class="faculty-grid course-faculty-grid">${grouped.map((group, index) => groupedTeacherMarkup(group, { courseScoped: true, id: `faculty-${course.id}-${index + 1}` })).join("\n")}</div>
   </section>`;
 }
 
-function groupedTeacherMarkup(group, { courseScoped = false } = {}) {
+function showcaseMarkup() {
+  return `<div class="showcase" aria-label="4コースの担当教員アトラス">
+    <div class="showcase-heading"><p class="showcase-kicker">FACULTY ATLAS / 2026</p><p>マウス移動・ドラッグ・スワイプで教員をたどる。写真を選ぶと担当科目へ。</p></div>
+    <div class="showcase-stage" tabindex="0" aria-label="4コースの担当教員。マウスを動かすか、ドラッグ・スワイプで教員を選べます">${showcasePeople.map(({ course, group, targetId }, index) => {
+      const source = portraits.get(normalize(group.name));
+      const name = escapeHtml(group.name);
+      const avatar = source
+        ? `<img src="${escapeHtml(source.imageUrl)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" draggable="false">`
+        : `<span class="showcase-fallback" aria-hidden="true">${escapeHtml(group.name[0])}</span>`;
+      return `<a class="showcase-person${index === 0 ? " is-current" : ""}" data-course="${course.id}" href="#${targetId}" aria-label="${escapeHtml(course.name)}コース・${name}の担当科目へ" tabindex="${index === 0 ? "0" : "-1"}"${index === 0 ? ' aria-current="true"' : ""}><span class="showcase-portrait">${avatar}</span><span class="showcase-person-name">${name}</span><span class="showcase-person-course">${escapeHtml(course.name)}</span></a>`;
+    }).join("\n")}</div>
+    <div class="showcase-caption"><div><span class="showcase-current-course">${courses[0].name}コース</span><strong class="showcase-current-name">${escapeHtml(showcasePeople[0].group.name)}</strong></div><a class="showcase-detail" href="#${showcasePeople[0].targetId}">担当科目を見る <span aria-hidden="true">↗</span></a></div>
+    <div class="showcase-course-legend" aria-label="教員の並び順">${courses.map((course) => `<span data-course="${course.id}"><b>${course.number}</b>${course.name}</span>`).join("")}</div>
+  </div>`;
+}
+
+function groupedTeacherMarkup(group, { courseScoped = false, id = "" } = {}) {
   const source = portraits.get(normalize(group.name));
   const name = escapeHtml(group.name);
   const avatar = source
@@ -143,7 +168,7 @@ function groupedTeacherMarkup(group, { courseScoped = false } = {}) {
   const entries = [...group.subjects.values()];
   const heading = courseScoped ? "h3" : "h2";
   const employmentLabel = group.employment === "regular" ? "常勤" : group.employment === "adjunct" ? "非常勤" : "";
-  return `<article class="faculty-card${courseScoped ? " course-faculty-card" : ""}">
+  return `<article class="faculty-card${courseScoped ? " course-faculty-card" : ""}"${id ? ` id="${id}"` : ""}>
     <header class="faculty-head">${avatar}<div class="faculty-identity"><div class="faculty-heading"><${heading}>${name}</${heading}>${employmentLabel ? `<span class="employment-badge ${group.employment}">${employmentLabel}</span>` : ""}</div>${profile}</div></header>
     <ul class="faculty-subjects">${entries.map((entry) => `<li class="${entry.requiredCourses.size ? "is-required" : ""}">
       <div class="faculty-subject-title"><div class="subject-name"><strong>${escapeHtml(entry.name)}</strong>${entry.requiredCourses.size ? `<span class="required-badge">必修</span>` : ""}</div></div>${courseScoped ? "" : `
@@ -168,19 +193,16 @@ const output = `<!doctype html>
       <div class="masthead-top"><a class="project-link" href="./">超履修計画2026</a><span>参考資料 / 2026年度</span></div>
       <div class="masthead-main">
         <p class="eyebrow">NAGOYA BUNRI UNIVERSITY <span>・</span> INFORMATION MEDIA</p>
-        <h1>コース科目と<br><em>担当教員</em></h1>
-        <p class="intro">4つのコースで学ぶ科目と、2026年度の時間割に記載された担当者を一覧にしました。写真は大学公式サイトに掲載されている場合のみ表示しています。</p>
+        <h1>教員を知る<span>。</span></h1>
+        <p class="intro">4つのコースを横断して、担当者をたどる。</p>
       </div>
-      <div class="facts"><div><strong>04</strong><span>コース</span></div><div><strong>${subjects.length}</strong><span>科目掲載</span></div><div><strong>${uniqueTeachers.size}</strong><span>担当者</span></div><div><strong>${picturedTeachers.size}</strong><span>写真あり</span></div></div>
+      ${showcaseMarkup()}
     </header>
 
     <main id="main-content">
       <div class="view-switch" role="group" aria-label="一覧の表示方法">
         <button type="button" class="is-active" data-view="course" aria-pressed="true">コース別</button>
         <button type="button" data-view="teacher" aria-pressed="false">担当者別</button>
-      </div>
-      <div class="navigator">
-        <nav class="course-nav" aria-label="コースへ移動">${courses.map((course) => `<a href="#${course.id}">${course.name}</a>`).join("")}</nav>
       </div>
       <div id="courseView">${courses.map(courseMarkup).join("\n")}</div>
       <div id="teacherView" hidden>
@@ -190,8 +212,10 @@ const output = `<!doctype html>
     </main>
 
     <footer class="source-note">
-      <div><p class="eyebrow">SOURCE &amp; NOTES</p><h2>この一覧について</h2></div>
+      <div><p class="eyebrow">SOURCE &amp; NOTES</p><h2>コース科目と担当教員</h2></div>
       <div class="source-body">
+        <p class="source-summary">4つのコースで学ぶ科目と、2026年度の時間割に記載された担当者の一覧です。写真は大学公式サイトに掲載されている場合のみ表示しています。</p>
+        <div class="source-facts"><span><strong>04</strong> コース</span><span><strong>${subjects.length}</strong> 科目掲載</span><span><strong>${uniqueTeachers.size}</strong> 担当者</span><span><strong>${picturedTeachers.size}</strong> 写真あり</span></div>
         <p>掲載範囲は本アプリの公式カリキュラムツリーにおける4コースの科目群です。コース共通、基礎教育、教職、他学科の科目は含みません。必修表示は本アプリのコース必修定義に基づきます。同一科目が複数コースにある場合、担当者別ではコース名を併記して一つにまとめています。</p>
         <p>担当者は大学の教育スタッフ紹介への掲載有無で常勤・非常勤を区分しています（2026年9月17日確認）。未掲載の担当者は非常勤として扱い、常勤を先に、その中で必修担当の有無、担当科目数の順に並べています。これは一覧用の分類であり、正式な雇用区分を証明するものではありません。</p>
         <p>担当者は<a href="2026前期情報メディア学科-1.pdf">2026年度前期時間割</a>と<a href="2026-2media4.pdf">2026年度後期時間割</a>に基づきます。複数クラスや共同担当の教員は併記しています。氏名・開講情報は年度中に変わることがあります。</p>

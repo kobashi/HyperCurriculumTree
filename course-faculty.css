@@ -25,9 +25,10 @@ a { color: inherit; }
 .page-shell { max-width: 1600px; margin: auto; }
 
 .masthead {
+  --gutter: clamp(22px, 5vw, 80px);
   position: relative;
   overflow: hidden;
-  padding: clamp(22px, 3vw, 46px) clamp(22px, 5vw, 80px) 0;
+  padding: clamp(22px, 3vw, 46px) var(--gutter) 0;
   color: #f8f6e9;
   background: linear-gradient(128deg, #193a34 0%, #164e45 67%, #226855 100%);
 }
@@ -43,45 +44,59 @@ a { color: inherit; }
   box-shadow: 0 0 0 70px #ffffff0c, 0 0 0 160px #ffffff08;
   pointer-events: none;
 }
-.masthead-top, .masthead-main, .facts { position: relative; z-index: 1; }
+.masthead-top, .masthead-main, .showcase { position: relative; z-index: 1; }
 .masthead-top { display: flex; justify-content: space-between; gap: 20px; align-items: center; font-size: .78rem; letter-spacing: .08em; }
 .project-link { text-decoration: none; font-weight: 800; border-bottom: 1px solid #f8f6e970; padding-bottom: 5px; }
 .project-link:hover, .return-link:hover { border-color: currentColor; }
-.masthead-main { padding: clamp(38px, 5vw, 65px) 0 clamp(38px, 5vw, 65px); max-width: 930px; }
+.masthead-main { padding: clamp(20px, 2.5vw, 34px) 0 24px; max-width: 930px; }
 .eyebrow { margin: 0; font: 700 .72rem/1.5 "Avenir Next", "Hiragino Kaku Gothic ProN", sans-serif; letter-spacing: .18em; }
 .eyebrow span { color: #c8d99a; }
 h1, h2, h3, p { margin-top: 0; }
 h1, .section-head h2, .source-note h2 { font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; }
-h1 { margin: 18px 0 20px; font-size: clamp(3rem, 6vw, 5.7rem); font-weight: 800; line-height: 1.12; letter-spacing: -.045em; }
-h1 em { font-style: normal; color: #d8e894; }
-.intro { max-width: 640px; margin-bottom: 0; line-height: 1.9; font-size: clamp(.94rem, 1.35vw, 1.08rem); color: #e1e8dc; }
-.facts { display: flex; flex-wrap: wrap; gap: 0; border-top: 1px solid #ffffff42; }
-.facts > div { display: flex; align-items: baseline; gap: 11px; min-width: 170px; padding: 20px 33px 20px 0; margin-right: 33px; border-right: 1px solid #ffffff3a; }
-.facts > div:last-child { border-right: 0; }
-.facts strong { font: 700 2rem/1 "Avenir Next", sans-serif; }
-.facts span { font-size: .74rem; color: #d6e4d9; }
+h1 { margin: 8px 0 4px; font-size: clamp(2.1rem, 3.3vw, 3.2rem); font-weight: 800; line-height: 1.12; letter-spacing: -.045em; }
+h1 span { color: #d8e894; }
+.intro { margin-bottom: 0; line-height: 1.7; font-size: .94rem; color: #e1e8dc; }
+
+.showcase {
+  margin: 0 calc(-1 * var(--gutter));
+  padding: 21px var(--gutter) 23px;
+  color: var(--ink);
+  background: linear-gradient(115deg, #eff4e7, #f8f4e6 62%, #efe7d6);
+}
+.showcase-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 15px; margin-bottom: 12px; }
+.showcase-heading p { margin: 0; color: var(--muted); font-size: .75rem; }
+.showcase-heading .showcase-kicker { color: var(--green); font: 800 .7rem/1.5 "Avenir Next", sans-serif; letter-spacing: .15em; }
+.showcase-stage { display: flex; gap: 12px; height: 300px; overflow-x: auto; padding: 22px 10px; border-top: 1px solid #cbd4c7; border-bottom: 1px solid #cbd4c7; scrollbar-width: thin; }
+.showcase-stage.is-enhanced { position: relative; display: block; overflow: hidden; padding: 0; cursor: ew-resize; touch-action: pan-y; user-select: none; }
+.showcase-stage.is-dragging { cursor: grabbing; }
+.showcase-stage:focus-visible, .showcase-person:focus-visible, .showcase-detail:focus-visible { outline: 3px solid var(--green); outline-offset: 3px; }
+.showcase-person { --course-accent: var(--system); flex: 0 0 180px; display: flex; flex-direction: column; width: 180px; padding: 7px; color: var(--ink); background: #fffdf7; border: 2px solid var(--course-accent); text-decoration: none; }
+.showcase-person[data-course="movie"], .showcase-course-legend [data-course="movie"] { --course-accent: var(--movie); }
+.showcase-person[data-course="sound"], .showcase-course-legend [data-course="sound"] { --course-accent: var(--sound); }
+.showcase-person[data-course="design"], .showcase-course-legend [data-course="design"] { --course-accent: var(--design); }
+.showcase-stage.is-enhanced .showcase-person { position: absolute; top: 32px; left: 0; width: var(--tile-size); will-change: transform; transform-origin: center center; }
+.showcase-person.is-current { background: white; }
+.showcase-portrait { display: grid; place-items: center; aspect-ratio: 1; overflow: hidden; background: #dce9df; }
+.showcase-portrait img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center 28%; transition: transform .35s ease; }
+.showcase-person.is-current img { transform: scale(1.04); }
+.showcase-fallback { display: grid; place-items: center; width: 100%; height: 100%; color: #326854; font: 800 clamp(3rem, 6vw, 5rem)/1 "Hiragino Mincho ProN", serif; }
+.showcase-person-name { padding: 9px 4px 2px; font: 800 1rem/1.35 "Hiragino Mincho ProN", "Yu Mincho", serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.showcase-person-course { padding: 0 4px 4px; color: var(--muted); font-size: .68rem; font-weight: 700; }
+.showcase-caption { display: flex; align-items: center; justify-content: space-between; gap: 15px; min-height: 67px; padding: 12px 4px; }
+.showcase-caption > div { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 14px; }
+.showcase-current-course { color: var(--green); font-size: .72rem; font-weight: 800; }
+.showcase-current-name { font: 800 1.5rem/1.3 "Hiragino Mincho ProN", "Yu Mincho", serif; }
+.showcase-detail { flex: none; border-bottom: 1px solid currentColor; padding-bottom: 3px; color: var(--green); font-size: .77rem; font-weight: 800; text-decoration: none; }
+.showcase-course-legend { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.showcase-course-legend span { --course-accent: var(--system); border-top: 4px solid var(--course-accent); padding-top: 8px; font-size: .7rem; font-weight: 800; white-space: nowrap; }
+.showcase-course-legend b { margin-right: 7px; color: var(--muted); font: 800 .67rem/1 "Avenir Next", sans-serif; }
 
 main { padding: 0 clamp(16px, 4vw, 64px) 90px; }
 .view-switch { display: inline-flex; gap: 4px; margin-top: 22px; padding: 4px; border: 1px solid #c6d6cb; background: #e8f0e9; }
 .view-switch button { border: 0; padding: 10px 22px; color: var(--ink); background: transparent; font-weight: 750; cursor: pointer; }
 .view-switch button.is-active { color: white; background: var(--green); }
 .view-switch button:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
-.navigator {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  padding: 20px 0;
-  background: #f7f5edf0;
-  backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--line);
-}
-.course-nav { display: flex; flex-wrap: wrap; gap: 8px; }
-.course-nav a { padding: 10px 13px; border: 1px solid #bfcfc5; border-radius: 2px; text-decoration: none; font-weight: 750; font-size: .82rem; white-space: nowrap; }
-.course-nav a:hover, .course-nav a:focus-visible { color: white; background: var(--green); border-color: var(--green); }
-
-.course-section { --accent: var(--system); margin-top: 55px; scroll-margin-top: 135px; }
+.course-section { --accent: var(--system); margin-top: 55px; scroll-margin-top: 24px; }
 #movie { --accent: var(--movie); }
 #sound { --accent: var(--sound); }
 #design { --accent: var(--design); }
@@ -128,29 +143,36 @@ main { padding: 0 clamp(16px, 4vw, 64px) 90px; }
 .source-note .eyebrow { color: #c9dd9c; }
 .source-note h2 { margin: 10px 0 0; font-size: clamp(1.7rem, 3vw, 2.4rem); }
 .source-body p { max-width: 850px; margin-bottom: 14px; font-size: .82rem; line-height: 1.9; }
+.source-body .source-summary { font-size: .95rem; color: #f5f6e8; }
+.source-facts { display: flex; flex-wrap: wrap; gap: 10px 22px; margin: 0 0 23px; padding-bottom: 18px; border-bottom: 1px solid #ffffff35; color: #d6e4d9; font-size: .75rem; }
+.source-facts span { white-space: nowrap; }
+.source-facts strong { margin-right: 5px; color: #e8eeb7; font: 800 1.35rem/1 "Avenir Next", sans-serif; }
 .source-body a { color: #e7ecb0; text-underline-offset: 3px; }
 .return-link { grid-column: 1 / -1; justify-self: start; border-bottom: 1px solid #e5efe588; padding-bottom: 5px; text-decoration: none; font-size: .85rem; font-weight: 700; }
 .return-link span { margin-left: 12px; }
 
 @media (max-width: 1450px) {
-  .course-section { scroll-margin-top: 195px; }
   .section-head { grid-template-columns: 70px minmax(0, 1fr) auto; }
   .faculty-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 680px) {
   .masthead { padding-left: 20px; padding-right: 20px; }
-  .masthead-main { padding: 42px 0 45px; }
+  .masthead { --gutter: 20px; }
+  .masthead-main { padding: 24px 0 22px; }
   .masthead-top { align-items: start; }
   .masthead-top > span { text-align: right; }
-  .facts > div { min-width: 50%; margin: 0; padding: 14px 10px 14px 0; border-bottom: 1px solid #ffffff32; }
-  .facts > div:nth-child(2) { border-right: 0; }
-  .facts strong { font-size: 1.55rem; }
+  .showcase { padding-top: 18px; }
+  .showcase-heading { display: block; }
+  .showcase-heading p + p { margin-top: 3px; }
+  .showcase-stage { height: 270px; }
+  .showcase-stage.is-enhanced .showcase-person { top: 38px; }
+  .showcase-current-name { font-size: 1.2rem; }
+  .showcase-course-legend { gap: 4px; }
+  .showcase-course-legend span { font-size: .56rem; white-space: normal; }
+  .showcase-course-legend b { display: block; margin: 0 0 3px; }
   main { padding: 0 16px 60px; }
-  .navigator { position: static; }
   .view-switch { display: flex; }
   .view-switch button { flex: 1; }
-  .course-nav { display: grid; grid-template-columns: repeat(2, 1fr); }
-  .course-nav a { text-align: center; font-size: .75rem; }
   .course-section { margin-top: 39px; scroll-margin-top: 20px; }
   .section-head { grid-template-columns: minmax(0, 1fr) auto; gap: 7px; }
   .section-number { grid-column: 1 / -1; }
@@ -164,4 +186,8 @@ main { padding: 0 clamp(16px, 4vw, 64px) 90px; }
 @media (prefers-reduced-motion: no-preference) {
   .masthead-main { animation: arrive .65s cubic-bezier(.2,.8,.2,1) both; }
   @keyframes arrive { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .showcase-portrait img { transition: none; }
 }

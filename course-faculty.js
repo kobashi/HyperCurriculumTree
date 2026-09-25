@@ -99,10 +99,20 @@ function draw() {
   const configuredPhotoSize = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--faculty-photo-size")) || 296;
   const focusWidth = Math.min(configuredPhotoSize * 2, width - 16, stage.clientHeight - 16);
   const focusScale = focusWidth / tileSize;
-  const edge = focusWidth / 2 + 8;
-  const minGap = Math.min(4, (width - edge * 2) / (people.length - 1) * .6);
   const focus = Math.round(shownIndex);
-  const focusX = Math.max(edge + focus * minGap, Math.min(width - edge - (people.length - 1 - focus) * minGap, shownX));
+  const sigma = width < 520 ? 1.8 : 2.35;
+  const expandedScales = people.map((_, index) => {
+    const distance = Math.abs(index - shownIndex);
+    const bell = Math.exp(-(distance ** 2) / (2 * sigma ** 2));
+    return 1 + (focusScale - 1) * bell;
+  });
+  const leftEdge = tileSize * expandedScales[0] / 2 + 8;
+  const rightEdge = width - tileSize * expandedScales[expandedScales.length - 1] / 2 - 8;
+  const minGap = Math.max(0, Math.min(4, (rightEdge - leftEdge) / (people.length - 1) * .6));
+  const focusX = Math.max(
+    leftEdge + focus * minGap,
+    Math.min(rightEdge - (people.length - 1 - focus) * minGap, shownX)
+  );
   const focusedCenters = new Array(people.length);
   focusedCenters[focus] = focusX;
 
@@ -111,10 +121,10 @@ function draw() {
     const leftWeights = Array.from({ length: focus }, (_, i) => weight(focus - i - .5));
     const total = leftWeights.reduce((sum, value) => sum + value, 0);
     let used = 0;
-    focusedCenters[0] = edge;
+    focusedCenters[0] = leftEdge;
     for (let i = 1; i <= focus; i += 1) {
       used += leftWeights[i - 1];
-      focusedCenters[i] = edge + i * minGap + (focusX - edge - focus * minGap) * used / total;
+      focusedCenters[i] = leftEdge + i * minGap + (focusX - leftEdge - focus * minGap) * used / total;
     }
   }
   if (focus < people.length - 1) {
@@ -123,16 +133,13 @@ function draw() {
     let used = 0;
     for (let i = focus + 1; i < people.length; i += 1) {
       used += rightWeights[i - focus - 1];
-      focusedCenters[i] = focusX + (i - focus) * minGap + (width - edge - focusX - rightWeights.length * minGap) * used / total;
+      focusedCenters[i] = focusX + (i - focus) * minGap + (rightEdge - focusX - rightWeights.length * minGap) * used / total;
     }
   }
 
   stage.style.setProperty("--tile-size", `${tileSize}px`);
   people.forEach((person, index) => {
-    const distance = Math.abs(index - shownIndex);
-    const sigma = width < 520 ? 1.8 : 2.35;
-    const bell = Math.exp(-(distance ** 2) / (2 * sigma ** 2));
-    const scale = 1 + shownFocus * (focusScale - 1) * bell;
+    const scale = 1 + shownFocus * (expandedScales[index] - 1);
     const normalEdge = tileSize / 2 + 8;
     const normalCenter = normalEdge + (width - normalEdge * 2) * index / (people.length - 1);
     const center = normalCenter + (focusedCenters[index] - normalCenter) * shownFocus;

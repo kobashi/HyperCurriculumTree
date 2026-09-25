@@ -7,6 +7,7 @@ const curriculum = readFileSync(join(root, "app.js"), "utf8");
 const timetable = readFileSync(join(root, "docs/2026-course-instructors.md"), "utf8");
 const portraitList = readFileSync(join(root, "docs/2026-faculty-portraits.md"), "utf8");
 const facultyDirectory = readFileSync(join(root, "docs/2026-information-media-faculty.md"), "utf8");
+const assetVersion = "1.06.1";
 
 const courses = [
   { name: "情報システム", id: "system", english: "Information Systems", number: "01" },
@@ -222,8 +223,8 @@ const output = `<!doctype html>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="名古屋文理大学情報メディア学科4コースの科目・担当教員と、4コース科目未担当の所属教員をまとめた2026年度参考一覧。">
   <title>2026 コース科目と担当教員 | 超履修計画2026</title>
-  <link rel="stylesheet" href="course-faculty.css">
-  <script src="course-faculty.js" defer></script>
+  <link rel="stylesheet" href="course-faculty.css?v=${assetVersion}">
+  <script src="course-faculty.js?v=${assetVersion}" defer></script>
 </head>
 <body>
   <div class="page-shell">
